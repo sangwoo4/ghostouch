@@ -1,0 +1,13 @@
+# Virtual Environment
+GestureClassifier/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE specific files
+.idea/
+.vscode/
+
+# Data files
+gesture/data/image_data/
