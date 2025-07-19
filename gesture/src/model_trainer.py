@@ -3,9 +3,9 @@ import numpy as np
 import tensorflow as tf
 import logging
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, Input
+from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from abc import ABC, abstractmethod
 from config import Config
 
@@ -18,20 +18,20 @@ class ModelBuilder(ABC):
         pass
 
 class BasicCNNBuilder(ModelBuilder):
-    # 기본 CNN 모델을 생성합니다
+    # 기본 CNN 모델을 생성합니다 (1D 랜드마크 데이터에 최적화)
     def build(self, input_shape, num_classes):
         model = Sequential([
-            Input(shape=input_shape),
-            Conv2D(32, (3, 2), padding='same', activation='relu'),
-            MaxPooling2D(pool_size=(2, 1)),
-            Dropout(0.2),
-            Conv2D(64, (3, 2), padding='same', activation='relu'),
-            MaxPooling2D(pool_size=(2, 1)),
-            Dropout(0.25),
-            Flatten(),
-            Dense(128, activation='relu'),
-            Dropout(0.35),
-            Dense(num_classes, activation='softmax')
+            Input(shape=input_shape), # 예: (64, 1)
+            tf.keras.layers.Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'),
+            tf.keras.layers.MaxPooling1D(pool_size=2),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Conv1D(filters=64, kernel_size=3, padding='same', activation='relu'),
+            tf.keras.layers.MaxPooling1D(pool_size=2),
+            tf.keras.layers.Dropout(0.25),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dropout(0.35),
+            tf.keras.layers.Dense(num_classes, activation='softmax')
         ])
         return model
 
@@ -74,7 +74,7 @@ class ModelTrainer:
         X_train, y_train, X_test, y_test = self._load_and_prepare_data()
         num_classes = len(self.label_map)
         
-        input_shape = (X_train.shape[1], 1, 1)
+        input_shape = (X_train.shape[1], 1)
         X_train = X_train.reshape(-1, *input_shape)
         X_test = X_test.reshape(-1, *input_shape)
 
@@ -83,13 +83,14 @@ class ModelTrainer:
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True)
+        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0.00001)
 
         model.fit(X_train, y_train,
                   validation_data=(X_test, y_test),
                   epochs=self.config.EPOCHS,
                   batch_size=self.config.BATCH_SIZE,
-                  callbacks=[early_stopping])
+                  callbacks=[early_stopping, lr_scheduler])
 
         model.save(self.config.MODEL_PATH)
         logger.info(f"----- 모델 저장 완료: {self.config.MODEL_PATH}")
