@@ -1,12 +1,12 @@
 import cv2
+import mediapipe as mp
 import numpy as np
 import tensorflow as tf
-import mediapipe as mp
 import json
+import argparse
 import logging
 import threading
 import queue
-from data_processor import UnifiedPreprocessingStrategy
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 class GesturePredictor:
     # 실시간 제스처 인식을 위한 클래스
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, model_type: str = 'basic'):
         self.config = config
-        self.strategy = UnifiedPreprocessingStrategy()
+        self.model_type = model_type
         self.interpreter, self.input_details, self.output_details = self._load_model()
         
         # 양자화 모델을 위한 입출력 스케일 및 제로 포인트 추출
@@ -32,7 +32,11 @@ class GesturePredictor:
 
     def _load_model(self):
         # TFLite 모델을 로드하고 입출력 세부 정보를 반환
-        interpreter = tf.lite.Interpreter(model_path=self.config.TFLITE_MODEL_PATH)
+        if self.model_type == 'basic':
+            model_path = self.config.BASIC_TFLITE_MODEL_PATH
+        else:
+            model_path = self.config.TRANSFER_TFLITE_MODEL_PATH
+        interpreter = tf.lite.Interpreter(model_path=model_path)
         interpreter.allocate_tensors()
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()
@@ -40,7 +44,11 @@ class GesturePredictor:
 
     def _load_label_map(self):
         # 라벨 맵을 로드하고 인덱스를 라벨에 매핑하는 딕셔너리를 반환
-        with open(self.config.LABEL_MAP_PATH, 'r') as f:
+        if self.model_type == 'basic':
+            label_map_path = self.config.BASIC_LABEL_MAP_PATH
+        else:
+            label_map_path = self.config.TRANSFER_LABEL_MAP_PATH
+        with open(label_map_path, 'r') as f:
             label_map = json.load(f)
         return {v: k for k, v in label_map.items()}
 
@@ -84,12 +92,14 @@ class GesturePredictor:
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = self.hands.process(image_rgb)
 
-        if results.multi_hand_landmarks:
-            hand_landmarks = results.multi_hand_landmarks[0]
-            landmark_points = [[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark]
+        if results.multi_hand_world_landmarks:
+            hand_world_landmarks = results.multi_hand_world_landmarks[0]
             handedness = results.multi_handedness[0].classification[0].label
 
-            feature_vector = self.strategy.preprocess(landmark_points, handedness)
+            # 월드 랜드마크를 직접 사용하고 평탄화
+            landmark_points = np.array([[lm.x, lm.y, lm.z] for lm in hand_world_landmarks.landmark], dtype=np.float32).flatten()
+            handedness_val = 0 if handedness == "Right" else 1
+            feature_vector = np.concatenate([landmark_points, [handedness_val]])
 
             if feature_vector is not None and self.preprocessed_queue.empty():
                 self.preprocessed_queue.put(feature_vector)
@@ -117,8 +127,13 @@ class GesturePredictor:
         self.inference_thread.join()
 
 def main():
+    parser = argparse.ArgumentParser(description="Live gesture recognition test.")
+    parser.add_argument('--model_type', type=str, default='basic', choices=['basic', 'transfer'],
+                        help="Type of model to use: 'basic' or 'transfer'.")
+    args = parser.parse_args()
+
     config = Config()
-    predictor = GesturePredictor(config)
+    predictor = GesturePredictor(config, model_type=args.model_type)
 
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAM_WIDTH)
@@ -139,6 +154,10 @@ def main():
         if new_label is not None:
             predicted_label = new_label
             confidence = new_confidence
+        else:
+            # 손이 감지되지 않으면 'none'으로 처리
+            predicted_label = "none"
+            confidence = 0.0
 
         text = f"{predicted_label} ({confidence:.2f})"
         cv2.putText(image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)

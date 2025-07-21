@@ -43,7 +43,9 @@ class TransferLearningModelBuilder(ModelBuilder):
 
     def build(self, input_shape, num_classes):
         base_model = tf.keras.models.load_model(self.base_model_path)
-        feature_extractor = Model(inputs=base_model.input, outputs=base_model.layers[-2].output)
+
+        # 특징 추출기 생성 (마지막 두 Dense 레이어를 제외)
+        feature_extractor = Sequential(base_model.layers[:-2], name="feature_extractor")
         feature_extractor.trainable = False
 
         model = Sequential([
@@ -52,22 +54,30 @@ class TransferLearningModelBuilder(ModelBuilder):
             Dropout(0.3),
             Dense(num_classes, activation='softmax', name=f"{self.prefix}_output")
         ])
+        
+        # 새로운 모델을 빌드하여 입력 형태를 확정
+        model.build(input_shape=(None, *input_shape))
         return model
 
 class ModelTrainer:
     # 모델을 학습하고 저장
-    def __init__(self, model_builder: ModelBuilder, config: Config):
+    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map_path: str = None, train_data_path: str = None, test_data_path: str = None):
         self.model_builder = model_builder
         self.config = config
+        self.model_save_path = model_save_path if model_save_path else self.config.BASIC_MODEL_PATH
+        self.tflite_save_path = tflite_save_path if tflite_save_path else self.config.BASIC_TFLITE_MODEL_PATH
+        self.label_map_path = label_map_path if label_map_path else self.config.BASIC_LABEL_MAP_PATH
+        self.train_data_path = train_data_path if train_data_path else self.config.BASIC_TRAIN_DATA_PATH
+        self.test_data_path = test_data_path if test_data_path else self.config.BASIC_TEST_DATA_PATH
         self.label_map = self._load_label_map()
 
     def _load_label_map(self):
         # 저장된 라벨 맵 로드
         try:
-            with open(self.config.LABEL_MAP_PATH, 'r') as f:
+            with open(self.label_map_path, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
-            logger.error(f"----- 라벨 맵 파일을 찾을 수 없습니다: {self.config.LABEL_MAP_PATH}")
+            logger.error(f"----- 라벨 맵 파일을 찾을 수 없습니다: {self.label_map_path}")
             raise
 
     def train(self):
@@ -92,15 +102,15 @@ class ModelTrainer:
                   batch_size=self.config.BATCH_SIZE,
                   callbacks=[early_stopping, lr_scheduler])
 
-        model.save(self.config.MODEL_PATH)
-        logger.info(f"----- 모델 저장 완료: {self.config.MODEL_PATH}")
+        model.save(self.model_save_path)
+        logger.info(f"----- 모델 저장 완료: {self.model_save_path}")
         
-        self._convert_to_tflite(model)
+        self._convert_to_tflite(model, X_train)
 
     def _load_and_prepare_data(self):
         # Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환
-        train_data = np.load(self.config.TRAIN_DATA_PATH, allow_pickle=True)
-        test_data = np.load(self.config.TEST_DATA_PATH, allow_pickle=True)
+        train_data = np.load(self.train_data_path, allow_pickle=True)
+        test_data = np.load(self.test_data_path, allow_pickle=True)
 
         X_train = train_data[:, :-1].astype(np.float32)
         y_train_labels = train_data[:, -1]
@@ -112,15 +122,14 @@ class ModelTrainer:
 
         return X_train, y_train, X_test, y_test
 
-    def _convert_to_tflite(self, model):
+    def _convert_to_tflite(self, model, X_train):
         # Keras 모델을 TFLite 모델로 변환하고 저장
-        X_train, _, _, _ = self._load_and_prepare_data()
         
         input_shape = model.input_shape[1:] # (height, width, channels)
         
         def representative_data_gen():
             # 학습 데이터에서 100개의 샘플을 사용하여 대표 데이터셋 생성
-            for input_value in tf.data.Dataset.from_tensor_slices(X_train.astype(np.float32)).batch(1).take(100):
+            for input_value in tf.data.Dataset.from_tensor_slices(X_train).batch(1).take(100):
                 yield [tf.reshape(input_value, (1, *input_shape))]
 
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
@@ -134,6 +143,6 @@ class ModelTrainer:
         
         tflite_quant_model = converter.convert()
 
-        with open(self.config.TFLITE_MODEL_PATH, "wb") as f:
+        with open(self.tflite_save_path, "wb") as f:
             f.write(tflite_quant_model)
-        logger.info(f"----- TFLite 모델 저장 완료 (INT8 양자화 적용): {self.config.TFLITE_MODEL_PATH}")
+        logger.info(f"----- TFLite 모델 저장 완료 (INT8 양자화 적용): {self.tflite_save_path}")

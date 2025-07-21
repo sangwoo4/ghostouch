@@ -11,3 +11,4 @@ __pycache__/
 
 # Data files
 gesture/data/image_data/
+gesture/data/new_image_data/
