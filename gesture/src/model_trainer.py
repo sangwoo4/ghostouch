@@ -12,13 +12,13 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 class ModelBuilder(ABC):
-    # 모델 생성을 위한 빌더 인터페이스입니다
+    # 모델 생성을 위한 빌더 인터페이스
     @abstractmethod
     def build(self, input_shape, num_classes):
         pass
 
 class BasicCNNBuilder(ModelBuilder):
-    # 기본 CNN 모델을 생성합니다 (1D 랜드마크 데이터에 최적화)
+    # 기본 CNN 모델을 생성 (1D 랜드마크 데이터에 최적화)
     def build(self, input_shape, num_classes):
         model = Sequential([
             Input(shape=input_shape), # 예: (64, 1)
@@ -36,7 +36,7 @@ class BasicCNNBuilder(ModelBuilder):
         return model
 
 class TransferLearningModelBuilder(ModelBuilder):
-    # 전이 학습 모델을 생성합니다
+    # 전이 학습 모델을 생성
     def __init__(self, base_model_path, prefix='transfer'):
         self.base_model_path = base_model_path
         self.prefix = prefix
@@ -55,14 +55,14 @@ class TransferLearningModelBuilder(ModelBuilder):
         return model
 
 class ModelTrainer:
-    # 모델을 학습하고 저장합니다
+    # 모델을 학습하고 저장
     def __init__(self, model_builder: ModelBuilder, config: Config):
         self.model_builder = model_builder
         self.config = config
         self.label_map = self._load_label_map()
 
     def _load_label_map(self):
-        # 저장된 라벨 맵을 불러옵니다
+        # 저장된 라벨 맵 로드
         try:
             with open(self.config.LABEL_MAP_PATH, 'r') as f:
                 return json.load(f)
@@ -98,7 +98,7 @@ class ModelTrainer:
         self._convert_to_tflite(model)
 
     def _load_and_prepare_data(self):
-        # Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환합니다.
+        # Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환
         train_data = np.load(self.config.TRAIN_DATA_PATH, allow_pickle=True)
         test_data = np.load(self.config.TEST_DATA_PATH, allow_pickle=True)
 
@@ -113,12 +113,27 @@ class ModelTrainer:
         return X_train, y_train, X_test, y_test
 
     def _convert_to_tflite(self, model):
-        # Keras 모델을 TFLite 모델로 변환하고 저장합니다.
+        # Keras 모델을 TFLite 모델로 변환하고 저장
+        X_train, _, _, _ = self._load_and_prepare_data()
+        
+        input_shape = model.input_shape[1:] # (height, width, channels)
+        
+        def representative_data_gen():
+            # 학습 데이터에서 100개의 샘플을 사용하여 대표 데이터셋 생성
+            for input_value in tf.data.Dataset.from_tensor_slices(X_train.astype(np.float32)).batch(1).take(100):
+                yield [tf.reshape(input_value, (1, *input_shape))]
+
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        converter.representative_dataset = representative_data_gen
+        # 모델의 모든 가중치와 연산을 정수형으로 변환
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        # 변환할 수 없는 연산이 있다면 변환을 중단
+        converter.inference_input_type = tf.uint8
+        converter.inference_output_type = tf.uint8
         
-        tflite_model = converter.convert()
+        tflite_quant_model = converter.convert()
 
         with open(self.config.TFLITE_MODEL_PATH, "wb") as f:
-            f.write(tflite_model)
-        logger.info(f"----- TFLite 모델 저장 완료: {self.config.TFLITE_MODEL_PATH}")
+            f.write(tflite_quant_model)
+        logger.info(f"----- TFLite 모델 저장 완료 (INT8 양자화 적용): {self.config.TFLITE_MODEL_PATH}")

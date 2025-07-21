@@ -12,12 +12,17 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 class GesturePredictor:
-    # 실시간 제스처 인식을 위한 클래스입니다
+    # 실시간 제스처 인식을 위한 클래스
 
     def __init__(self, config: Config):
         self.config = config
         self.strategy = UnifiedPreprocessingStrategy()
         self.interpreter, self.input_details, self.output_details = self._load_model()
+        
+        # 양자화 모델을 위한 입출력 스케일 및 제로 포인트 추출
+        self.input_scale, self.input_zero_point = self.input_details[0]['quantization']
+        self.output_scale, self.output_zero_point = self.output_details[0]['quantization']
+        
         self.index_to_label = self._load_label_map()
         self.hands = self._init_hands()
         
@@ -26,7 +31,7 @@ class GesturePredictor:
         self.inference_thread = self._start_inference_thread()
 
     def _load_model(self):
-        # TFLite 모델을 로드하고 입출력 세부 정보를 반환합니다
+        # TFLite 모델을 로드하고 입출력 세부 정보를 반환
         interpreter = tf.lite.Interpreter(model_path=self.config.TFLITE_MODEL_PATH)
         interpreter.allocate_tensors()
         input_details = interpreter.get_input_details()
@@ -34,35 +39,37 @@ class GesturePredictor:
         return interpreter, input_details, output_details
 
     def _load_label_map(self):
-        # 라벨 맵을 로드하고 인덱스를 라벨에 매핑하는 딕셔너리를 반환합니다
+        # 라벨 맵을 로드하고 인덱스를 라벨에 매핑하는 딕셔너리를 반환
         with open(self.config.LABEL_MAP_PATH, 'r') as f:
             label_map = json.load(f)
         return {v: k for k, v in label_map.items()}
 
     def _init_hands(self):
-        # MediaPipe Hands를 초기화합니다
+        # MediaPipe Hands를 초기화
         return mp.solutions.hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+            min_detection_confidence=self.config.MIN_DETECTION_CONFIDENCE,
+            min_tracking_confidence=self.config.MIN_TRACKING_CONFIDENCE
         )
 
     def _start_inference_thread(self):
-        # 모델 추론을 위한 별도의 스레드를 시작합니다
+        # 모델 추론을 위한 별도의 스레드를 시작
         thread = threading.Thread(target=self._run_inference)
         thread.daemon = True
         thread.start()
         return thread
 
     def _run_inference(self):
-        # 백그라운드에서 지속적으로 추론을 실행합니다
+        # 백그라운드에서 지속적으로 추론을 실행
         while True:
             feature_vector = self.preprocessed_queue.get()
             if feature_vector is None:  # 종료 신호
                 break
 
-            input_data = np.array([feature_vector], dtype=np.float32)
+            # Float32 입력을 모델이 요구하는 Uint8로 양자화
+            input_data = (feature_vector / self.input_scale) + self.input_zero_point
+            input_data = np.array([input_data], dtype=self.input_details[0]['dtype'])
             input_data = input_data.reshape(self.input_details[0]['shape'])
             
             self.interpreter.set_tensor(self.input_details[0]['index'], input_data)
@@ -73,7 +80,7 @@ class GesturePredictor:
                 self.result_queue.put(output_data)
 
     def process_frame(self, image):
-        # 단일 프레임을 처리하고, 손을 감지하여 추론 큐에 넣습니다
+        # 단일 프레임을 처리하고, 손을 감지하여 추론 큐에 삽입
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = self.hands.process(image_rgb)
 
@@ -90,18 +97,22 @@ class GesturePredictor:
         return results
 
     def get_prediction(self):
-        # 추론 결과를 반환합니다.
+        # 추론 결과를 반환
         try:
             output_data = self.result_queue.get_nowait()
-            predicted_index = np.argmax(output_data)
-            confidence = np.max(output_data)
+            
+            # Uint8 출력을 Float32 확률로 역양자화
+            dequantized_output = (output_data.astype(np.float32) - self.output_zero_point) * self.output_scale
+
+            predicted_index = np.argmax(dequantized_output)
+            confidence = np.max(dequantized_output)
             predicted_label = self.index_to_label.get(predicted_index, "Unknown")
             return predicted_label, confidence
         except queue.Empty:
             return None, None
 
     def stop(self):
-        # 추론 스레드를 안전하게 종료합니다.
+        # 추론 스레드를 안전하게 종료
         self.preprocessed_queue.put(None)
         self.inference_thread.join()
 

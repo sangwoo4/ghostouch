@@ -11,13 +11,13 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 class PreprocessingStrategy(ABC):
-    # 전처리 전략에 대한 인터페이스입니다
+    # 전처리 전략에 대한 인터페이스
     @abstractmethod
     def preprocess(self, landmark_points, handedness=None):
         pass
 
 class UnifiedPreprocessingStrategy(PreprocessingStrategy):
-    # 랜드마크 정규화를 위한 통합 전략을 제공합니다
+    # 랜드마크 정규화를 위한 통합 전략
 
     def preprocess(self, landmark_points, handedness=None):
         
@@ -54,14 +54,14 @@ class UnifiedPreprocessingStrategy(PreprocessingStrategy):
         return landmarks - base
 
     def _normalize_scale(self, landmarks):
-        # 손목과 중지 손허리뼈(9번) 사이의 거리를 기준으로 크기를 정규화합니다
+        # 손목과 중지 손허리뼈(9번) 사이의 거리를 기준으로 크기를 정규화
         scale_factor = np.linalg.norm(landmarks[9])
         if scale_factor < 1e-6 or np.isnan(scale_factor):
             return None
         return landmarks / scale_factor
 
     def _normalize_rotation(self, landmarks):
-        # 손목-중지 손허리뼈 벡터를 X축에 정렬하도록 2D 회전하여 방향을 정규화합니다
+        # 손목-중지 손허리뼈 벡터를 X축에 정렬하도록 2D 회전하여 방향을 정규화
         x_vec = landmarks[9, :2]  # X, Y 좌표만 사용
         angle = np.arctan2(x_vec[1], x_vec[0])
         
@@ -76,7 +76,7 @@ class UnifiedPreprocessingStrategy(PreprocessingStrategy):
         return rotated_landmarks
 
 class DataProcessor:
-    # 이미지에서 랜드마크를 추출하고 전처리하며, 라벨 맵을 생성합니다.
+    # 이미지에서 랜드마크를 추출하고 전처리하며, 라벨 맵을 생성
     def __init__(self, config: Config, strategy: PreprocessingStrategy):
         self.config = config
         self.strategy = strategy
@@ -132,7 +132,7 @@ class DataProcessor:
         logger.info(f"----- CSV 데이터 저장 완료! -> {self.config.LANDMARK_CSV_PATH}")
 
     def _create_and_save_label_map(self, folder_names):
-        # 폴더 이름으로부터 라벨 맵을 생성하고 JSON 파일로 저장합니다.
+        # 폴더 이름으로부터 라벨 맵을 생성하고 JSON 파일로 저장
         label_map = {"none": 0} # 'none'을 0번 인덱스로 고정
         current_index = 1
         for label in sorted(folder_names):

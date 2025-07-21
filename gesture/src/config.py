@@ -34,6 +34,8 @@ class Config:
     # 07. 실시간 테스트 관련 설정
     CAM_WIDTH = 640
     CAM_HEIGHT = 480
+    MIN_DETECTION_CONFIDENCE = 0.5
+    MIN_TRACKING_CONFIDENCE = 0.5
 
 # 사용 예시: from config import Config
 # print(Config.MODEL_PATH)
