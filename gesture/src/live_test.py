@@ -116,7 +116,11 @@ class GesturePredictor:
 
             predicted_index = np.argmax(dequantized_output)
             confidence = np.max(dequantized_output)
-            predicted_label = self.index_to_label.get(predicted_index, "Unknown")
+
+            if confidence < self.config.CONFIDENCE_THRESHOLD:
+                return "none", confidence # 임계값보다 낮으면 Unknown으로 처리
+
+            predicted_label = self.index_to_label.get(predicted_index, "none")
             return predicted_label, confidence
         except queue.Empty:
             return None, None

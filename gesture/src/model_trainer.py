@@ -45,8 +45,9 @@ class TransferLearningModelBuilder(ModelBuilder):
         base_model = tf.keras.models.load_model(self.base_model_path)
 
         # 특징 추출기 생성 (마지막 두 Dense 레이어를 제외)
+        # 전이 학습 시 특징 추출기 레이어를 학습 가능하게 설정 (미세 조정)
         feature_extractor = Sequential(base_model.layers[:-2], name="feature_extractor")
-        feature_extractor.trainable = False
+        feature_extractor.trainable = True
 
         model = Sequential([
             feature_extractor,
@@ -61,7 +62,7 @@ class TransferLearningModelBuilder(ModelBuilder):
 
 class ModelTrainer:
     # 모델을 학습하고 저장
-    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map_path: str = None, train_data_path: str = None, test_data_path: str = None):
+    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map_path: str = None, train_data_path: str = None, test_data_path: str = None, is_transfer_learning: bool = False):
         self.model_builder = model_builder
         self.config = config
         self.model_save_path = model_save_path if model_save_path else self.config.BASIC_MODEL_PATH
@@ -69,6 +70,7 @@ class ModelTrainer:
         self.label_map_path = label_map_path if label_map_path else self.config.BASIC_LABEL_MAP_PATH
         self.train_data_path = train_data_path if train_data_path else self.config.BASIC_TRAIN_DATA_PATH
         self.test_data_path = test_data_path if test_data_path else self.config.BASIC_TEST_DATA_PATH
+        self.is_transfer_learning = is_transfer_learning
         self.label_map = self._load_label_map()
 
     def _load_label_map(self):
@@ -89,11 +91,12 @@ class ModelTrainer:
         X_test = X_test.reshape(-1, *input_shape)
 
         model = self.model_builder.build(input_shape, num_classes)
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.config.LEARNING_RATE),
+        learning_rate = self.config.TRANSFER_LEARNING_RATE if self.is_transfer_learning else self.config.LEARNING_RATE
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001, restore_best_weights=True)
         lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0.00001)
 
         model.fit(X_train, y_train,

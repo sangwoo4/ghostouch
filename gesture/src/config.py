@@ -36,12 +36,14 @@ class Config:
         self.EPOCHS = 1000
         self.BATCH_SIZE = 32
         self.LEARNING_RATE = 0.001
+        self.TRANSFER_LEARNING_RATE = 0.0001 # 전이 학습을 위한 더 작은 학습률 (수렴 속도 개선)
         
         # 07. 실시간 테스트 관련 설정
         self.CAM_WIDTH = 640
         self.CAM_HEIGHT = 480
         self.MIN_DETECTION_CONFIDENCE = 0.5
         self.MIN_TRACKING_CONFIDENCE = 0.5
+        self.CONFIDENCE_THRESHOLD = 0.9 # 예측 확신도 임계값
 
 # 사용 예시: from config import Config
 # print(Config.MODEL_PATH)
