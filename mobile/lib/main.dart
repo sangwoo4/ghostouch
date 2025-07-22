@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart'; // 🔧 채널용 import
+import 'package:flutter/services.dart'; // 크로스 채널 import
 import 'package:flutter/material.dart';
 
 void main() {
@@ -33,7 +33,7 @@ class _MainPageState extends State<MainPage> {
 
   // ✅ functionToggle 함수 정의
   Future<void> functionToggle(bool enabled) async {
-    print('✅ functionToggle 호출됨. 전달 값: $enabled'); // 로그 추가
+    print('✅ functionToggle 호출됨. 전달 값: $enabled'); // 로그로 채널 호출 확인
 
     try {
       await platform.invokeMethod('functionToggle', {'enabled': enabled});
@@ -49,7 +49,7 @@ class _MainPageState extends State<MainPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Top Header
+          // 헤더 부분 시작점
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: const BoxDecoration(
@@ -162,7 +162,7 @@ class _MainPageState extends State<MainPage> {
           ),
           subtitle: Text(subtitle, style: const TextStyle(color: Colors.brown)),
           onTap: () {
-            // TODO: 네비게이션 등 연결
+            // 나중에 네비게이션 연결용 함수
           },
         ),
       ),
