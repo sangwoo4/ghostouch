@@ -10,35 +10,14 @@ logger = logging.getLogger(__name__)
 
 class DataManager:
     # 데이터 로드, 분할 및 저장을 관리
-    def __init__(self, config: Config, csv_paths: list = None, train_data_path: str = None, test_data_path: str = None, 
-                 image_data_dirs: list = None, label_map_path: str = None,
+    def __init__(self, config: Config, csv_paths: list = None, train_data_path: str = None, test_data_path: str = None,
                  is_transfer_learning: bool = False, deduplication_precision: int = 6):
         self.config = config
         self.landmark_csv_paths = csv_paths if csv_paths else [self.config.BASIC_LANDMARK_CSV_PATH]
         self.train_data_path = train_data_path if train_data_path else self.config.BASIC_TRAIN_DATA_PATH
         self.test_data_path = test_data_path if test_data_path else self.config.BASIC_TEST_DATA_PATH
-        self.image_data_dirs = image_data_dirs if image_data_dirs else [self.config.BASIC_IMAGE_DATA_DIR]
-        self.label_map_path = label_map_path if label_map_path else self.config.BASIC_LABEL_MAP_PATH
         self.is_transfer_learning = is_transfer_learning
         self.deduplication_precision = deduplication_precision
-
-    def create_label_map(self):
-        # 이미지 데이터 디렉토리에서 라벨 맵을 생성하고 저장
-        all_folder_names = set()
-        for data_dir in self.image_data_dirs:
-            if os.path.exists(data_dir):
-                for f in os.listdir(data_dir):
-                    if os.path.isdir(os.path.join(data_dir, f)):
-                        all_folder_names.add(f)
-        label_map = {"none": 0}
-        current_index = 1
-        for label in sorted(list(all_folder_names)):
-            if label.lower() != "none":
-                label_map[label] = current_index
-                current_index += 1
-        with open(self.label_map_path, 'w') as f:
-            json.dump(label_map, f, indent=4)
-        logging.info(f"----- 라벨 맵 저장 완료: {self.label_map_path}")
 
     def identify_cross_label_similarities(self):
         logger.info("----- 새로운 데이터와 기존 라벨 간 정확한 중복 분석 시작...")
