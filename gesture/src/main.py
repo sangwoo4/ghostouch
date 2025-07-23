@@ -18,16 +18,14 @@ def main():
 
     # 1. 데이터 전처리 및 라벨 맵 생성
     if args.mode == 'train':
-        data_processor = DataProcessor(config, data_dir=config.BASIC_IMAGE_DATA_DIR, output_csv_path=config.BASIC_LANDMARK_CSV_PATH)
+        data_processor = DataProcessor(config, data_dirs=[config.BASIC_IMAGE_DATA_DIR], output_csv_path=config.BASIC_LANDMARK_CSV_PATH, label_map_path=config.BASIC_LABEL_MAP_PATH)
+        data_processor.create_label_map()
         data_processor.process()
 
         data_manager = DataManager(config, 
                                      csv_paths=[config.BASIC_LANDMARK_CSV_PATH],
                                      train_data_path=config.BASIC_TRAIN_DATA_PATH,
-                                     test_data_path=config.BASIC_TEST_DATA_PATH,
-                                     image_data_dirs=[config.BASIC_IMAGE_DATA_DIR],
-                                     label_map_path=config.BASIC_LABEL_MAP_PATH)
-        data_manager.create_label_map()
+                                     test_data_path=config.BASIC_TEST_DATA_PATH)
         data_manager.process_data()
         
         model_builder = BasicCNNBuilder()
@@ -41,7 +39,8 @@ def main():
 
     elif args.mode == 'transfer':
         # 새로운 데이터만 처리
-        data_processor_transfer = DataProcessor(config, data_dir=config.TRANSFER_IMAGE_DATA_DIR, output_csv_path=config.TRANSFER_LANDMARK_CSV_PATH)
+        data_processor_transfer = DataProcessor(config, data_dirs=[config.TRANSFER_IMAGE_DATA_DIR], output_csv_path=config.TRANSFER_LANDMARK_CSV_PATH, label_map_path=config.TRANSFER_LABEL_MAP_PATH)
+        data_processor_transfer.create_label_map()
         data_processor_transfer.process()
         
         # 기존 데이터와 새로운 데이터를 모두 DataManager에 전달
@@ -49,11 +48,8 @@ def main():
                                      csv_paths=[config.BASIC_LANDMARK_CSV_PATH, config.TRANSFER_LANDMARK_CSV_PATH],
                                      train_data_path=config.TRANSFER_TRAIN_DATA_PATH,
                                      test_data_path=config.TRANSFER_TEST_DATA_PATH,
-                                     image_data_dirs=[config.BASIC_IMAGE_DATA_DIR, config.TRANSFER_IMAGE_DATA_DIR],
-                                     label_map_path=config.TRANSFER_LABEL_MAP_PATH,
                                      is_transfer_learning=True,
                                      deduplication_precision=6)
-        data_manager.create_label_map()
         data_manager.process_data()
         data_manager.identify_cross_label_similarities()
 
