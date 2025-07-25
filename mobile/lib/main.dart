@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart'; // 크로스 채널 import
 import 'package:flutter/material.dart';
 
+import 'pages/GestureSettingsPage.dart';
+
 void main() {
   runApp(const AirCommandApp());
 }
@@ -74,7 +76,7 @@ class _MainPageState extends State<MainPage> {
                     Icon(Icons.touch_app, size: 60, color: Colors.white),
                     CircleAvatar(
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.menu_book, size: 20),
+                      child: Icon(Icons.menu_book, size: 30),
                     ),
                   ],
                 ),
@@ -107,7 +109,16 @@ class _MainPageState extends State<MainPage> {
             icon: Icons.gesture,
             title: '제스처 기능 설정',
             subtitle: '새로운 제스처를 원하시면 하단 제스처 등록을 먼저 설정하세요.',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GestureSettingsPage(),
+                ),
+              );
+            },
           ),
+
           _buildMenuCard(
             icon: Icons.person,
             title: '사용자 제스처 등록',
@@ -148,6 +159,7 @@ class _MainPageState extends State<MainPage> {
     required IconData icon,
     required String title,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
