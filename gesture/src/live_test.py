@@ -32,10 +32,10 @@ class GesturePredictor:
 
     def _load_model(self):
         # TFLite 모델을 로드하고 입출력 세부 정보를 반환
-        if self.model_type == 'basic':
-            model_path = self.config.BASIC_TFLITE_MODEL_PATH
-        else:
-            model_path = self.config.TRANSFER_TFLITE_MODEL_PATH
+        model_path = self.config.TFLITE_MODEL_PATHS.get(self.model_type)
+        if not model_path or not os.path.exists(model_path):
+            raise ValueError(f"모델 파일을 찾을 수 없거나 지원되지 않는 모델 타입입니다: {self.model_type}")
+        
         interpreter = tf.lite.Interpreter(model_path=model_path)
         interpreter.allocate_tensors()
         input_details = interpreter.get_input_details()
@@ -44,10 +44,10 @@ class GesturePredictor:
 
     def _load_label_map(self):
         # 라벨 맵을 로드하고 인덱스를 라벨에 매핑하는 딕셔너리를 반환
-        if self.model_type == 'basic':
-            label_map_path = self.config.BASIC_LABEL_MAP_PATH
-        else:
-            label_map_path = self.config.TRANSFER_LABEL_MAP_PATH
+        label_map_path = self.config.LABEL_MAP_PATHS.get(self.model_type)
+        if not label_map_path or not os.path.exists(label_map_path):
+            raise ValueError(f"라벨 맵 파일을 찾을 수 없거나 지원되지 않는 모델 타입입니다: {self.model_type}")
+
         with open(label_map_path, 'r') as f:
             label_map = json.load(f)
         return {v: k for k, v in label_map.items()}
@@ -132,8 +132,8 @@ class GesturePredictor:
 
 def main():
     parser = argparse.ArgumentParser(description="Live gesture recognition test.")
-    parser.add_argument('--model_type', type=str, default='basic', choices=['basic', 'transfer'],
-                        help="Type of model to use: 'basic' or 'transfer'.")
+    parser.add_argument('--model_type', type=str, default='basic', choices=['basic', 'transfer', 'combine'],
+                        help="Type of model to use: 'basic', 'transfer', or 'combine'.")
     args = parser.parse_args()
 
     config = Config()

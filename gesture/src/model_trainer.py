@@ -2,7 +2,7 @@ import json
 import numpy as np
 import tensorflow as tf
 import logging
-from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
@@ -120,8 +120,8 @@ class ModelTrainer:
         X_test = test_data[:, :-1].astype(np.float32)
         y_test_labels = test_data[:, -1]
 
-        y_train = to_categorical([self.label_map[label] for label in y_train_labels], num_classes=len(self.label_map))
-        y_test = to_categorical([self.label_map[label] for label in y_test_labels], num_classes=len(self.label_map))
+        y_train = to_categorical(y_train_labels, num_classes=len(self.label_map))
+        y_test = to_categorical(y_test_labels, num_classes=len(self.label_map))
 
         return X_train, y_train, X_test, y_test
 
@@ -138,9 +138,7 @@ class ModelTrainer:
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.representative_dataset = representative_data_gen
-        # 모델의 모든 가중치와 연산을 정수형으로 변환
         converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        # 변환할 수 없는 연산이 있다면 변환을 중단
         converter.inference_input_type = tf.uint8
         converter.inference_output_type = tf.uint8
         
