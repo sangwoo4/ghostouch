@@ -51,7 +51,7 @@ class _MainPageState extends State<MainPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // 헤더 부분 시작점
+          // 헤더 부분
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: const BoxDecoration(
@@ -123,9 +123,9 @@ class _MainPageState extends State<MainPage> {
             icon: Icons.person,
             title: '사용자 제스처 등록',
             subtitle: '새로운 제스처를 등록할 수 있습니다.',
+            // 향후 네비게이션 추가 예정
           ),
 
-          // 백그라운드 꺼짐 설정
           _buildBackgroundCard(),
         ],
       ),
@@ -173,9 +173,7 @@ class _MainPageState extends State<MainPage> {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(subtitle, style: const TextStyle(color: Colors.brown)),
-          onTap: () {
-            // 나중에 네비게이션 연결용 함수
-          },
+          onTap: onTap, // ✅ 여기 수정됨
         ),
       ),
     );
