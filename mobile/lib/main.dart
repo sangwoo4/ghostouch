@@ -13,7 +13,7 @@ class AirCommandApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Air Command',
+      title: 'Ghostouch',
       home: const MainPage(),
       debugShowCheckedModeBanner: false,
     );
@@ -40,8 +40,14 @@ class _MainPageState extends State<MainPage> {
     try {
       await platform.invokeMethod('functionToggle', {'enabled': enabled});
       print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
+
+      if (enabled) {
+        print('🔧 openSettings 호출 시도');
+        await platform.invokeMethod('openSettings'); // 👈 설정 열기 추가
+        print('✅ openSettings 호출 완료');
+      }
     } on PlatformException catch (e) {
-      print("❌ 네이티브 함수 호출 실패: '${e.message}'.");
+      print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
   }
 
@@ -66,7 +72,7 @@ class _MainPageState extends State<MainPage> {
                     CircleAvatar(
                       backgroundColor: Colors.white,
                       child: Text(
-                        'SQUARE',
+                        'Pentagon',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -82,7 +88,7 @@ class _MainPageState extends State<MainPage> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Air Command',
+                  'Ghostouch',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -91,7 +97,7 @@ class _MainPageState extends State<MainPage> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  '에어 커맨드를 활용해 핸드폰을 터치 없이 제어할 수 있습니다',
+                  '고스트 터치를 활용해 핸드폰을 터치 없이 제어할 수 있습니다',
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
@@ -140,7 +146,7 @@ class _MainPageState extends State<MainPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ListTile(
           leading: const Icon(Icons.touch_app, color: Colors.orange),
-          title: const Text('사용 안 함'),
+          title: Text(isGestureEnabled ? '사용함' : '사용 안 함'),
           trailing: Switch(
             value: isGestureEnabled,
             onChanged: (val) {
