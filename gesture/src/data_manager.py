@@ -58,14 +58,43 @@ class DataManager:
 
         df = pd.read_csv(csv_path)
         X = df.drop(columns=['label']).values
-        y = df['label'].values
+        y = df['label'].values # 문자열 라벨
 
-        # 라벨 인코딩 (문자열 라벨을 숫자로 변환)
-        unique_labels = np.unique(y)
-        label_to_int = {label: i for i, label in enumerate(unique_labels)}
-        y_encoded = np.array([label_to_int[label] for label in y])
+        # Load the label map to ensure consistent encoding and identify 'none' label's integer value
+        # Assuming basic_label_map.json is the source for this CSV's labels
+        label_map_path_for_csv = self.config.LABEL_MAP_PATHS['basic'] if 'basic' in csv_path else self.config.LABEL_MAP_PATHS['transfer']
+        try:
+            with open(label_map_path_for_csv, 'r') as f:
+                label_map = json.load(f)
+        except FileNotFoundError:
+            logger.error(f"라벨 맵 파일을 찾을 수 없습니다: {label_map_path_for_csv}")
+            raise
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=test_size, random_state=random_state, stratify=y_encoded)
+        # Convert string labels to integer labels using the loaded label_map
+        y_encoded = np.array([label_map[label] for label in y])
+
+        # Identify the integer value for 'none'
+        none_label_int = label_map.get("none", -1) # Get 0 if 'none' exists, else -1 (or handle error)
+
+        # Filter out 'none' labels from the dataset if 'none' exists and is not intended for training
+        if none_label_int != -1: # Check if 'none' label was found in the map
+            # Create a mask to exclude 'none' labeled data
+            mask = (y_encoded != none_label_int)
+            X_filtered = X[mask]
+            y_filtered = y_encoded[mask]
+            logger.info(f"----- 'none' 라벨 데이터 {len(y_encoded) - len(y_filtered)}개 제외 완료.")
+        else:
+            X_filtered = X
+            y_filtered = y_encoded
+            logger.warning("----- 라벨 맵에서 'none' 라벨을 찾을 수 없습니다. 'none' 데이터 필터링을 건너뜁니다.")
+
+        # Ensure there's still data after filtering
+        if len(y_filtered) == 0:
+            logger.error("----- 'none' 라벨 필터링 후 학습/테스트 데이터가 없습니다. 데이터셋을 확인하세요.")
+            raise ValueError("No data remaining after filtering 'none' label.")
+
+        # Perform train-test split on the filtered data
+        X_train, X_test, y_train, y_test = train_test_split(X_filtered, y_filtered, test_size=test_size, random_state=random_state, stratify=y_filtered)
 
         np.save(train_npy_path, np.column_stack((X_train, y_train)))
         logger.info(f"----- 기본 학습 데이터 저장 완료: {train_npy_path}")
