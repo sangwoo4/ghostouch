@@ -108,7 +108,11 @@ class ModelTrainer:
         model.save(self.model_save_path)
         logger.info(f"----- 모델 저장 완료: {self.model_save_path}")
         
-        self._convert_to_tflite(model, X_train)
+        loss, acc = model.evaluate(X_test, y_test, verbose=0)
+        logger.info(f"----- 테스트 정확도: {acc:.4f}, 손실: {loss:.4f}")
+
+        X_train_for_tflite = np.load(self.train_data_path, mmap_mode='r')[:, :-1].astype(np.float32)
+        self._convert_to_tflite(model, X_train_for_tflite)
 
     def _load_and_prepare_data(self):
         # Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환
