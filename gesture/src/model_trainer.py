@@ -21,7 +21,7 @@ class BasicCNNBuilder(ModelBuilder):
     # 기본 CNN 모델을 생성 (1D 랜드마크 데이터에 최적화)
     def build(self, input_shape, num_classes):
         model = Sequential([
-            Input(shape=input_shape), # 예: (64, 1)
+            Input(shape=input_shape), # ex: (64, 1)
             tf.keras.layers.Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'),
             tf.keras.layers.MaxPooling1D(pool_size=2),
             tf.keras.layers.Dropout(0.2),
@@ -35,9 +35,9 @@ class BasicCNNBuilder(ModelBuilder):
         ])
         return model
 
-class TransferLearningModelBuilder(ModelBuilder):
+class UpdateModelBuilder(ModelBuilder):
     # 전이 학습 모델을 생성
-    def __init__(self, base_model_path, prefix='transfer'):
+    def __init__(self, base_model_path, prefix='combine'):
         self.base_model_path = base_model_path
         self.prefix = prefix
 
@@ -62,7 +62,7 @@ class TransferLearningModelBuilder(ModelBuilder):
 
 class ModelTrainer:
     # 모델을 학습하고 저장
-    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map_path: str = None, train_data_path: str = None, test_data_path: str = None, is_transfer_learning: bool = False):
+    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map_path: str = None, train_data_path: str = None, test_data_path: str = None, is_incremental_learning: bool = False):
         self.model_builder = model_builder
         self.config = config
         self.model_save_path = model_save_path if model_save_path else self.config.BASIC_MODEL_PATH
@@ -70,7 +70,7 @@ class ModelTrainer:
         self.label_map_path = label_map_path if label_map_path else self.config.BASIC_LABEL_MAP_PATH
         self.train_data_path = train_data_path if train_data_path else self.config.BASIC_TRAIN_DATA_PATH
         self.test_data_path = test_data_path if test_data_path else self.config.BASIC_TEST_DATA_PATH
-        self.is_transfer_learning = is_transfer_learning
+        self.is_incremental_learning = is_incremental_learning
         self.label_map = self._load_label_map()
 
     def _load_label_map(self):
@@ -91,13 +91,13 @@ class ModelTrainer:
         X_test = X_test.reshape(-1, *input_shape)
 
         model = self.model_builder.build(input_shape, num_classes)
-        learning_rate = self.config.TRANSFER_LEARNING_RATE if self.is_transfer_learning else self.config.LEARNING_RATE
+        learning_rate = self.config.INCREMENTAL_LEARNING_RATE if self.is_incremental_learning else self.config.LEARNING_RATE
         model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
-        early_stopping = EarlyStopping(monitor='val_loss', patience=3, min_delta=0.0001, restore_best_weights=True)
-        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0.00001)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True)
+        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001)
 
         model.fit(X_train, y_train,
                   validation_data=(X_test, y_test),

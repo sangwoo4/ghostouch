@@ -132,9 +132,9 @@ class GesturePredictor:
         self.inference_thread.join()
 
 def main():
-    parser = argparse.ArgumentParser(description="Live gesture recognition test.")
-    parser.add_argument('--model_type', type=str, default='basic', choices=['basic', 'transfer', 'combine'],
-                        help="Type of model to use: 'basic', 'transfer', or 'combine'.")
+    parser = argparse.ArgumentParser(description="실시간 테스트")
+    parser.add_argument('--model_type', type=str, default='basic', choices=['basic', 'combine'],
+                        help="Type of model to use: 'basic' (기본) or 'combine' (업데이트된 모델).")
     args = parser.parse_args()
 
     config = Config()

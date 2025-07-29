@@ -14,34 +14,77 @@ class DataManager:
 
     def _load_npy_data(self, file_path: str):
         if not os.path.exists(file_path):
-            logger.warning(f"NPY 파일을 찾을 수 없습니다: {file_path}")
+            logger.warning(f"----- NPY 파일을 찾을 수 없습니다: {file_path}")
             return None, None
         try:
             data = np.load(file_path, allow_pickle=True)
             return data[:, :-1].astype(np.float32), data[:, -1]
         except Exception as e:
-            logger.error(f"NPY 파일 로드 중 오류 발생 ({file_path}): {e}")
+            logger.error(f"----- NPY 파일 로드 중 오류 발생 ({file_path}): {e}")
             return None, None
 
-    def load_and_combine_all_datasets(self):
-        # 1. 모든 데이터 로드
-        all_data = {
-            name: self._load_npy_data(path) for name, path in {
-                "basic_train": self.config.BASIC_TRAIN_DATA_PATH,
-                "basic_test": self.config.BASIC_TEST_DATA_PATH,
-                "transfer_train": self.config.TRANSFER_TRAIN_DATA_PATH,
-                "transfer_test": self.config.TRANSFER_TEST_DATA_PATH
-            }.items()
+    def load_and_combine_all_datasets(self, combined_map_path: str):
+        # 0. 통합 라벨맵 로드
+        try:
+            with open(combined_map_path, 'r') as f:
+                combined_map = json.load(f)
+        except FileNotFoundError:
+            logger.error(f"----- 통합 라벨맵을 찾을 수 없습니다: {combined_map_path}")
+            return None, None, None, None
+
+        # 1. 모든 데이터 로드 (기존 로직과 동일)
+        all_data_paths = {
+            "basic_train": self.config.BASIC_TRAIN_DATA_PATH,
+            "basic_test": self.config.BASIC_TEST_DATA_PATH,
+            "incremental_train": self.config.INCREMENTAL_TRAIN_DATA_PATH,
+            "incremental_test": self.config.INCREMENTAL_TEST_DATA_PATH
         }
-        if any(data[0] is None for data in all_data.values()):
-            logger.error("필수 npy 파일 중 일부가 존재하지 않아 처리를 중단합니다.")
+        all_original_maps = {
+            "basic": self.config.LABEL_MAP_PATHS['basic'],
+            "incremental": self.config.LABEL_MAP_PATHS['incremental']
+        }
+
+        final_datasets = {"train_X": [], "train_y": [], "test_X": [], "test_y": []}
+
+        for data_type in ["train", "test"]:
+            for dataset_name in ["basic", "incremental"]:
+                npy_path = all_data_paths.get(f"{dataset_name}_{data_type}")
+                if not npy_path or not os.path.exists(npy_path):
+                    logger.warning(f"----- NPY 파일을 찾을 수 없습니다: {npy_path}")
+                    continue
+                
+                X, y_original_indices = self._load_npy_data(npy_path)
+                if X is None:
+                    continue
+
+                # 원본 라벨맵 로드
+                original_map_path = all_original_maps[dataset_name]
+                with open(original_map_path, 'r') as f:
+                    original_map = json.load(f)
+                
+                # 인덱스를 문자열 라벨로 변환
+                index_to_str_map = {v: k for k, v in original_map.items()}
+                y_str_labels = [index_to_str_map.get(idx) for idx in y_original_indices]
+
+                # 문자열 라벨을 통합 인덱스로 변환
+                y_combined_indices = [combined_map.get(s_label) for s_label in y_str_labels if s_label is not None]
+                
+                # 유효한 라벨이 있는 데이터만 필터링
+                valid_mask = [s_label is not None for s_label in y_str_labels]
+                X_filtered = X[valid_mask]
+
+                final_datasets[f"{data_type}_X"].append(X_filtered)
+                final_datasets[f"{data_type}_y"].append(np.array(y_combined_indices))
+
+        if not final_datasets["train_X"] or not final_datasets["test_X"]:
+            logger.error("데이터셋을 병합할 수 없습니다. 하나 이상의 npy 파일이 비어있거나 없습니다.")
             return None, None, None, None
 
         # 2. 데이터 병합
-        final_train_X = np.vstack([all_data["basic_train"][0], all_data["transfer_train"][0]])
-        final_train_y = np.concatenate([all_data["basic_train"][1], all_data["transfer_train"][1]])
-        final_test_X = np.vstack([all_data["basic_test"][0], all_data["transfer_test"][0]])
-        final_test_y = np.concatenate([all_data["basic_test"][1], all_data["transfer_test"][1]])
+        final_train_X = np.vstack(final_datasets["train_X"])
+        final_train_y = np.concatenate(final_datasets["train_y"])
+        final_test_X = np.vstack(final_datasets["test_X"])
+        final_test_y = np.concatenate(final_datasets["test_y"])
 
         return final_train_X, final_train_y, final_test_X, final_test_y
 
@@ -60,25 +103,19 @@ class DataManager:
         X = df.drop(columns=['label']).values
         y = df['label'].values # 문자열 라벨
 
-        # Load the label map to ensure consistent encoding and identify 'none' label's integer value
-        # Assuming basic_label_map.json is the source for this CSV's labels
-        label_map_path_for_csv = self.config.LABEL_MAP_PATHS['basic'] if 'basic' in csv_path else self.config.LABEL_MAP_PATHS['transfer']
+        label_map_path_for_csv = self.config.LABEL_MAP_PATHS['basic'] if 'basic' in csv_path else self.config.LABEL_MAP_PATHS['incremental']
         try:
             with open(label_map_path_for_csv, 'r') as f:
                 label_map = json.load(f)
         except FileNotFoundError:
-            logger.error(f"라벨 맵 파일을 찾을 수 없습니다: {label_map_path_for_csv}")
+            logger.error(f"----- 라벨 맵 파일을 찾을 수 없습니다: {label_map_path_for_csv}")
             raise
 
-        # Convert string labels to integer labels using the loaded label_map
-        y_encoded = np.array([label_map[label] for label in y])
+        y_encoded = y # 이미 정수 라벨로 인코딩되어 있음
 
-        # Identify the integer value for 'none'
-        none_label_int = label_map.get("none", -1) # Get 0 if 'none' exists, else -1 (or handle error)
+        none_label_int = label_map.get("none", -1)
 
-        # Filter out 'none' labels from the dataset if 'none' exists and is not intended for training
-        if none_label_int != -1: # Check if 'none' label was found in the map
-            # Create a mask to exclude 'none' labeled data
+        if none_label_int != -1:
             mask = (y_encoded != none_label_int)
             X_filtered = X[mask]
             y_filtered = y_encoded[mask]
@@ -88,12 +125,10 @@ class DataManager:
             y_filtered = y_encoded
             logger.warning("----- 라벨 맵에서 'none' 라벨을 찾을 수 없습니다. 'none' 데이터 필터링을 건너뜁니다.")
 
-        # Ensure there's still data after filtering
         if len(y_filtered) == 0:
             logger.error("----- 'none' 라벨 필터링 후 학습/테스트 데이터가 없습니다. 데이터셋을 확인하세요.")
-            raise ValueError("No data remaining after filtering 'none' label.")
+            raise ValueError("----- 'none' label 이 후 데이터 및 라벨이 존재하지 않습니다.")
 
-        # Perform train-test split on the filtered data
         X_train, X_test, y_train, y_test = train_test_split(X_filtered, y_filtered, test_size=test_size, random_state=random_state, stratify=y_filtered)
 
         np.save(train_npy_path, np.column_stack((X_train, y_train)))
@@ -102,7 +137,7 @@ class DataManager:
         logger.info(f"----- 기본 테스트 데이터 저장 완료: {test_npy_path}")
 
     @staticmethod
-    def combine_label_maps(basic_map_path: str, transfer_map_path: str, combined_map_save_path: str):
+    def combine_label_maps(basic_map_path: str, incremental_map_path: str, combined_map_save_path: str):
         combined_map = {}
         current_idx = 0
 
@@ -114,10 +149,11 @@ class DataManager:
                         combined_map[label_str] = current_idx
                         current_idx += 1
 
-        if os.path.exists(transfer_map_path):
-            with open(transfer_map_path, 'r') as f:
-                transfer_map = json.load(f)
-                for label_str in sorted(transfer_map.keys()):
+        if os.path.exists(incremental_map_path):
+            with open(incremental_map_path, 'r') as f:
+                incremental_map = json.load(f)
+                
+                for label_str in sorted(incremental_map.keys()):
                     if label_str not in combined_map:
                         combined_map[label_str] = current_idx
                         current_idx += 1
