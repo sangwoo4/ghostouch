@@ -6,6 +6,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from sklearn.utils.class_weight import compute_class_weight
 from abc import ABC, abstractmethod
 from config import Config
 
@@ -21,7 +22,7 @@ class BasicCNNBuilder(ModelBuilder):
     # 기본 CNN 모델을 생성 (1D 랜드마크 데이터에 최적화)
     def build(self, input_shape, num_classes):
         model = Sequential([
-            Input(shape=input_shape), # ex: (64, 1)
+            Input(shape=input_shape), # 예: (64, 1)
             tf.keras.layers.Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'),
             tf.keras.layers.MaxPooling1D(pool_size=2),
             tf.keras.layers.Dropout(0.2),
@@ -83,7 +84,7 @@ class ModelTrainer:
             raise
 
     def train(self):
-        X_train, y_train, X_test, y_test = self._load_and_prepare_data()
+        X_train, y_train, X_test, y_test, y_train_labels, y_test_labels = self._load_and_prepare_data()
         num_classes = len(self.label_map)
         
         input_shape = (X_train.shape[1], 1)
@@ -99,11 +100,30 @@ class ModelTrainer:
         early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True)
         lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001)
 
+        # 클래스 가중치 계산 (클래스 불균형 처리)
+        # y_train_labels는 원-핫 인코딩 전의 정수 라벨 배열입니다.
+        unique_classes = np.unique(y_train_labels)
+        class_weights = compute_class_weight(
+            class_weight='balanced',
+            classes=unique_classes,
+            y=y_train_labels
+        )
+        class_weights_dict = dict(zip(unique_classes, class_weights))
+        logger.info("----- 클래스 가중치 적용 (클래스 불균형 처리):")
+        for cls, weight in class_weights_dict.items():
+            # 라벨 맵을 사용하여 숫자 라벨을 문자열 라벨로 변환하여 출력
+            label_name = self.label_map.get(cls, f"Unknown({cls})") # self.label_map은 {문자열: 숫자} 형태이므로 뒤집어야 함
+            # self.label_map은 {문자열: 숫자} 형태이므로, 숫자를 키로 문자열을 찾기 위해 뒤집은 맵을 사용
+            reversed_label_map = {v: k for k, v in self.label_map.items()}
+            label_name = reversed_label_map.get(cls, f"Unknown({cls})")
+            logger.info(f"        라벨 {cls} ({label_name}): 가중치 {weight:.4f}")
+
         model.fit(X_train, y_train,
                   validation_data=(X_test, y_test),
                   epochs=self.config.EPOCHS,
                   batch_size=self.config.BATCH_SIZE,
-                  callbacks=[early_stopping, lr_scheduler])
+                  callbacks=[early_stopping, lr_scheduler],
+                  class_weight=class_weights_dict) # class_weight 인자 추가
 
         model.save(self.model_save_path)
         logger.info(f"----- 모델 저장 완료: {self.model_save_path}")
@@ -127,7 +147,7 @@ class ModelTrainer:
         y_train = to_categorical(y_train_labels, num_classes=len(self.label_map))
         y_test = to_categorical(y_test_labels, num_classes=len(self.label_map))
 
-        return X_train, y_train, X_test, y_test
+        return X_train, y_train, X_test, y_test, y_train_labels, y_test_labels
 
     def _convert_to_tflite(self, model, X_train):
         # Keras 모델을 TFLite 모델로 변환하고 저장
