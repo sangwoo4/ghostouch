@@ -32,11 +32,11 @@
 
 ## Flutter Multi Cross Channel Name
 
-| 기능 설명                      | 채널 이름                                |
-| ------------------------------ | ---------------------------------------- |
-| 메인화면 Ghostouch 사용 토글   | `com.pentagon.ghostouch/toggle`          |
-| 제스처 촬영 버튼(카메라 실행)  | `com.pentagon.ghostouch/camera`          |
-| 등록된 제스처 목록 보기        | `com.pentagon.ghostouch/list-gesture`    |
-| 제스처 초기화                  | `com.pentagon.ghostouch/reset-gesture`   |
-| 제스처 동작 설정               | `com.pentagon.ghostouch/funtion-gesture` |
-| 포그라운드 자동 꺼짐 기능 설정 | `com.pentagon.ghostouch/foreground`      |
+| 기능 설명                      | 채널 이름                                | 개설 여부 |
+| ------------------------------ | ---------------------------------------- | --------- |
+| 메인화면 Ghostouch 사용 토글   | `com.pentagon.ghostouch/toggle`          | ✅        |
+| 제스처 촬영 버튼(카메라 실행)  | `com.pentagon.ghostouch/camera`          | ✅        |
+| 등록된 제스처 목록 보기        | `com.pentagon.ghostouch/list-gesture`    |           |
+| 제스처 초기화                  | `com.pentagon.ghostouch/reset-gesture`   | ✅        |
+| 제스처 동작 설정               | `com.pentagon.ghostouch/funtion-gesture` |           |
+| 포그라운드 자동 꺼짐 기능 설정 | `com.pentagon.ghostouch/foreground`      |           |
