@@ -17,25 +17,12 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-
-    // ✅ 상단바 & 내비게이션 바 숨기기 (Immersive 모드)
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  }
-
-  @override
-  void dispose() {
-    // ✅ 페이지 닫힐 때 UI 모드 복원 (선택 사항)
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
+      body: MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

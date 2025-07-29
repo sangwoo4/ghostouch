@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart'; // 크로스 채널 import
 import 'package:flutter/material.dart';
+import 'package:ghostouch/pages/GestureRegisterPage.dart';
 
 import 'pages/GestureSettingsPage.dart';
 
@@ -129,7 +130,14 @@ class _MainPageState extends State<MainPage> {
             icon: Icons.person,
             title: '사용자 제스처 등록',
             subtitle: '새로운 제스처를 등록할 수 있습니다.',
-            // 향후 네비게이션 추가 예정
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GestureRegisterPage(),
+                ),
+              );
+            },
           ),
 
           _buildBackgroundCard(),
