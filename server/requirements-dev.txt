@@ -1,0 +1,6 @@
+requests==2.32.3
+httpx
+fastapi
+uvicorn
+click
+typing-extensions==4.5.0
