@@ -1,8 +1,15 @@
 # Ghostouch Flutter 프로젝트
 
+### Flutter version
+
+- **flutter vesion : 3.32.6**
+- **dart sdk version : 3.8.1**
+
+---
+
 ## 시작하기
 
-아래 순서대로 명령어를 실행하세요.
+순서대로 명령어를 실행
 
 1. 프로젝트 정리
 
