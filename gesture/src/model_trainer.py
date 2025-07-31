@@ -171,7 +171,9 @@ class ModelTrainer:
         
         def representative_data_gen():
             # 양자화를 위해 모델에 입력될 데이터의 분포를 알려주는 대표 데이터셋 생성
-            for input_value in tf.data.Dataset.from_tensor_slices(X_train_for_tflite).batch(1).take(100):
+            # 데이터셋을 무작위로 섞어(shuffle) 100개의 샘플을 추출하여 편향을 방지
+            dataset = tf.data.Dataset.from_tensor_slices(X_train_for_tflite)
+            for input_value in dataset.shuffle(buffer_size=len(X_train_for_tflite)).batch(1).take(100):
                 yield [tf.reshape(input_value, (1, *input_shape))]
 
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
