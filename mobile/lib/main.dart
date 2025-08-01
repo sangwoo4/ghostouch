@@ -34,18 +34,93 @@ class _MainPageState extends State<MainPage> {
   // ✅ MethodChannel 선언
   static const platform = MethodChannel('com.pentagon.ghostouch/toggle');
 
+  // ✅ 추가: 다이얼로그 표시 함수
+  Future<bool?> _showCustomDialog() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const Icon(Icons.settings, size: 40, color: Colors.orange),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    '1단계: 🚀 "이동하기" 버튼을 눌러주세요\n'
+                    '2단계: 📋 목록에서 \'Ghostouch\' 선택\n'
+                    '3단계: 🔛 스위치를 \'사용 중\'으로 켜고 확인',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: Color(0xFF333333),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(false);
+                          },
+                          child: const Text(
+                            '취소',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            try {
+                              await platform.invokeMethod('openSettings');
+                            } on PlatformException catch (e) {
+                              print("❌ openSettings 호출 실패: ${e.message}");
+                            }
+                          },
+                          child: const Text(
+                            '이동하기',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ✅ functionToggle 함수 정의
   Future<void> functionToggle(bool enabled) async {
-    print('✅ functionToggle 호출됨. 전달 값: $enabled'); // 로그로 채널 호출 확인
+    print('✅ functionToggle 호출됨. 전달 값: $enabled');
 
     try {
       await platform.invokeMethod('functionToggle', {'enabled': enabled});
       print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
 
       if (enabled) {
-        print('🔧 openSettings 호출 시도');
-        await platform.invokeMethod('openSettings'); // 👈 설정 열기 추가
-        print('✅ openSettings 호출 완료');
+        _showCustomDialog(); // 설정 다이얼로그 표시
       }
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
@@ -157,11 +232,27 @@ class _MainPageState extends State<MainPage> {
           title: Text(isGestureEnabled ? '사용함' : '사용 안 함'),
           trailing: Switch(
             value: isGestureEnabled,
-            onChanged: (val) {
-              setState(() {
-                isGestureEnabled = val;
-              });
-              functionToggle(val); // ✅ 네이티브 함수 호출
+            onChanged: (val) async {
+              if (val) {
+                // 사용자가 이동하기를 누르면 true, 아니면 false 반환
+                final result = await _showCustomDialog();
+                if (result == true) {
+                  setState(() {
+                    isGestureEnabled = true;
+                  });
+                  functionToggle(true);
+                } else {
+                  // 사용자가 취소하거나 아무 동작도 안 하면 false
+                  setState(() {
+                    isGestureEnabled = false;
+                  });
+                }
+              } else {
+                setState(() {
+                  isGestureEnabled = false;
+                });
+                functionToggle(false); // OFF는 즉시 반영
+              }
             },
           ),
         ),
@@ -187,7 +278,7 @@ class _MainPageState extends State<MainPage> {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(subtitle, style: const TextStyle(color: Colors.brown)),
-          onTap: onTap, // ✅ 여기 수정됨
+          onTap: onTap,
         ),
       ),
     );
