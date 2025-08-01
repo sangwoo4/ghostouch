@@ -86,7 +86,7 @@ class _MainPageState extends State<MainPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () async {
-                            Navigator.of(context).pop();
+                            Navigator.of(context).pop(true);
                             try {
                               await platform.invokeMethod('openSettings');
                             } on PlatformException catch (e) {
@@ -119,9 +119,9 @@ class _MainPageState extends State<MainPage> {
       await platform.invokeMethod('functionToggle', {'enabled': enabled});
       print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
 
-      if (enabled) {
-        _showCustomDialog(); // 설정 다이얼로그 표시
-      }
+      // if (enabled) {
+      //   _showCustomDialog(); // 설정 다이얼로그 표시
+      // }
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
