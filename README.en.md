@@ -109,7 +109,7 @@ Run `live_test.py` to check the performance of the trained model in real-time vi
     ```bash
     python gesture/src/live_test.py --model_type combine
     ```
-Press the ESC key to exit the program. If no hand is detected, "none" will be displayed.
+Press the ESC key to exit the program. If no hand is detected, "Unknown" will be displayed.
 
 --- 
 
@@ -119,13 +119,13 @@ Press the ESC key to exit the program. If no hand is detected, "none" will be di
     -   Reads images from the `image_data` or `new_image_data` folders.
     -   **Multiprocessing** is used with MediaPipe Hands to extract 21 hand landmark coordinates (x, y, z) from each image in parallel.
     -   Normalizes the extracted landmarks for **translation, scale, and rotation** to ensure consistent features regardless of hand position, size, or orientation.
-    -   Dynamically generates a label map based on the image folder structure and saves the processed landmark data and integer labels to `basic_hand_landmarks.csv` or `transfer_hand_landmarks.csv` files.
+    -   Dynamically generates a label map based on the image folder structure and saves the processed landmark data and **string labels** to `basic_hand_landmarks.csv` or `incremental_hand_landmarks.csv` files.
 
 2.  **Data Management (`data_manager.py`)**:
     -   Loads the generated landmark CSV files.
     -   Splits the data into training and testing sets and saves them as NumPy arrays (`.npy`) suitable for model training.
-    -   Merges `basic` and `transfer` label maps to create `combine_label_map.json`. It prioritizes `basic` labels' indices and adds only new labels sequentially, **preventing label conflicts**.
-    -   When merging `basic` and `transfer` data, it **re-maps** the labels of each dataset based on the combined label map to form an accurate integrated dataset.
+    -   Merges `basic` and `incremental` label maps to create `combine_label_map.json`. It prioritizes `basic` labels' indices and adds only new labels sequentially, **preventing label conflicts**.
+    -   When merging `basic` and `incremental` data, it **re-maps** the labels of each dataset based on the combined label map to form an accurate integrated dataset.
 
 3.  **Model Training (`model_trainer.py`)**:
     -   Loads the split `.npy` datasets.
@@ -137,7 +137,7 @@ Press the ESC key to exit the program. If no hand is detected, "none" will be di
     -   Uses OpenCV to get the webcam feed.
     -   Detects hands and extracts landmarks from each frame, then normalizes them in the same way as during training.
     -   Predicts gestures using the TFLite model with the normalized landmarks as input, and displays the results on the screen if the prediction confidence is above `CONFIDENCE_THRESHOLD` (0.8).
-    -   The logic has been improved to display "none" if no hand is detected.
+    -   If no hand is detected or confidence is low, "Unknown" will be displayed.
 
 --- 
 

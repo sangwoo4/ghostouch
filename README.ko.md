@@ -109,7 +109,7 @@ MediaPipe Gesture Recognizer에 대한 자세한 정보는 [여기](https://ai.g
     ```bash
     python gesture/src/live_test.py --model_type combine
     ```
-ESC 키를 누르면 프로그램이 종료됩니다. 손이 감지되지 않을 경우 "none"이 출력됩니다.
+ESC 키를 누르면 프로그램이 종료됩니다. 손이 감지되지 않을 경우 "Unknown"이 출력됩니다.
 
 ---
 
@@ -119,12 +119,12 @@ ESC 키를 누르면 프로그램이 종료됩니다. 손이 감지되지 않을
     -   `image_data` 또는 `new_image_data` 폴더의 이미지를 읽어들입니다.
     -   **멀티프로세싱**을 사용하여 MediaPipe Hands로 각 이미지에서 21개의 손 랜드마크 좌표(x, y, z)를 병렬로 추출합니다.
     -   추출된 랜드마크를 **이동(translation), 크기(scale), 회전(rotation)**에 대해 정규화하여 손의 위치, 크기, 방향에 관계없이 일관된 특징을 학습할 수 있도록 합니다.
-    -   이미지 폴더 구조를 기반으로 라벨 맵을 **동적으로 생성**하고, 처리된 랜드마크 데이터와 정수 라벨을 `basic_hand_landmarks.csv` 또는 `transfer_hand_landmarks.csv` 파일로 저장합니다.
+    -   이미지 폴더 구조를 기반으로 라벨 맵을 **동적으로 생성**하고, 처리된 랜드마크 데이터와 **문자열 라벨**을 `basic_hand_landmarks.csv` 또는 `incremental_hand_landmarks.csv` 파일로 저장합니다.
 
 2.  **데이터 관리 (`data_manager.py`)**:
     -   생성된 랜드마크 CSV 파일을 로드합니다.
     -   데이터를 학습용(train)과 테스트용(test)으로 분할하고, 모델 학습에 적합한 NumPy 배열(`.npy`) 형태로 저장합니다.
-    -   `basic` 라벨 맵과 `transfer` 라벨 맵을 병합하여 `combine_label_map.json`을 생성합니다. 이때 `basic` 라벨의 인덱스를 우선하고, 새로운 라벨만 뒤에 추가하여 **라벨 충돌을 방지**합니다.
+    -   `basic` 라벨 맵과 `incremental` 라벨 맵을 병합하여 `combine_label_map.json`을 생성합니다. 이때 `basic` 라벨의 인덱스를 우선하고, 새로운 라벨만 뒤에 추가하여 **라벨 충돌을 방지**합니다.
     -   `basic` 데이터와 `transfer` 데이터를 병합할 때, 각 데이터의 라벨을 통합 라벨 맵 기준으로 **재조정(re-mapping)**하여 정확한 통합 데이터셋을 구성합니다.
 
 3.  **모델 학습 (`model_trainer.py`)**:
@@ -137,7 +137,7 @@ ESC 키를 누르면 프로그램이 종료됩니다. 손이 감지되지 않을
     -   OpenCV를 사용하여 웹캠 피드를 받아옵니다.
     -   각 프레임에서 손 감지 후 랜드마크를 추출한 뒤, 학습 시와 동일한 방식으로 정규화합니다.
     -   TFLite 모델을 통해 정규화된 랜드마크를 입력으로 제스처를 예측하고, 예측 신뢰도가 `CONFIDENCE_THRESHOLD`(0.8) 이상일 경우 결과를 화면에 표시합니다.
-    -   손이 감지되지 않을 경우 "none"을 출력하도록 로직이 개선되었습니다.
+    -   손이 감지되지 않거나 신뢰도가 낮을 경우 "Unknown"이 출력됩니다.
 
 ---
 
