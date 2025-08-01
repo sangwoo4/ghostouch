@@ -12,6 +12,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   final TextEditingController _controller = TextEditingController();
   bool _isDuplicateChecked = false;
   bool _isNameValid = false;
+  String _errorMessage = '';
 
   static const cameraChannel = MethodChannel('com.pentagon.ghostouch/camera');
   static const resetChannel = MethodChannel(
@@ -24,8 +25,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     '보 제스처',
     '한성대 제스처',
   ];
-
-  String _errorMessage = '';
 
   void _checkDuplicate() {
     String input = _controller.text.trim();
@@ -78,21 +77,47 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   @override
   Widget build(BuildContext context) {
     final inputValidAndChecked = _isDuplicateChecked && _isNameValid;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('사용자 제스처 등록'),
-        backgroundColor: const Color(0xFF0E1539),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+      backgroundColor: Colors.white,
+      body: MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '새롭게 등록할 제스처의 이름을 설정해주세요.',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+            // 상단 헤더
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              decoration: const BoxDecoration(
+                color: Color(0xFF0E1539),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(30),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    '사용자 제스처 등록',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '새롭게 등록할 제스처의 이름을 설정해주세요.',
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
 
