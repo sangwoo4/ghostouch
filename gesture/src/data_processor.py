@@ -11,9 +11,9 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 class DataProcessor:
-    # 이미지 파일에서 손 랜드마크를 추출하고 전처리하여 CSV 파일로 저장합니다.
-    # MediaPipe를 사용하여 손의 월드 랜드마크를 감지하고, 이를 특징 벡터로 변환합니다.
-    # 멀티프로세싱을 사용하여 대량의 이미지를 효율적으로 처리합니다.
+    # 이미지 파일에서 손 랜드마크를 추출하고 전처리하여 CSV 파일로 저장
+    # MediaPipe를 사용하여 손의 월드 랜드마크를 감지하고 이를 특징 벡터로 변환
+    # 멀티프로세싱을 사용하여 대량의 이미지를 효율적으로 처리
 
     def __init__(self, config: Config, data_dirs: list = None, output_csv_path: str = None, label_map_path: str = None):
         self.config = config
@@ -24,7 +24,7 @@ class DataProcessor:
     @staticmethod
     def _process_image(args):
         # 단일 이미지를 처리하여 랜드마크 특징 벡터와 라벨을 반환하는 정적 메서드.
-        # 멀티프로세싱의 `pool.map`에서 사용하기 위해 정적 메서드로 구현되었습니다.
+        # 멀티프로세싱의 `pool.map`에서 사용하기 위해 정적 메서드로 구현
 
         img_path, label = args
         # 각 프로세스에서 MediaPipe Hands 객체를 새로 생성해야 함
@@ -38,7 +38,7 @@ class DataProcessor:
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = hands.process(image_rgb)
-        hands.close()  # 리소스 해제
+        hands.close()
 
         if not results.multi_hand_world_landmarks:
             return None
@@ -56,7 +56,7 @@ class DataProcessor:
         return feature_vector, label
 
     def process(self):
-        # 지정된 이미지 디렉토리의 모든 이미지를 순회하며 랜드마크를 추출하고 CSV로 저장합니다.
+        # 지정된 이미지 디렉토리의 모든 이미지를 순회하며 랜드마크를 추출하고 CSV로 저장
     
         all_image_paths_and_labels = []
         for data_dir in self.image_data_dirs:
@@ -100,22 +100,16 @@ class DataProcessor:
 
         # 이미지 폴더 이름(문자열 라벨)으로부터 동적으로 라벨 맵(JSON) 생성 및 저장
         unique_string_labels = sorted(list(set(string_labels)))
-        label_map = {"none": 0}  # 'none' 라벨은 항상 0으로 고정
-        current_index = 1
-        for label_str in unique_string_labels:
-            if label_str.lower() != "none":
-                label_map[label_str] = current_index
-                current_index += 1
+        label_map = {}
+        for i, label_str in enumerate(unique_string_labels):
+            label_map[label_str] = i
         
         with open(self.label_map_path, 'w') as f:
             json.dump(label_map, f, indent=4)
         logger.info(f"----- 라벨 맵 저장 완료: {self.label_map_path}")
 
-        # 생성된 라벨 맵을 사용하여 문자열 라벨을 정수 라벨로 변환
-        numeric_labels = [label_map[s_label] for s_label in string_labels]
-
         df = pd.DataFrame(landmarks_data)
-        df.insert(0, "label", numeric_labels)
+        df.insert(0, "label", string_labels)
         
         os.makedirs(self.config.PROCESSED_DATA_DIR, exist_ok=True)
         df.to_csv(self.output_csv_path, index=False)

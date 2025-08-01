@@ -32,7 +32,7 @@ def _process_and_create_dataset(config: Config, image_dir: str, csv_path: str, l
     logging.info(f"----- '{image_dir}'에 대한 NPY 데이터셋 생성 완료")
 
 def main():
-    # 메인 실행 함수: CLI 인자를 파싱하여 'train' 또는 'update' 모드를 실행합니다.
+    # 메인 실행 함수: CLI 인자를 파싱하여 'train' 또는 'update' 모드를 실행
 
     parser = argparse.ArgumentParser(description="----- 가위바위보 제스처 인식 모델 학습 파이프라인")
     parser.add_argument('--mode', type=str, choices=['train', 'update'], default='train', 
@@ -70,7 +70,7 @@ def main():
         logging.info("----- [train] 모드 완료: 기본 모델 생성이 완료되었습니다.")
 
     elif args.mode == 'update':
-        # --- 모델 업데이트(전이 학습) 모드 ---
+        # --- 모델 업데이트(증분 학습) 모드 ---
 
         logging.info("----- [update] 모드 시작: 새로운 데이터로 모델을 업데이트합니다.")
         base_model_path = args.base_model_path if args.base_model_path else config.KERAS_MODEL_PATHS['basic']
@@ -90,14 +90,12 @@ def main():
         )
 
         # 2. 데이터 오염 방지를 위한 중복 검사
-
         logging.info(f"----- 데이터셋 간 라벨별 교차 중복 검사 시작 (임계값: {args.dup_threshold}%)")
         data_manager = DataManager(config)
         checker = DuplicateChecker()
         is_duplicate_found = False
 
         # 각 데이터셋을 라벨별로 그룹화하여 로드
-
         inc_train_grouped = data_manager.load_data_grouped_by_label(config.INCREMENTAL_TRAIN_DATA_PATH, config.LABEL_MAP_PATHS['incremental'])
         basic_train_grouped = data_manager.load_data_grouped_by_label(config.BASIC_TRAIN_DATA_PATH, config.LABEL_MAP_PATHS['basic'])
         basic_test_grouped = data_manager.load_data_grouped_by_label(config.BASIC_TEST_DATA_PATH, config.LABEL_MAP_PATHS['basic'])
@@ -121,7 +119,6 @@ def main():
                     is_duplicate_found = True
 
         # 3. 중복 검사 결과에 따른 처리
-        
         if is_duplicate_found:
             logging.error("중복 검사 실패. 데이터셋 간의 중복이 허용치를 초과하여 프로세스를 중단합니다.")
             sys.exit(1)

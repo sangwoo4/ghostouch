@@ -14,9 +14,8 @@ logger = logging.getLogger(__name__)
 
 class GesturePredictor:
     # 실시간 제스처 인식을 위한 클래스.
-    # 웹캠 프레임을 처리하고, TFLite 모델을 사용하여 제스처를 예측합니다.
-    # 추론은 별도의 스레드에서 실행하여 메인 스레드(GUI)의 블로킹을 방지합니다.
-    
+    # 웹캠 프레임을 처리하고, TFLite 모델을 사용하여 제스처를 예측
+    # 추론은 별도의 스레드에서 실행하여 메인 스레드(GUI)의 블로킹을 방지
 
     def __init__(self, config: Config, model_type: str = 'basic'):
         self.config = config
@@ -36,7 +35,7 @@ class GesturePredictor:
         self.inference_thread = self._start_inference_thread()
 
     def _load_model(self):
-        # TFLite 모델을 로드하고 입출력 세부 정보를 반환합니다.
+        # TFLite 모델을 로드하고 입출력 세부 정보를 반환
 
         model_path = self.config.TFLITE_MODEL_PATHS.get(self.model_type)
         if not model_path or not os.path.exists(model_path):
@@ -49,7 +48,7 @@ class GesturePredictor:
         return interpreter, input_details, output_details
 
     def _load_label_map(self):
-        # 라벨 맵을 로드하고, 인덱스를 라벨 이름에 매핑하는 딕셔너리를 반환합니다.
+        # 라벨 맵을 로드하고, 인덱스를 라벨 이름에 매핑하는 딕셔너리를 반환
 
         label_map_path = self.config.LABEL_MAP_PATHS.get(self.model_type)
         if not label_map_path or not os.path.exists(label_map_path):
@@ -60,7 +59,7 @@ class GesturePredictor:
         return {v: k for k, v in label_map.items()}  # {index: name} 형태
 
     def _init_hands(self):
-        # MediaPipe Hands를 초기화합니다.
+        # MediaPipe Hands를 초기화
 
         return mp.solutions.hands.Hands(
             static_image_mode=False,  # 비디오 스트림 모드
@@ -70,7 +69,7 @@ class GesturePredictor:
         )
 
     def _start_inference_thread(self):
-        # 모델 추론을 위한 별도의 스레드를 시작합니다.
+        # 모델 추론을 위한 별도의 스레드 시작
 
         thread = threading.Thread(target=self._run_inference)
         thread.daemon = True
@@ -94,11 +93,14 @@ class GesturePredictor:
             self.interpreter.invoke()
             output_data = self.interpreter.get_tensor(self.output_details[0]['index'])
             
-            if not self.result_queue.full():
-                self.result_queue.put(output_data)
+            try:
+                self.result_queue.put_nowait(output_data)
+            except queue.Full:
+                self.result_queue.get_nowait()
+                self.result_queue.put_nowait(output_data)
 
     def process_frame(self, image):
-        # 단일 프레임을 처리하고, 손을 감지하여 특징 벡터를 추출한 후 추론 큐에 삽입합니다.
+        # 단일 프레임을 처리하고 손을 감지하여 특징 벡터를 추출한 후 추론 큐에 삽입
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         results = self.hands.process(image_rgb)
@@ -118,7 +120,7 @@ class GesturePredictor:
         return results
 
     def get_prediction(self):
-        # 추론 결과 큐에서 예측 결과를 가져와 해석합니다.
+        # 추론 결과 큐에서 예측 결과를 가져와 해석
 
         try:
             output_data = self.result_queue.get_nowait()
@@ -129,11 +131,9 @@ class GesturePredictor:
             predicted_index = np.argmax(dequantized_output)
             confidence = np.max(dequantized_output)
 
-            # 예측 신뢰도가 임계값보다 낮으면 'none'으로 처리
-            if confidence < self.config.CONFIDENCE_THRESHOLD:
-                return "none", confidence
-
-            predicted_label = self.index_to_label.get(predicted_index, "none")
+            predicted_label = self.index_to_label.get(predicted_index, "Unknown") # 'none' 대신 'Unknown' 사용
+            if confidence < self.config.CONFIDENCE_THRESHOLD: # 신뢰도 임계값 로직은 유지하되 'none' 반환은 제거
+                return "Unknown", confidence # 'none' 대신 'Unknown' 반환
             return predicted_label, confidence
         except queue.Empty:
             return None, None  # 새로운 결과가 없으면 None 반환
@@ -177,11 +177,9 @@ def main():
         if new_label is not None:
             predicted_label = new_label
             confidence = new_confidence
-            
-        # 손이 감지되지 않으면 'none'으로 표시 (process_frame에서 처리)
-        elif not predictor.preprocessed_queue.full():
-             predicted_label = "none"
-             confidence = 0.0
+        else: # 예측 결과가 없으면 (손이 감지되지 않았거나 큐가 비어있음)
+            predicted_label = "Unknown"
+            confidence = 0.0
 
         # 화면에 예측 결과 표시
         text = f"{predicted_label} ({confidence:.2f})"

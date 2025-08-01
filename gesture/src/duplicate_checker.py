@@ -2,7 +2,7 @@ import numpy as np
 
 class DuplicateChecker:
     # 두 NumPy 벡터 배열 간의 중복을 계산하는 순수 알고리즘 클래스.
-    # `np.allclose`를 사용하여 부동소수점 벡터의 유사성을 비교합니다.
+    # `np.allclose`를 사용하여 부동소수점 벡터의 유사성을 비교
     
     def __init__(self, tolerance: float = 1e-7):
         
