@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart'; // 크로스 채널 import
 import 'package:flutter/material.dart';
 import 'package:ghostouch/pages/GestureRegisterPage.dart';
-
 import 'pages/GestureSettingsPage.dart';
+import 'pages/TestPage.dart'; // ✅ 테스트 페이지 import
 
 void main() {
   runApp(const AirCommandApp());
@@ -15,7 +15,7 @@ class AirCommandApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ghostouch',
-      home: const MainPage(),
+      home: const MainPage(), // 앱 시작 시 보여줄 첫 화면 
       debugShowCheckedModeBanner: false,
     );
   }
@@ -34,7 +34,7 @@ class _MainPageState extends State<MainPage> {
   // ✅ MethodChannel 선언
   static const platform = MethodChannel('com.pentagon.ghostouch/toggle');
 
-  // ✅ 추가: 다이얼로그 표시 함수
+  // ✅ 설정 다이얼로그
   Future<bool?> _showCustomDialog() {
     return showDialog<bool>(
       context: context,
@@ -111,17 +111,13 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  // ✅ functionToggle 함수 정의
+  // ✅ functionToggle 함수
   Future<void> functionToggle(bool enabled) async {
     print('✅ functionToggle 호출됨. 전달 값: $enabled');
 
     try {
       await platform.invokeMethod('functionToggle', {'enabled': enabled});
       print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
-
-      // if (enabled) {
-      //   _showCustomDialog(); // 설정 다이얼로그 표시
-      // }
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
@@ -133,7 +129,7 @@ class _MainPageState extends State<MainPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // 헤더 부분
+          // 헤더
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: const BoxDecoration(
@@ -149,10 +145,7 @@ class _MainPageState extends State<MainPage> {
                       backgroundColor: Colors.white,
                       child: Text(
                         'Pentagon',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
                     Icon(Icons.touch_app, size: 60, color: Colors.white),
@@ -165,11 +158,7 @@ class _MainPageState extends State<MainPage> {
                 const SizedBox(height: 10),
                 const Text(
                   'Ghostouch',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -183,10 +172,8 @@ class _MainPageState extends State<MainPage> {
 
           const SizedBox(height: 30),
 
-          // Toggle Switch
           _buildToggleCard(),
 
-          // 기능 설정 카드들
           _buildMenuCard(
             icon: Icons.gesture,
             title: '제스처 기능 설정',
@@ -216,6 +203,21 @@ class _MainPageState extends State<MainPage> {
           ),
 
           _buildBackgroundCard(),
+
+          // ✅ 테스트 페이지 카드 (맨 아래)
+          _buildMenuCard(
+            icon: Icons.bug_report,
+            title: '테스트 페이지',
+            subtitle: '기능을 실험할 수 있는 화면입니다.',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TestPage(),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -234,7 +236,6 @@ class _MainPageState extends State<MainPage> {
             value: isGestureEnabled,
             onChanged: (val) async {
               if (val) {
-                // 사용자가 이동하기를 누르면 true, 아니면 false 반환
                 final result = await _showCustomDialog();
                 if (result == true) {
                   setState(() {
@@ -242,7 +243,6 @@ class _MainPageState extends State<MainPage> {
                   });
                   functionToggle(true);
                 } else {
-                  // 사용자가 취소하거나 아무 동작도 안 하면 false
                   setState(() {
                     isGestureEnabled = false;
                   });
@@ -251,7 +251,7 @@ class _MainPageState extends State<MainPage> {
                 setState(() {
                   isGestureEnabled = false;
                 });
-                functionToggle(false); // OFF는 즉시 반영
+                functionToggle(false);
               }
             },
           ),
