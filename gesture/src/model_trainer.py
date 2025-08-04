@@ -1,4 +1,3 @@
-import json
 import numpy as np
 import tensorflow as tf
 import logging
@@ -71,25 +70,16 @@ class UpdateModelBuilder(ModelBuilder):
 class ModelTrainer:
     # 모델을 학습하고, 평가하며, TFLite로 변환하여 저장하는 클래스.
 
-    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map_path: str = None, train_data_path: str = None, test_data_path: str = None, is_incremental_learning: bool = False):
+    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map: dict = None, train_data_path: str = None, test_data_path: str = None, is_incremental_learning: bool = False):
         self.model_builder = model_builder
         self.config = config
         self.model_save_path = model_save_path
         self.tflite_save_path = tflite_save_path
-        self.label_map_path = label_map_path
         self.train_data_path = train_data_path
         self.test_data_path = test_data_path
         self.is_incremental_learning = is_incremental_learning
-        self.label_map = self._load_label_map()
-    def _load_label_map(self):
-        # 저장된 라벨 맵(JSON)을 로드
-
-        try:
-            with open(self.label_map_path, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            logger.error(f"----- 라벨 맵 파일을 찾을 수 없습니다: {self.label_map_path}")
-            raise
+        self.label_map = label_map
+    
 
     def train(self):
         X_train, y_train, X_test, y_test, y_train_labels, y_test_labels = self._load_and_prepare_data()

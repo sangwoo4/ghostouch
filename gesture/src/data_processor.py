@@ -115,4 +115,6 @@ class DataProcessor:
         df.to_csv(self.output_csv_path, index=False)
         logger.info(f"----- CSV 데이터 저장 완료! -> {self.output_csv_path}")
 
+        return label_map
+
     

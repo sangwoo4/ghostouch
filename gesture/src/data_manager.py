@@ -25,14 +25,7 @@ class DataManager:
             logger.error(f"----- NPY 파일 로드 중 오류 발생 ({file_path}): {e}")
             return None, None
 
-    def load_and_combine_all_datasets(self, combined_map_path: str):
-        try:
-            with open(combined_map_path, 'r') as f:
-                combined_map = json.load(f)
-        except FileNotFoundError:
-            logger.error(f"----- 통합 라벨맵을 찾을 수 없습니다: {combined_map_path}")
-            return None, None, None, None
-
+    def load_and_combine_all_datasets(self, combined_map: dict, basic_map: dict, incremental_map: dict):
         all_data_paths = {
             "basic_train": self.config.BASIC_TRAIN_DATA_PATH,
             "basic_test": self.config.BASIC_TEST_DATA_PATH,
@@ -40,8 +33,8 @@ class DataManager:
             "incremental_test": self.config.INCREMENTAL_TEST_DATA_PATH
         }
         all_original_maps = {
-            "basic": self.config.LABEL_MAP_PATHS['basic'],
-            "incremental": self.config.LABEL_MAP_PATHS['incremental']
+            "basic": basic_map,
+            "incremental": incremental_map
         }
 
         final_datasets = {"train_X": [], "train_y": [], "test_X": [], "test_y": []}
@@ -49,24 +42,17 @@ class DataManager:
         for data_type in ["train", "test"]:
             for dataset_name in ["basic", "incremental"]:
                 npy_path = all_data_paths.get(f"{dataset_name}_{data_type}")
-                original_map_path = all_original_maps.get(dataset_name)
+                original_map = all_original_maps.get(dataset_name)
 
                 if not npy_path or not os.path.exists(npy_path):
                     logger.warning(f"----- NPY 파일을 찾을 수 없습니다: {npy_path}")
                     continue
-                if not original_map_path or not os.path.exists(original_map_path):
-                    logger.warning(f"----- 원본 라벨맵 파일을 찾을 수 없습니다: {original_map_path}")
+                if not original_map:
+                    logger.warning(f"----- 원본 라벨맵 '{dataset_name}'이(가) 제공되지 않았습니다.")
                     continue
 
                 X, y_original_numeric_labels = self._load_npy_data(npy_path)
                 if X is None:
-                    continue
-
-                try:
-                    with open(original_map_path, 'r') as f:
-                        original_map = json.load(f)
-                except FileNotFoundError:
-                    logger.error(f"----- 원본 라벨맵 파일을 로드할 수 없습니다: {original_map_path}")
                     continue
 
                 # 원본 숫자 라벨을 문자열 라벨로 변환 (original_map을 뒤집어 사용)
@@ -106,39 +92,35 @@ class DataManager:
         np.save(self.config.COMBINE_TEST_DATA_PATH, np.column_stack((final_test_X, final_test_y)))
         logger.info(f"----- 최종 테스트 데이터 저장 완료: {self.config.COMBINE_TEST_DATA_PATH}")
 
-    def load_data_grouped_by_label(self, npy_path: str, label_map_path: str):
-        
+    def load_data_grouped_by_label(self, npy_path: str, label_map: dict):
         # NPY 파일에서 데이터를 로드하고, 라벨 맵을 사용하여 라벨별로 그룹화
-        X, y_str_labels = self._load_npy_data(npy_path)
-        if X is None: return {}
+        X, y_numeric_labels = self._load_npy_data(npy_path)
+        if X is None:
+            return {}
+
+        # 숫자 라벨을 문자열 라벨로 변환
+        index_to_label_map = {v: k for k, v in label_map.items()}
+        y_string_labels = [index_to_label_map.get(num_label) for num_label in y_numeric_labels]
 
         grouped_data = {}
-        for i, label_str in enumerate(y_str_labels):
-            if label_str not in grouped_data:
-                grouped_data[label_str] = []
-            grouped_data[label_str].append(X[i])
+        for i, str_label in enumerate(y_string_labels):
+            if str_label is None:
+                continue
+            if str_label not in grouped_data:
+                grouped_data[str_label] = []
+            grouped_data[str_label].append(X[i])
 
         for label, vectors in grouped_data.items():
             grouped_data[label] = np.array(vectors)
 
         return grouped_data
 
-    def combine_and_save_data(self):
-        # 기존 및 증분 데이터셋을 결합하고, 통합 라벨 맵을 생성한 후
-
-        # 최종 학습 및 테스트 NPY 파일을 저장
-        combined_label_map_path = self.config.LABEL_MAP_PATHS['combine']
+    def combine_and_save_data(self, combined_map: dict, basic_map: dict, incremental_map: dict):
+        # 기존 및 증분 데이터셋을 결합하고, 최종 학습 및 테스트 NPY 파일을 저장
         
-        # 통합 라벨 맵 생성 및 저장
-        DataManager.combine_label_maps(
-            self.config.LABEL_MAP_PATHS['basic'],
-            self.config.LABEL_MAP_PATHS['incremental'],
-            combined_label_map_path
-        )
-
         # 모든 데이터셋 로드 및 통합
         final_train_X, final_train_y, final_test_X, final_test_y = \
-            self.load_and_combine_all_datasets(combined_label_map_path)
+            self.load_and_combine_all_datasets(combined_map, basic_map, incremental_map)
 
         if final_train_X is None or final_test_X is None:
             logger.error("데이터 통합에 실패했습니다. 모델 학습을 진행할 수 없습니다.")
@@ -147,7 +129,7 @@ class DataManager:
         # 통합된 데이터셋 저장
         self.save_combined_datasets(final_train_X, final_train_y, final_test_X, final_test_y)
 
-    def create_basic_npy_datasets(self, csv_path: str, train_npy_path: str, test_npy_path: str, test_size: float = 0.2, random_state: int = 42):
+    def create_basic_npy_datasets(self, csv_path: str, train_npy_path: str, test_npy_path: str, label_map: dict, test_size: float = 0.2, random_state: int = 42):
         logger.info(f"----- CSV 파일로부터 기본 NPY 데이터셋 생성 중: {csv_path}")
         if not os.path.exists(csv_path):
             raise FileNotFoundError(f"CSV 파일을 찾을 수 없습니다: {csv_path}")
@@ -155,14 +137,6 @@ class DataManager:
         df = pd.read_csv(csv_path)
         X = df.drop(columns=['label']).values
         y_string_labels = df['label'].values # 문자열 라벨
-
-        label_map_path_for_csv = self.config.LABEL_MAP_PATHS['basic'] if 'basic' in csv_path else self.config.LABEL_MAP_PATHS['incremental']
-        try:
-            with open(label_map_path_for_csv, 'r') as f:
-                label_map = json.load(f)
-        except FileNotFoundError:
-            logger.error(f"----- 라벨 맵 파일을 찾을 수 없습니다: {label_map_path_for_csv}")
-            raise
 
         # 문자열 라벨을 숫자형 라벨로 변환
         y_numeric_labels = np.array([label_map[label] for label in y_string_labels], dtype=int)
