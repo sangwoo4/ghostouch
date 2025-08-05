@@ -1,6 +1,6 @@
-import 'package:flutter/services.dart'; // 크로스 채널 import
+import 'package:flutter/services.dart'; // 크로스 채널용 import
 import 'package:flutter/material.dart';
-import 'package:ghostouch/pages/GestureRegisterPage.dart';
+import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
 import 'pages/TestPage.dart'; // ✅ 테스트 페이지 import
 
@@ -15,7 +15,7 @@ class AirCommandApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ghostouch',
-      home: const MainPage(), // 앱 시작 시 보여줄 첫 화면 
+      home: const MainPage(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -31,11 +31,25 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool isGestureEnabled = false;
 
-  // ✅ MethodChannel 선언
-  static const platform = MethodChannel('com.pentagon.ghostouch/toggle');
+  String _selectedTimeoutLabel = '설정 안 함';
+  static const Map<String, int> backgroundTimeoutOptions = {
+    '설정 안 함': 0,
+    '1시간': 60,
+    '2시간': 120,
+    '4시간': 240,
+  };
 
-  // ✅ 설정 다이얼로그
-  Future<bool?> _showCustomDialog() {
+  // ✅ MethodChannel 선언
+  static const toggleChannel = MethodChannel('com.pentagon.ghostouch/toggle');
+  static const foregroundChannel = MethodChannel(
+    'com.pentagon.ghostouch/foreground',
+  );
+  static const backgroundChannel = MethodChannel(
+    'com.pentagon.ghostouch/background',
+  );
+
+  // ✅ 추가: 다이얼로그 표시 함수
+  Future<bool?> _showToggleDialog() {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -88,7 +102,7 @@ class _MainPageState extends State<MainPage> {
                           onPressed: () async {
                             Navigator.of(context).pop(true);
                             try {
-                              await platform.invokeMethod('openSettings');
+                              await toggleChannel.invokeMethod('openSettings');
                             } on PlatformException catch (e) {
                               print("❌ openSettings 호출 실패: ${e.message}");
                             }
@@ -111,16 +125,58 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  // ✅ functionToggle 함수
+  // ✅ functionToggle 함수 정의
   Future<void> functionToggle(bool enabled) async {
     print('✅ functionToggle 호출됨. 전달 값: $enabled');
 
     try {
-      await platform.invokeMethod('functionToggle', {'enabled': enabled});
+      await toggleChannel.invokeMethod('functionToggle', {'enabled': enabled});
       print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
+  }
+
+  Future<void> _showBackgroundSelector() async {
+    final durations = {'30분': 30, '1시간': 60, '2시간': 120, '4시간': 240};
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              '자동 꺼짐 시간 설정',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const Divider(),
+            ...durations.entries.map((entry) {
+              return ListTile(
+                title: Text(entry.key),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  try {
+                    await backgroundChannel.invokeMethod(
+                      'setBackgroundTimeout',
+                      {'minutes': entry.value},
+                    );
+                    print('⏱️ 백그라운드 시간 설정 완료: ${entry.value}분');
+                  } on PlatformException catch (e) {
+                    print("❌ backgroundChannel 호출 실패: ${e.message}");
+                  }
+                },
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -129,7 +185,7 @@ class _MainPageState extends State<MainPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // 헤더
+          // 헤더 부분
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: const BoxDecoration(
@@ -145,7 +201,10 @@ class _MainPageState extends State<MainPage> {
                       backgroundColor: Colors.white,
                       child: Text(
                         'Pentagon',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Icon(Icons.touch_app, size: 60, color: Colors.white),
@@ -158,7 +217,11 @@ class _MainPageState extends State<MainPage> {
                 const SizedBox(height: 10),
                 const Text(
                   'Ghostouch',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -172,8 +235,10 @@ class _MainPageState extends State<MainPage> {
 
           const SizedBox(height: 30),
 
+          // Toggle Switch
           _buildToggleCard(),
 
+          // 기능 설정 카드들
           _buildMenuCard(
             icon: Icons.gesture,
             title: '제스처 기능 설정',
@@ -204,7 +269,7 @@ class _MainPageState extends State<MainPage> {
 
           _buildBackgroundCard(),
 
-          // ✅ 테스트 페이지 카드 (맨 아래)
+                    // ✅ 테스트 페이지 카드 (맨 아래)
           _buildMenuCard(
             icon: Icons.bug_report,
             title: '테스트 페이지',
@@ -236,13 +301,15 @@ class _MainPageState extends State<MainPage> {
             value: isGestureEnabled,
             onChanged: (val) async {
               if (val) {
-                final result = await _showCustomDialog();
+                // 사용자가 이동하기를 누르면 true, 아니면 false 반환
+                final result = await _showToggleDialog();
                 if (result == true) {
                   setState(() {
                     isGestureEnabled = true;
                   });
                   functionToggle(true);
                 } else {
+                  // 사용자가 취소하거나 아무 동작도 안 하면 false
                   setState(() {
                     isGestureEnabled = false;
                   });
@@ -251,7 +318,7 @@ class _MainPageState extends State<MainPage> {
                 setState(() {
                   isGestureEnabled = false;
                 });
-                functionToggle(false);
+                functionToggle(false); // OFF는 즉시 반영
               }
             },
           ),
@@ -295,15 +362,39 @@ class _MainPageState extends State<MainPage> {
           title: const Text('백그라운드 자동 꺼짐'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text('4시간'),
-              SizedBox(width: 8),
-              Icon(Icons.settings, color: Colors.grey),
+            children: [
+              Text(_selectedTimeoutLabel, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.settings, color: Colors.grey),
+                onSelected: (String value) async {
+                  setState(() {
+                    _selectedTimeoutLabel = value;
+                  });
+
+                  try {
+                    await backgroundChannel.invokeMethod(
+                      'setBackgroundTimeout',
+                      {'minutes': backgroundTimeoutOptions[value]},
+                    );
+                    print(
+                      '✅ 백그라운드 꺼짐 시간 설정: $value (${backgroundTimeoutOptions[value]}분)',
+                    );
+                  } on PlatformException catch (e) {
+                    print("❌ backgroundChannel 호출 실패: ${e.message}");
+                  }
+                },
+                itemBuilder: (BuildContext context) {
+                  return backgroundTimeoutOptions.keys.map((String choice) {
+                    return PopupMenuItem<String>(
+                      value: choice,
+                      child: Text(choice),
+                    );
+                  }).toList();
+                },
+              ),
             ],
           ),
-          onTap: () {
-            // TODO: 설정 화면 이동
-          },
         ),
       ),
     );

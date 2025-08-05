@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'GestureShootingPage.dart';
 
 class GestureRegisterPage extends StatefulWidget {
   const GestureRegisterPage({super.key});
@@ -25,6 +26,102 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     '보 제스처',
     '한성대 제스처',
   ];
+
+  // ✅ 추가: 다이얼로그 표시 함수
+  Future<bool?> _showCameraDialog(BuildContext parentContext) {
+    return showDialog<bool>(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const Icon(Icons.camera, size: 40, color: Colors.orange),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    '💡 빛 반사가 없는 곳에서 진행해주세요.\n'
+                    '✋ 프레임 가운데 손이 위치하도록 해주세요.\n'
+                    '📸 촬영 중 움직이면 정확도가 떨어질 수 있습니다.\n'
+                    '📶 네트워크를 연결했는지 확인해주세요.\n',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: Color(0xFF333333),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop(false);
+                          },
+                          child: const Text(
+                            '취소',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const GestureShootingPage(),
+                              ),
+                            );
+
+                            try {
+                              await cameraChannel.invokeMethod('openSettings');
+
+                              if (parentContext.mounted) {
+                                Navigator.push(
+                                  parentContext,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const GestureShootingPage(),
+                                  ),
+                                );
+                              }
+                            } on PlatformException catch (e) {
+                              print("❌ openSettings 호출 실패: ${e.message}");
+                            }
+                          },
+                          child: const Text(
+                            '촬영하기',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   void _checkDuplicate() {
     String input = _controller.text.trim();
@@ -173,7 +270,15 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: inputValidAndChecked ? _startCamera : null,
+                onPressed: inputValidAndChecked
+                    ? () async {
+                        final shouldStart = await _showCameraDialog(context);
+                        if (shouldStart == true) {
+                          _startCamera();
+                        }
+                      }
+                    : null,
+
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.black,
                   backgroundColor: inputValidAndChecked

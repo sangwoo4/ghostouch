@@ -6,12 +6,20 @@ import android.os.Bundle
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.platform.PlatformViewRegistry
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
 
-    override fun configureFlutterEngine(flutterEngine: io.flutter.embedding.engine.FlutterEngine) {
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // 네이티브 뷰 팩토리 등록
+        flutterEngine
+            .platformViewsController
+            .registry
+            .registerViewFactory("hand_detection_view", HandDetectionViewFactory(this))
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
             call, result ->
