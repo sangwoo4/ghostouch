@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart'; // 크로스 채널용 import
 import 'package:flutter/material.dart';
-import 'package:ghostouch/pages/GestureRegisterPage.dart';
+import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
 
 void main() {
@@ -30,8 +30,22 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool isGestureEnabled = false;
 
+  String _selectedTimeoutLabel = '설정 안 함';
+  static const Map<String, int> backgroundTimeoutOptions = {
+    '설정 안 함': 0,
+    '1시간': 60,
+    '2시간': 120,
+    '4시간': 240,
+  };
+
   // ✅ MethodChannel 선언
   static const toggleChannel = MethodChannel('com.pentagon.ghostouch/toggle');
+  static const foregroundChannel = MethodChannel(
+    'com.pentagon.ghostouch/foreground',
+  );
+  static const backgroundChannel = MethodChannel(
+    'com.pentagon.ghostouch/background',
+  );
 
   // ✅ 추가: 다이얼로그 표시 함수
   Future<bool?> _showToggleDialog() {
@@ -120,6 +134,48 @@ class _MainPageState extends State<MainPage> {
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
+  }
+
+  Future<void> _showBackgroundSelector() async {
+    final durations = {'30분': 30, '1시간': 60, '2시간': 120, '4시간': 240};
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              '자동 꺼짐 시간 설정',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const Divider(),
+            ...durations.entries.map((entry) {
+              return ListTile(
+                title: Text(entry.key),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  try {
+                    await backgroundChannel.invokeMethod(
+                      'setBackgroundTimeout',
+                      {'minutes': entry.value},
+                    );
+                    print('⏱️ 백그라운드 시간 설정 완료: ${entry.value}분');
+                  } on PlatformException catch (e) {
+                    print("❌ backgroundChannel 호출 실패: ${e.message}");
+                  }
+                },
+              );
+            }).toList(),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -290,15 +346,39 @@ class _MainPageState extends State<MainPage> {
           title: const Text('백그라운드 자동 꺼짐'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text('4시간'),
-              SizedBox(width: 8),
-              Icon(Icons.settings, color: Colors.grey),
+            children: [
+              Text(_selectedTimeoutLabel, style: const TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.settings, color: Colors.grey),
+                onSelected: (String value) async {
+                  setState(() {
+                    _selectedTimeoutLabel = value;
+                  });
+
+                  try {
+                    await backgroundChannel.invokeMethod(
+                      'setBackgroundTimeout',
+                      {'minutes': backgroundTimeoutOptions[value]},
+                    );
+                    print(
+                      '✅ 백그라운드 꺼짐 시간 설정: $value (${backgroundTimeoutOptions[value]}분)',
+                    );
+                  } on PlatformException catch (e) {
+                    print("❌ backgroundChannel 호출 실패: ${e.message}");
+                  }
+                },
+                itemBuilder: (BuildContext context) {
+                  return backgroundTimeoutOptions.keys.map((String choice) {
+                    return PopupMenuItem<String>(
+                      value: choice,
+                      child: Text(choice),
+                    );
+                  }).toList();
+                },
+              ),
             ],
           ),
-          onTap: () {
-            // TODO: 설정 화면 이동
-          },
         ),
       ),
     );

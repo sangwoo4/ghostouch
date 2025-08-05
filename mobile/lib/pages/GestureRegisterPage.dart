@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'GestureShootingPage.dart';
 
 class GestureRegisterPage extends StatefulWidget {
   const GestureRegisterPage({super.key});
@@ -27,11 +28,11 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   ];
 
   // ✅ 추가: 다이얼로그 표시 함수
-  Future<bool?> _showCameraDialog() {
+  Future<bool?> _showCameraDialog(BuildContext parentContext) {
     return showDialog<bool>(
-      context: context,
+      context: parentContext,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -42,15 +43,15 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 16),
-                const Icon(Icons.settings, size: 40, color: Colors.orange),
+                const Icon(Icons.camera, size: 40, color: Colors.orange),
                 const SizedBox(height: 12),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    '💡 빛  반사가 없는 곳에서 진행해주세요. ❌\n'
-                    '✋ 프레임 가운데 손이 위치하도록 해주세요.🎯 \n'
-                    '📸 촬영 중 움직이면 정확도가 떨어질 수 있습니다. 🏃\n'
-                    '📶 네트워크를 연결했는지 확인해주세요. 🔌\n',
+                    '💡 빛 반사가 없는 곳에서 진행해주세요.\n'
+                    '✋ 프레임 가운데 손이 위치하도록 해주세요.\n'
+                    '📸 촬영 중 움직이면 정확도가 떨어질 수 있습니다.\n'
+                    '📶 네트워크를 연결했는지 확인해주세요.\n',
                     style: TextStyle(
                       fontSize: 12,
                       height: 1.5,
@@ -67,7 +68,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () {
-                            Navigator.of(context).pop(false);
+                            Navigator.of(dialogContext).pop(false);
                           },
                           child: const Text(
                             '취소',
@@ -79,9 +80,27 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () async {
-                            Navigator.of(context).pop(true);
+                            Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const GestureShootingPage(),
+                              ),
+                            );
+
                             try {
                               await cameraChannel.invokeMethod('openSettings');
+
+                              if (parentContext.mounted) {
+                                Navigator.push(
+                                  parentContext,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const GestureShootingPage(),
+                                  ),
+                                );
+                              }
                             } on PlatformException catch (e) {
                               print("❌ openSettings 호출 실패: ${e.message}");
                             }
@@ -253,12 +272,13 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
               child: ElevatedButton(
                 onPressed: inputValidAndChecked
                     ? () async {
-                        final shouldStart = await _showCameraDialog();
+                        final shouldStart = await _showCameraDialog(context);
                         if (shouldStart == true) {
                           _startCamera();
                         }
                       }
                     : null,
+
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.black,
                   backgroundColor: inputValidAndChecked

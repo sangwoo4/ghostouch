@@ -40,4 +40,4 @@
 | 제스처 초기화                   | `com.pentagon.ghostouch/reset-gesture`   | ✅        |     |         |
 | 제스처 동작 설정                | `com.pentagon.ghostouch/funtion-gesture` |           |     |         |
 | 포그라운드 자동 꺼짐 기능 설정  | `com.pentagon.ghostouch/foreground`      |           |     |         |
-| 안드로이드 백그라운드 시간 설정 | `com.pentagon.ghostouch/background`      |           |     |
+| 안드로이드 백그라운드 시간 설정 | `com.pentagon.ghostouch/background`      | ✅        |     |
