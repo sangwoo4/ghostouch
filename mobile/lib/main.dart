@@ -1,7 +1,6 @@
-import 'package:flutter/services.dart'; // 크로스 채널 import
+import 'package:flutter/services.dart'; // 크로스 채널용 import
 import 'package:flutter/material.dart';
 import 'package:ghostouch/pages/GestureRegisterPage.dart';
-
 import 'pages/GestureSettingsPage.dart';
 
 void main() {
@@ -32,10 +31,10 @@ class _MainPageState extends State<MainPage> {
   bool isGestureEnabled = false;
 
   // ✅ MethodChannel 선언
-  static const platform = MethodChannel('com.pentagon.ghostouch/toggle');
+  static const toggleChannel = MethodChannel('com.pentagon.ghostouch/toggle');
 
   // ✅ 추가: 다이얼로그 표시 함수
-  Future<bool?> _showCustomDialog() {
+  Future<bool?> _showToggleDialog() {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -88,7 +87,7 @@ class _MainPageState extends State<MainPage> {
                           onPressed: () async {
                             Navigator.of(context).pop(true);
                             try {
-                              await platform.invokeMethod('openSettings');
+                              await toggleChannel.invokeMethod('openSettings');
                             } on PlatformException catch (e) {
                               print("❌ openSettings 호출 실패: ${e.message}");
                             }
@@ -116,12 +115,8 @@ class _MainPageState extends State<MainPage> {
     print('✅ functionToggle 호출됨. 전달 값: $enabled');
 
     try {
-      await platform.invokeMethod('functionToggle', {'enabled': enabled});
+      await toggleChannel.invokeMethod('functionToggle', {'enabled': enabled});
       print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
-
-      // if (enabled) {
-      //   _showCustomDialog(); // 설정 다이얼로그 표시
-      // }
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
@@ -235,7 +230,7 @@ class _MainPageState extends State<MainPage> {
             onChanged: (val) async {
               if (val) {
                 // 사용자가 이동하기를 누르면 true, 아니면 false 반환
-                final result = await _showCustomDialog();
+                final result = await _showToggleDialog();
                 if (result == true) {
                   setState(() {
                     isGestureEnabled = true;
