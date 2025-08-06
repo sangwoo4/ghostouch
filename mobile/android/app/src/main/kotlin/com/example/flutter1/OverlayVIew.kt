@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
+import com.google.mediapipe.tasks.components.containers.Category
 import kotlin.math.max
 import kotlin.math.min
 
@@ -26,6 +27,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     private var imageWidth: Int = 1
     private var imageHeight: Int = 1
     private var gestureResult: String? = null
+    private var isFrontCamera: Boolean = false
+    private var rotationDegrees: Int = 0
+    private var handednesses: List<List<Category>>? = null
 
     init {
         initPaints()
@@ -66,23 +70,75 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
         results?.let { handLandmarkerResult ->
+            val imageRatio = imageWidth.toFloat() / imageHeight.toFloat()
+            val viewRatio = width.toFloat() / height.toFloat()
+            var actualScaleFactor = 1f
+            var xOffset = 0f
+            var yOffset = 0f
+
+            if (viewRatio > imageRatio) {
+                // View is wider than image, scale to height
+                actualScaleFactor = height.toFloat() / imageHeight
+                xOffset = (width - imageWidth * actualScaleFactor) / 2f
+            } else {
+                // View is taller than image, scale to width
+                actualScaleFactor = width.toFloat() / imageWidth
+                yOffset = (height - imageHeight * actualScaleFactor) / 2f
+            }
+
             for (landmark in handLandmarkerResult.landmarks()) {
                 for (normalizedLandmark in landmark) {
-                    canvas.drawPoint(
-                        normalizedLandmark.x() * imageWidth * scaleFactor,
-                        normalizedLandmark.y() * imageHeight * scaleFactor,
-                        pointPaint
-                    )
+                    var x = normalizedLandmark.x() * imageWidth * actualScaleFactor + xOffset
+                    var y = normalizedLandmark.y() * imageHeight * actualScaleFactor + yOffset
+
+                    // Apply mirroring for front camera
+                    if (isFrontCamera) {
+                        x = width - x // Mirror horizontally
+                    }
+
+                    canvas.drawPoint(x, y, pointPaint)
                 }
 
                 HandLandmarker.HAND_CONNECTIONS.forEach {
+                    val startX = landmark[it.start()].x() * imageWidth * actualScaleFactor + xOffset
+                    val startY = landmark[it.start()].y() * imageHeight * actualScaleFactor + yOffset
+                    val endX = landmark[it.end()].x() * imageWidth * actualScaleFactor + xOffset
+                    val endY = landmark[it.end()].y() * imageHeight * actualScaleFactor + yOffset
+
+                    var transformedStartX = startX
+                    var transformedEndX = endX
+
+                    if (isFrontCamera) {
+                        transformedStartX = width - startX
+                        transformedEndX = width - endX
+                    }
+
                     canvas.drawLine(
-                        handLandmarkerResult.landmarks()[0][it.start()].x() * imageWidth * scaleFactor,
-                        handLandmarkerResult.landmarks()[0][it.start()].y() * imageHeight * scaleFactor,
-                        handLandmarkerResult.landmarks()[0][it.end()].x() * imageWidth * scaleFactor,
-                        handLandmarkerResult.landmarks()[0][it.end()].y() * imageHeight * scaleFactor,
+                        transformedStartX,
+                        startY,
+                        transformedEndX,
+                        endY,
                         linePaint
                     )
+                }
+
+                // Draw handedness (Left/Right hand)
+                handednesses?.getOrNull(handLandmarkerResult.landmarks().indexOf(landmark))?.let { handednessList ->
+                    val handedness = handednessList[0] // Get the first Category object
+                    val handLabel = if (isFrontCamera) {
+                        // Invert for front camera
+                        if (handedness.categoryName().equals("Left", true)) "Right"
+                        else "Left"
+                    } else {
+                        handedness.categoryName()
+                    }
+                    val handScore = String.format("%.2f", handedness.score())
+                    val handText = "$handLabel ($handScore)"
+
+                    val textX = landmark[0].x() * imageWidth * actualScaleFactor + xOffset
+                    val textY = landmark[0].y() * imageHeight * actualScaleFactor + yOffset - 20 // Offset to draw above the hand
+
+                    canvas.drawText(handText, textX, textY, textPaint)
                 }
             }
         }
@@ -137,23 +193,21 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         imageHeight: Int,
         imageWidth: Int,
         runningMode: RunningMode = RunningMode.IMAGE,
-        gestureResult: String? = null
+        gestureResult: String? = null,
+        isFrontCamera: Boolean = false,
+        rotationDegrees: Int = 0,
+        handednesses: List<List<Category>>? = null
     ) {
         this.results = handLandmarkerResult
         this.gestureResult = gestureResult
+        this.isFrontCamera = isFrontCamera
+        this.rotationDegrees = rotationDegrees
+        this.handednesses = handednesses
 
         this.imageHeight = imageHeight
         this.imageWidth = imageWidth
 
-        scaleFactor = when (runningMode) {
-            RunningMode.IMAGE,
-            RunningMode.VIDEO -> {
-                min(width * 1f / imageWidth, height * 1f / imageHeight)
-            }
-            RunningMode.LIVE_STREAM -> {
-                max(width * 1f / imageWidth, height * 1f / imageHeight)
-            }
-        }
+        // The scaleFactor is now calculated within the draw method to handle FILL_CENTER logic
         invalidate()
     }
 

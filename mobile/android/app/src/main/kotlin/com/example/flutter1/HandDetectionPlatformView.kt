@@ -238,7 +238,10 @@ class HandDetectionPlatformView(
                     resultBundle.inputImageHeight,
                     resultBundle.inputImageWidth,
                     RunningMode.LIVE_STREAM,
-                    gesture ?: "none"
+                    gesture ?: "none",
+                    isFrontCamera = true, // Assuming front camera is always used here
+                    rotationDegrees = resultBundle.rotationDegrees,
+                    handednesses = handLandmarkerResult.handednesses()
                 )
             }
         }

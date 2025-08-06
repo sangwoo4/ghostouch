@@ -32,6 +32,7 @@ import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
+import com.google.mediapipe.tasks.components.containers.Category
 
 class HandLandmarkerHelper(
     var minHandDetectionConfidence: Float = DEFAULT_HAND_DETECTION_CONFIDENCE,
@@ -48,6 +49,7 @@ class HandLandmarkerHelper(
     // For this example this needs to be a var so it can be reset on changes.
     // If the Hand Landmarker will not change, a lazy val would be preferable.
     private var handLandmarker: HandLandmarker? = null
+    private var rotationDegrees: Int = 0
 
     init {
         setupHandLandmarker()
@@ -170,15 +172,7 @@ class HandLandmarkerHelper(
             // Rotate the frame received from the camera to be in the same direction as it'll be shown
             postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
 
-            // flip image if user use front camera
-            if (isFrontCamera) {
-                postScale(
-                    -1f,
-                    1f,
-                    imageProxy.width.toFloat(),
-                    imageProxy.height.toFloat()
-                )
-            }
+            
         }
         val rotatedBitmap = Bitmap.createBitmap(
             bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
@@ -188,15 +182,16 @@ class HandLandmarkerHelper(
         // Convert the input Bitmap object to an MPImage object to run inference
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
-        detectAsync(mpImage, frameTime)
+        detectAsync(mpImage, frameTime, imageProxy.imageInfo.rotationDegrees)
     }
 
     // Run hand hand landmark using MediaPipe Hand Landmarker API
     @VisibleForTesting
-    fun detectAsync(mpImage: MPImage, frameTime: Long) {
+    fun detectAsync(mpImage: MPImage, frameTime: Long, rotationDegrees: Int) {
         handLandmarker?.detectAsync(mpImage, frameTime)
         // As we're using running mode LIVE_STREAM, the landmark result will
         // be returned in returnLivestreamResult function
+        this.rotationDegrees = rotationDegrees // Store rotationDegrees
     }
 
     // Accepts the URI for a video file loaded from the user's gallery and attempts to run
@@ -341,7 +336,9 @@ class HandLandmarkerHelper(
                 listOf(result),
                 inferenceTime,
                 input.height,
-                input.width
+                input.width,
+                rotationDegrees,
+                result.handednesses()
             )
         )
     }
@@ -373,6 +370,8 @@ class HandLandmarkerHelper(
         val inferenceTime: Long,
         val inputImageHeight: Int,
         val inputImageWidth: Int,
+        val rotationDegrees: Int = 0,
+        val handednesses: List<List<Category>>? = null
     )
 
     interface LandmarkerListener {
