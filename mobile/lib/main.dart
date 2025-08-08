@@ -233,7 +233,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
         children: [
           // 헤더 부분
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
             decoration: const BoxDecoration(
               color: Color(0xFF0E1539),
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
@@ -248,7 +248,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                       child: Text(
                         'Pentagon',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -315,7 +315,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
           _buildBackgroundCard(),
 
-                    // ✅ 테스트 페이지 카드 (맨 아래)
+          // ✅ 테스트 페이지 카드 (맨 아래)
           _buildMenuCard(
             icon: Icons.bug_report,
             title: '테스트 페이지',
@@ -323,9 +323,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const TestPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const TestPage()),
               );
             },
           ),
@@ -345,44 +343,48 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           title: Text(isGestureEnabled ? '사용함' : '사용 안 함'),
           trailing: Switch(
             value: isGestureEnabled,
-            onChanged: _isToggleBusy ? null : (value) async {
-              setState(() {
-                _isToggleBusy = true;
-              });
-
-              try {
-                // 사용자가 스위치를 켤 때
-                if (value) {
-                  bool hasPermission = false;
-                  try {
-                    hasPermission = await toggleChannel.invokeMethod('checkCameraPermission');
-                  } on PlatformException catch (e) {
-                    print("❌ 권한 확인 실패: ${e.message}");
-                  }
-
-                  if (hasPermission) {
-                    // 권한이 있으면 서비스 시작
-                    await functionToggle(true);
+            onChanged: _isToggleBusy
+                ? null
+                : (value) async {
                     setState(() {
-                      isGestureEnabled = true;
+                      _isToggleBusy = true;
                     });
-                  } else {
-                    // 권한이 없으면 설정 안내 다이얼로그 표시
-                    await _showToggleDialog();
-                  }
-                } else {
-                  // 사용자가 스위치를 끌 때
-                  await functionToggle(false);
-                  setState(() {
-                    isGestureEnabled = false;
-                  });
-                }
-              } finally {
-                setState(() {
-                  _isToggleBusy = false;
-                });
-              }
-            },
+
+                    try {
+                      // 사용자가 스위치를 켤 때
+                      if (value) {
+                        bool hasPermission = false;
+                        try {
+                          hasPermission = await toggleChannel.invokeMethod(
+                            'checkCameraPermission',
+                          );
+                        } on PlatformException catch (e) {
+                          print("❌ 권한 확인 실패: ${e.message}");
+                        }
+
+                        if (hasPermission) {
+                          // 권한이 있으면 서비스 시작
+                          await functionToggle(true);
+                          setState(() {
+                            isGestureEnabled = true;
+                          });
+                        } else {
+                          // 권한이 없으면 설정 안내 다이얼로그 표시
+                          await _showToggleDialog();
+                        }
+                      } else {
+                        // 사용자가 스위치를 끌 때
+                        await functionToggle(false);
+                        setState(() {
+                          isGestureEnabled = false;
+                        });
+                      }
+                    } finally {
+                      setState(() {
+                        _isToggleBusy = false;
+                      });
+                    }
+                  },
           ),
         ),
       ),
