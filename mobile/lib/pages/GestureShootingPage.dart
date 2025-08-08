@@ -100,14 +100,10 @@ class GestureShootingPage extends StatelessWidget {
                     width: 350,
                     height: 350,
                     color: Colors.black12,
-                    child: const Center(
-                      child: Text(
-                        '📷 카메라 뷰 (여기에 띄움)',
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                    child: const AndroidView(
+                      viewType: 'hand_detection_view',
+                      layoutDirection: TextDirection.ltr,
                     ),
-                    // 이 영역에 카메라 뷰 삽입 예정
-                    // 예: CameraPreview(controller)
                   ),
                 ),
               ),
