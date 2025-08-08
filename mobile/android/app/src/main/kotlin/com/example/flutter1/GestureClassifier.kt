@@ -97,12 +97,34 @@ class GestureClassifier(private val context: Context) {
             val landmarks = handLandmarkerResult.landmarks()[0]
             val wrist = landmarks[0]  // 기준점: 손목
 
-            // 손목을 기준으로 중앙 정렬
-            var centeredX = landmarks.map { it.x() - wrist.x() }
-            val centeredY = landmarks.map { it.y() - wrist.y() }
-            val centeredZ = landmarks.map { it.z() - wrist.z() }
+            // 1. 손목을 기준으로 랜드마크 중앙 정렬
+            val centeredLandmarks = landmarks.map {
+                listOf(it.x() - wrist.x(), it.y() - wrist.y(), it.z() - wrist.z())
+            }
 
-            // 미러링된 카메라 보정 (예: 전면 카메라이면 실제 손이 반대편임)
+            // 2. 손 회전 각도 계산 및 랜드마크 정규화 (세로 방향으로)
+            val wristCentered = centeredLandmarks[0]
+            val middleFingerMCP = centeredLandmarks[9]
+
+            // y축이 이미지 좌표에서 반전되므로 -y 사용
+            val angle = Math.atan2(
+                (middleFingerMCP[0] - wristCentered[0]).toDouble(),
+                -(middleFingerMCP[1] - wristCentered[1]).toDouble()
+            )
+            val rotationAngle = -angle
+
+            val cosAngle = Math.cos(rotationAngle).toFloat()
+            val sinAngle = Math.sin(rotationAngle).toFloat()
+
+            var rotatedLandmarks = centeredLandmarks.map { landmark ->
+                val x = landmark[0]
+                val y = landmark[1]
+                val newX = x * cosAngle - y * sinAngle
+                val newY = x * sinAngle + y * cosAngle
+                listOf(newX, newY, landmark[2]) // z는 동일하게 유지
+            }
+
+            // 3. 미러링된 카메라 보정
             val rawHandedness = handLandmarkerResult.handedness()
                 .firstOrNull()?.firstOrNull()?.categoryName()?.lowercase() ?: "right"
 
@@ -112,24 +134,28 @@ class GestureClassifier(private val context: Context) {
                 rawHandedness
             }
 
-            // 오른손인 경우, 왼손 기준 모델에 맞추기 위해 x 좌표 반전
+            // 4. 오른손인 경우, 왼손 기준 모델에 맞추기 위해 x 좌표 반전
             if (actualHandedness == "right") {
-                centeredX = centeredX.map { -it }
+                rotatedLandmarks = rotatedLandmarks.map { listOf(-it[0], it[1], it[2]) }
             }
 
-            // 정규화를 위한 최대 길이 계산 (x, y, z 축 중 최대값)
+            // 5. 회전된 랜드마크를 사용하여 정규화를 위한 최대 길이 계산
+            val xs = rotatedLandmarks.map { it[0] }
+            val ys = rotatedLandmarks.map { it[1] }
+            val zs = rotatedLandmarks.map { it[2] }
+
             val maxDim = maxOf(
-                centeredX.maxOrNull()!! - centeredX.minOrNull()!!,
-                centeredY.maxOrNull()!! - centeredY.minOrNull()!!,
-                centeredZ.maxOrNull()!! - centeredZ.minOrNull()!!
+                xs.maxOrNull()!! - xs.minOrNull()!!,
+                ys.maxOrNull()!! - ys.minOrNull()!!,
+                zs.maxOrNull()!! - zs.minOrNull()!!
             ).takeIf { it > 0f } ?: 1f  // 0 나누기 방지
 
-            // 정규화된 좌표 리스트 생성 (x,y,z 순서로 21개)
+            // 6. 정규화된 좌표 리스트 생성
             val floatList = mutableListOf<Float>()
-            for (i in landmarks.indices) {
-                floatList.add(centeredX[i] / maxDim)
-                floatList.add(centeredY[i] / maxDim)
-                floatList.add(centeredZ[i] / maxDim)
+            for (landmark in rotatedLandmarks) {
+                floatList.add(landmark[0] / maxDim)
+                floatList.add(landmark[1] / maxDim)
+                floatList.add(landmark[2] / maxDim)
             }
 
             // 총 64개의 입력 벡터 만들기 (63개 + handedness)
