@@ -1,3 +1,4 @@
+import 'dart:io'; // Platform 체크를 위해 필요
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -93,7 +94,7 @@ class GestureShootingPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // 카메라 뷰 (원형)
+            // 카메라 뷰 (원형) - 플랫폼별 분기 처리
             Expanded(
               child: Center(
                 child: ClipOval(
@@ -101,19 +102,16 @@ class GestureShootingPage extends StatelessWidget {
                     width: 350,
                     height: 350,
                     color: Colors.black12,
-                    // child: const Center(
-                    //   child: Text(
-                    //     '📷 카메라 뷰 (여기에 띄움)',
-                    //     style: TextStyle(color: Colors.grey),
-                    //   ),
-                    // ),
-                    child: UiKitView(
-                      viewType: 'camera_view',
-                      creationParamsCodec: StandardMessageCodec(),
-                    ),
 
-                    // 이 영역에 카메라 뷰 삽입 예정
-                    // 예: CameraPreview(controller)
+                    child: Platform.isAndroid
+                        ? const AndroidView(
+                            viewType: 'hand_detection_view',
+                            layoutDirection: TextDirection.ltr,
+                          )
+                        : const UiKitView(
+                            viewType: 'camera_view',
+                            creationParamsCodec: StandardMessageCodec(),
+                          ),
                   ),
                 ),
               ),

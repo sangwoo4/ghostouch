@@ -185,7 +185,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
             // 상단 헤더
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               decoration: const BoxDecoration(
                 color: Color(0xFF0E1539),
                 borderRadius: BorderRadius.vertical(
