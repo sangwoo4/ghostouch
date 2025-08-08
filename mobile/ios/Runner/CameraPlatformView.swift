@@ -8,21 +8,26 @@
 import Flutter
 import UIKit
 
-// 2) FlutterPlatformView 역할
+// FlutterPlatformView가 CameraPreviewView(UIViewController)를 관리하도록 수정합니다.
 class CameraPlatformView: NSObject, FlutterPlatformView {
-  private let _view: CameraPreviewView
+  //  private let _view: CameraPreviewView
+  private let _cameraController: CameraPreviewView
 
   init(frame: CGRect, viewIdentifier: Int64, arguments: Any?, messenger: FlutterBinaryMessenger) {
-    _view = CameraPreviewView(frame: frame)
+    // CameraPreviewView 컨트롤러 인스턴스를 생성합니다.
+   //   _view = CameraPreviewView(frame: frame)
+    _cameraController = CameraPreviewView()
     super.init()
   }
 
+  // Flutter에 보여줄 View로 컨트롤러의 view를 반환합니다.
   func view() -> UIView {
-    return _view
+      //return _view
+      return _cameraController.view
   }
 }
 
-// 3) Factory
+// Factory 클래스는 변경할 필요가 없습니다.
 class CameraPlatformViewFactory: NSObject, FlutterPlatformViewFactory {
   private let messenger: FlutterBinaryMessenger
   init(messenger: FlutterBinaryMessenger) {

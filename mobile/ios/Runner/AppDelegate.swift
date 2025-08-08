@@ -21,12 +21,13 @@ import UIKit
       if let settingReg = registrar(forPlugin: "OpenSetting") {
         OpenSetting.register(with: settingReg)
       }
-//      if let cameraReg = registrar(forPlugin: "OpenCamera") {
-//        OpenCamera.register(with: cameraReg)
-//      }
-      if let cameraReg = registrar(forPlugin: "CameraViewPlugin") {
-          CameraViewPlugin.register(with: cameraReg)
+      // CameraPlatformViewFactory를 직접 등록
+      // "camera_view" -> Flutter 코드에서 PlatformView를 식별하는 데 사용되는 고유 ID
+      if let registrar = self.registrar(forPlugin: "camera-view-plugin") {
+          let cameraFactory = CameraPlatformViewFactory(messenger: registrar.messenger())
+          registrar.register(cameraFactory, withId: "camera_view")
       }
+
 
 //      // PlatformViewFactory 등록
 //      let factory = CameraPlatformViewFactory(messenger: messenger)
