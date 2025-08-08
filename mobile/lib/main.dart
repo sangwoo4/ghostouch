@@ -28,8 +28,50 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> {
+class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   bool isGestureEnabled = false;
+  bool _isToggleBusy = false; // 처리 중 상태를 나타내는 변수
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkInitialPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkInitialPermission();
+    }
+  }
+
+  Future<void> _checkInitialPermission() async {
+    bool hasPermission = false;
+    try {
+      hasPermission = await toggleChannel.invokeMethod('checkCameraPermission');
+      print('카메라 권한 상태: $hasPermission');
+    } on PlatformException catch (e) {
+      print("카메라 권한 확인 실패: '${e.message}'.");
+    }
+
+    setState(() {
+      isGestureEnabled = hasPermission;
+    });
+
+    // 권한이 있으면 서비스 시작, 없으면 중지 (상태 동기화)
+    if (hasPermission) {
+      await functionToggle(true);
+    } else {
+      await functionToggle(false);
+    }
+  }
 
   String _selectedTimeoutLabel = '설정 안 함';
   static const Map<String, int> backgroundTimeoutOptions = {
@@ -125,13 +167,17 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  // ✅ functionToggle 함수 정의
   Future<void> functionToggle(bool enabled) async {
     print('✅ functionToggle 호출됨. 전달 값: $enabled');
 
     try {
-      await toggleChannel.invokeMethod('functionToggle', {'enabled': enabled});
-      print('📡 네이티브에게 functionToggle 전송 완료: $enabled');
+      if (enabled) {
+        await toggleChannel.invokeMethod('startGestureService');
+        print('📡 네이티브에 서비스 시작 명령 전송');
+      } else {
+        await toggleChannel.invokeMethod('stopGestureService');
+        print('📡 네이티브에 서비스 중지 명령 전송');
+      }
     } on PlatformException catch (e) {
       print("❌ 네이티브 함수 호출 실패: '${e.message}'");
     }
@@ -299,26 +345,42 @@ class _MainPageState extends State<MainPage> {
           title: Text(isGestureEnabled ? '사용함' : '사용 안 함'),
           trailing: Switch(
             value: isGestureEnabled,
-            onChanged: (val) async {
-              if (val) {
-                // 사용자가 이동하기를 누르면 true, 아니면 false 반환
-                final result = await _showToggleDialog();
-                if (result == true) {
-                  setState(() {
-                    isGestureEnabled = true;
-                  });
-                  functionToggle(true);
+            onChanged: _isToggleBusy ? null : (value) async {
+              setState(() {
+                _isToggleBusy = true;
+              });
+
+              try {
+                // 사용자가 스위치를 켤 때
+                if (value) {
+                  bool hasPermission = false;
+                  try {
+                    hasPermission = await toggleChannel.invokeMethod('checkCameraPermission');
+                  } on PlatformException catch (e) {
+                    print("❌ 권한 확인 실패: ${e.message}");
+                  }
+
+                  if (hasPermission) {
+                    // 권한이 있으면 서비스 시작
+                    await functionToggle(true);
+                    setState(() {
+                      isGestureEnabled = true;
+                    });
+                  } else {
+                    // 권한이 없으면 설정 안내 다이얼로그 표시
+                    await _showToggleDialog();
+                  }
                 } else {
-                  // 사용자가 취소하거나 아무 동작도 안 하면 false
+                  // 사용자가 스위치를 끌 때
+                  await functionToggle(false);
                   setState(() {
                     isGestureEnabled = false;
                   });
                 }
-              } else {
+              } finally {
                 setState(() {
-                  isGestureEnabled = false;
+                  _isToggleBusy = false;
                 });
-                functionToggle(false); // OFF는 즉시 반영
               }
             },
           ),

@@ -200,8 +200,12 @@ class HandDetectionPlatformView(
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
             .also {
-                it.setAnalyzer(backgroundExecutor) { image ->
-                    detectHand(image)
+                it.setAnalyzer(backgroundExecutor) { imageProxy ->
+                    if (handLandmarkerHelper?.isClose() == false) {
+                        detectHand(imageProxy)
+                    } else {
+                        imageProxy.close()
+                    }
                 }
             }
 
@@ -270,6 +274,13 @@ class HandDetectionPlatformView(
 
     override fun dispose() {
         backgroundExecutor.shutdown()
+        try {
+            if (!backgroundExecutor.awaitTermination(50, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                backgroundExecutor.shutdownNow()
+            }
+        } catch (e: InterruptedException) {
+            backgroundExecutor.shutdownNow()
+        }
         cameraProvider?.unbindAll()
         handLandmarkerHelper?.clearHandLandmarker()
         gestureClassifier?.close()

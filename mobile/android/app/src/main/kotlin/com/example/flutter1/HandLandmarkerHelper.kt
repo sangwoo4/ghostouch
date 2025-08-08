@@ -145,7 +145,6 @@ class HandLandmarkerHelper(
         }
     }
 
-    // Convert the ImageProxy to MP Image and feed it to HandlandmakerHelper.
     fun detectLiveStream(
         imageProxy: ImageProxy,
         isFrontCamera: Boolean
@@ -158,31 +157,41 @@ class HandLandmarkerHelper(
         }
         val frameTime = SystemClock.uptimeMillis()
 
+        // Extract needed properties from imageProxy before closing it.
+        val rotation = imageProxy.imageInfo.rotationDegrees
+        val width = imageProxy.width
+        val height = imageProxy.height
+
         // Copy out RGB bits from the frame to a bitmap buffer
         val bitmapBuffer =
             Bitmap.createBitmap(
-                imageProxy.width,
-                imageProxy.height,
+                width,
+                height,
                 Bitmap.Config.ARGB_8888
             )
-        imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
-        imageProxy.close()
+
+        // Close the imageProxy after copying the buffer
+        imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(it.planes[0].buffer) }
+        // After this point, imageProxy is closed and should not be accessed.
 
         val matrix = Matrix().apply {
             // Rotate the frame received from the camera to be in the same direction as it'll be shown
-            postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
+            postRotate(rotation.toFloat())
 
-            
+            // Flip the frame if it's from the front camera
+            if (isFrontCamera) {
+                postScale(-1f, 1f, width / 2f, height / 2f)
+            }
         }
         val rotatedBitmap = Bitmap.createBitmap(
-            bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
+            bitmapBuffer, 0, 0, width, height,
             matrix, true
         )
 
         // Convert the input Bitmap object to an MPImage object to run inference
         val mpImage = BitmapImageBuilder(rotatedBitmap).build()
 
-        detectAsync(mpImage, frameTime, imageProxy.imageInfo.rotationDegrees)
+        detectAsync(mpImage, frameTime, rotation)
     }
 
     // Run hand hand landmark using MediaPipe Hand Landmarker API
