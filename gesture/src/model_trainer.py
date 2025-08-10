@@ -67,16 +67,17 @@ class UpdateModelBuilder(ModelBuilder):
         model.build(input_shape=(None, *input_shape))
         return model
 
+from sklearn.model_selection import train_test_split
+
 class ModelTrainer:
     # 모델을 학습하고, 평가하며, TFLite로 변환하여 저장하는 클래스.
 
-    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map: dict = None, train_data_path: str = None, test_data_path: str = None, is_incremental_learning: bool = False):
+    def __init__(self, model_builder: ModelBuilder, config: Config, model_save_path: str = None, tflite_save_path: str = None, label_map: dict = None, data_path: str = None, is_incremental_learning: bool = False):
         self.model_builder = model_builder
         self.config = config
         self.model_save_path = model_save_path
         self.tflite_save_path = tflite_save_path
-        self.train_data_path = train_data_path
-        self.test_data_path = test_data_path
+        self.data_path = data_path
         self.is_incremental_learning = is_incremental_learning
         self.label_map = label_map
     
@@ -122,7 +123,11 @@ class ModelTrainer:
                   callbacks=[early_stopping, lr_scheduler],
                   class_weight=class_weights_dict)  # 계산된 클래스 가중치 적용
 
-        model.save(self.model_save_path)
+        
+        assert self.model_save_path.endswith(".keras"), "파일 확장자는 반드시 .keras여야 함"
+        model.save(self.model_save_path, save_format='keras')
+        import zipfile
+        assert zipfile.is_zipfile(self.model_save_path), "❌ 저장된 .keras 파일은 zip 포맷이 아님!"
         logger.info(f"----- Keras 모델 저장 완료: {self.model_save_path}")
         
         loss, acc = model.evaluate(X_test, y_test, verbose=0)
@@ -134,13 +139,17 @@ class ModelTrainer:
     def _load_and_prepare_data(self):
         # Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환
 
-        train_data = np.load(self.train_data_path, allow_pickle=True)
-        test_data = np.load(self.test_data_path, allow_pickle=True)
+        data = np.load(self.data_path, allow_pickle=True)
 
-        X_train = train_data[:, :-1].astype(np.float32)
-        y_train_labels = train_data[:, -1].astype(int)
-        X_test = test_data[:, :-1].astype(np.float32)
-        y_test_labels = test_data[:, -1].astype(int)
+        X = data[:, :-1].astype(np.float32)
+        y_string_labels = data[:, -1]
+        
+        # 문자열 라벨을 label_map을 사용하여 정수 라벨로 변환
+        y_labels = np.array([self.label_map[label] for label in y_string_labels])
+
+        X_train, X_test, y_train_labels, y_test_labels = train_test_split(
+            X, y_labels, test_size=0.2, random_state=42, stratify=y_labels
+        )
 
         y_train = to_categorical(y_train_labels, num_classes=len(self.label_map))
         y_test = to_categorical(y_test_labels, num_classes=len(self.label_map))

@@ -18,18 +18,15 @@ class Config:
 
         # 02-1. basic 데이터
         self.BASIC_LANDMARK_CSV_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'basic_hand_landmarks.csv')
-        self.BASIC_TRAIN_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'basic_train_data.npy')
-        self.BASIC_TEST_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'basic_test_data.npy')
+        self.BASIC_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'basic_data.npy')
 
         # 02-2. incremental 데이터
         self.INCREMENTAL_IMAGE_DATA_DIR = os.path.join(self.DATA_DIR, 'new_image_data')
         self.INCREMENTAL_LANDMARK_CSV_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'incremental_hand_landmarks.csv')
-        self.INCREMENTAL_TRAIN_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'incremental_train_data.npy')
-        self.INCREMENTAL_TEST_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'incremental_test_data.npy')
+        self.INCREMENTAL_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'incremental_data.npy')
 
         # 02-3. combine 데이터 (basic + incremental)
-        self.COMBINE_TRAIN_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'combine_train_data.npy')
-        self.COMBINE_TEST_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'combine_test_data.npy')
+        self.COMBINE_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'combine_data.npy')
 
         # 03. 모델 타입별 경로 (라이브 테스트용)
         self.TFLITE_MODEL_PATHS = {
