@@ -12,4 +12,6 @@ class StatusResponse(BaseModel):
     task_id: str
     status: str
     result: Optional[Any] = None
+    error_info: Optional[str] = None
+    progress: Optional[dict] = None
 

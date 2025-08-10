@@ -11,24 +11,35 @@ def start_new_training_job(model_code, landmarks) -> str:
     :return: celery task id
     """
     print("model_code:", model_code)
-    #task = training_tasks.run_train_and_upload.delay(model_code, landmarks)
+    task = training_tasks.training_task.delay(model_code, landmarks)
+    #
+    # task_chain = chain(
+    #     training_tasks.training_task.s(model_code, landmarks),
+    #     training_tasks.upload_task.s()
+    # )
 
-    task_chain = chain(
-        training_tasks.training_task.s(model_code, landmarks),
-        training_tasks.upload_task.s()
-    )
-
-    result = task_chain.apply_async()
-    return result.id
+    #result = task_chain.apply_async()
+    return task.id
 
 def get_job_status(task_id: str) -> dict:
     task_result = AsyncResult(task_id, app = celery_app)
     status = task_result.status
+    result = None
+    error_info = None
+    progress = None
 
-    result = task_result.result if task_result.ready() else None
+    if status == 'PROGRESS':
+        progress = task_result.result
+    elif task_result.ready():
+        if task_result.successful():
+            result = task_result.result
+        elif task_result.failed():
+            error_info = task_result.info
 
     return{
         "task_id": task_id,
         "status": status,
-        "result": result
+        "result": result,
+        "error_info": error_info,
+        "progress": progress,
     }
