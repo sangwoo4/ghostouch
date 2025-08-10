@@ -61,6 +61,37 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // 제스처-액션 매핑을 위한 새로운 MethodChannel
+        val MAPPING_CHANNEL = "com.pentagon.ghostouch/mapping"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAPPING_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setGestureAction" -> {
+                    val gesture = call.argument<String>("gesture")
+                    val action = call.argument<String>("action")
+
+                    if (gesture != null && action != null) {
+                        val prefs = getSharedPreferences("gesture_mappings", MODE_PRIVATE)
+                        prefs.edit().putString("gesture_action_$gesture", action).apply()
+                        result.success("매핑 저장 성공: $gesture -> $action")
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "제스처 또는 액션 인수가 없습니다.", null)
+                    }
+                }
+                "getGestureAction" -> {
+                    val gesture = call.argument<String>("gesture")
+                    if (gesture != null) {
+                        val prefs = getSharedPreferences("gesture_mappings", MODE_PRIVATE)
+                        // 저장된 값이 없으면 "none"을 기본값으로 반환
+                        val action = prefs.getString("gesture_action_$gesture", "none")
+                        result.success(action)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "제스처 인수가 없습니다.", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun openAppSettings() {
@@ -69,5 +100,19 @@ class MainActivity: FlutterActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 앱이 화면에 보이면 서비스에 알림
+        GestureDetectionService.isAppInForeground = true
+        android.util.Log.d("MainActivity", "onResume: isAppInForeground set to TRUE")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 앱이 화면에서 사라지면 서비스에 알림
+        GestureDetectionService.isAppInForeground = false
+        android.util.Log.d("MainActivity", "onPause: isAppInForeground set to FALSE")
     }
 }

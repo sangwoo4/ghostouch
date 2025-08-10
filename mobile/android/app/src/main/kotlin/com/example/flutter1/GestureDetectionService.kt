@@ -29,11 +29,17 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
     private var gestureClassifier: GestureClassifier? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var backgroundExecutor: ExecutorService
+    private var lastActionTimestamp: Long = 0 // 마지막 액션 실행 시간
+    private val actionCooldownMs: Long = 1500 // 액션 실행 최소 간격 (1.5초)
 
     companion object {
         private const val TAG = "GestureDetectionService"
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "GestureDetectionChannel"
+
+        // 앱의 포그라운드 상태를 공유하기 위한 변수
+        @JvmStatic
+        var isAppInForeground = false
     }
 
     override val lifecycle: Lifecycle
@@ -126,7 +132,23 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
             val gesture = gestureClassifier?.classifyGesture(handLandmarkerResult)
             if (gesture != null && gesture != "none") {
                 Log.d(TAG, "인식된 제스처: $gesture")
-                // TODO: 인식된 제스처에 따라 특정 동작 수행 (예: 이벤트 버스, 브로드캐스트)
+
+                // 결과 문자열에서 실제 제스처 이름만 추출 (예: "rock (98%)" -> "rock")
+                val gestureName = gesture.substringBefore(" (").trim()
+
+                // 앱이 백그라운드에 있을 때만 액션 실행
+                Log.d(TAG, "Checking action condition. isAppInForeground = ${isAppInForeground}")
+                if (!isAppInForeground) {
+                    // 쿨다운 확인
+                    val now = System.currentTimeMillis()
+                    if (now - lastActionTimestamp > actionCooldownMs) {
+                        val actionExecutor = ActionExecutor(this)
+                        actionExecutor.executeActionForGesture(gestureName)
+                        lastActionTimestamp = now // 마지막 실행 시간 업데이트
+                    }
+                } else {
+                    Log.d(TAG, "앱이 포그라운드 상태이므로 액션을 실행하지 않습니다.")
+                }
             }
         }
     }
