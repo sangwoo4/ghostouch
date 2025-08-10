@@ -9,6 +9,7 @@ def start_new_training_job(model_code, landmarks) -> str:
     :param landmarks: 수집한 렌드마크
     :return: celery task id
     """
+    print("model_code:", model_code)
     task = training_tasks.run_train_and_upload.delay(model_code, landmarks)
     return task.id
 
