@@ -8,7 +8,8 @@ from .ml.model_summary_printer import ModelSummaryPrinter
 from .ml.model_trainer import ModelTrainer
 from app.utils.utils import generate_model_id, convert_landmarks_to_csv
 from .ml.update_model_builder import UpdateModelBuilder
-
+from ..services import firebase_service
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def archive_other_files_task(files_paths):
 
 
 @celery_app.task
-def run_train_and_upload(model_code, landmarks):
+def training_task(model_code, landmarks):
         new_model_code = generate_model_id()
         hparams_configs = HparamsConfig()
         path_configs = PathConfig(model_code, new_model_code)
@@ -49,8 +50,34 @@ def run_train_and_upload(model_code, landmarks):
         ModelSummaryPrinter.print_summaries(path_configs)
         logger.info("증분 학습이 성공적으로 완료되었습니다.")
 
-        # new_tflite_url = await upload_model_to_firebase(
-        #         path_configs.tflite_model_path,
-        #         path_configs.combined_keras_model_path,
-        #         path_configs.combined_csv_path
-        # )
+        return {
+                "tflite_model_path": path_configs.tflite_model_path,
+                "combined_keras_model_path": path_configs.combined_keras_model_path,
+                "combined_csv_path": path_configs.combined_csv_path,
+        }
+
+
+
+
+@celery_app.task
+def upload_task(paths: dict):
+    # asyncio 환경에서 실행
+    return asyncio.run(_upload_task_async(paths))
+
+
+async def _upload_task_async(paths: dict):
+    tflite_url = await firebase_service.upload_tflite_and_get_url(
+        paths["tflite_model_path"]
+    )
+    logger.info(f"TFLite 모델 업로드 완료 및 URL 수신: {tflite_url}")
+
+    asyncio.create_task(firebase_service.upload_keras_model(
+        paths["combined_keras_model_path"]
+    ))
+
+    asyncio.create_task(firebase_service.upload_csv_data(
+        paths["combined_csv_path"]
+    ))
+    logger.info("Keras 모델 및 CSV 데이터 백그라운드 업로드 시작됨.")
+
+    return tflite_url

@@ -1,4 +1,5 @@
 from celery import Celery
+from app.utils import firebase_util
 
 celery_app = Celery(
     "worker",
@@ -8,5 +9,5 @@ celery_app = Celery(
 )
 
 celery_app.conf.update(
-    esult_expires = 300,
+    result_expires = 300,
 )

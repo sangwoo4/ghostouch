@@ -31,6 +31,7 @@ class PathConfig:
         self.combined_keras_model_path = os.path.join(self.new_model_dir, f"{new_model_code}_model.keras")
         self.tflite_model_path = os.path.join(self.new_model_dir, f"{new_model_code}_model.tflite")
 
+
         # self.base_model_dir = os.path.join(self.MODELS_DIR, self.model_code)
         # os.makedirs(self.base_model_dir, exist_ok=True)
         #
