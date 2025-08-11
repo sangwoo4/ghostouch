@@ -55,5 +55,14 @@
             <data android:mimeType="text/plain"/>
         </intent>
         <package android:name="com.samsung.android.app.notes" />
+        <package android:name="com.samsung.android.dialer" />
+        <package android:name="com.samsung.android.messaging" />
+        <package android:name="com.sec.android.app.camera" />
+        <package android:name="com.sec.android.gallery3d" />
+        <package android:name="com.sec.android.app.clockpackage" />
+        <package android:name="com.samsung.android.calendar" />
+        <package android:name="com.sec.android.app.popupcalculator" />
+        <package android:name="com.samsung.android.app.contacts" />
+        <package android:name="com.android.settings" />
     </queries>
 </manifest>

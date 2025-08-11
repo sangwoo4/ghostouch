@@ -107,8 +107,15 @@ class _GestureActionDropdownState extends State<GestureActionDropdown> {
   final Map<String, String> options = {
     'none': '동작 없음',
     'action_open_memo': '메모장 실행',
-    'action_capture': '스크린 캡처',
-    'action_play_pause': '플레이/정지',
+    'action_open_dialer': '전화 실행',
+    'action_open_messages': '메시지 실행',
+    'action_open_camera': '카메라 실행',
+    'action_open_gallery': '갤러리 실행',
+    'action_open_clock': '시계 실행',
+    'action_open_calendar': '캘린더 실행',
+    'action_open_calculator': '계산기 실행',
+    'action_open_contacts': '연락처 실행',
+    'action_open_settings': '설정 실행',
   };
 
   // SharedPreferences에서 초기값 로드

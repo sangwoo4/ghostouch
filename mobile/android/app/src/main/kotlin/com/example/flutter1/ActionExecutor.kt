@@ -14,10 +14,17 @@ class ActionExecutor(private val context: Context) {
 
         Log.d("ActionExecutor", "실행 요청: $gesture -> $action")
 
-        // "action_open_memo" 동작이 지정된 경우, 메모장 앱 실행
-        if (action == "action_open_memo") {
-            // 삼성 노트 앱의 패키지 이름입니다. 다른 메모장 앱을 원하시면 이 부분을 수정해야 합니다.
-            openApp("com.samsung.android.app.notes")
+        when (action) {
+            "action_open_memo" -> openApp("com.samsung.android.app.notes")
+            "action_open_dialer" -> openApp("com.samsung.android.dialer")
+            "action_open_messages" -> openApp("com.samsung.android.messaging")
+            "action_open_camera" -> openApp("com.sec.android.app.camera")
+            "action_open_gallery" -> openApp("com.sec.android.gallery3d")
+            "action_open_clock" -> openApp("com.sec.android.app.clockpackage")
+            "action_open_calendar" -> openApp("com.samsung.android.calendar")
+            "action_open_calculator" -> openApp("com.sec.android.app.popupcalculator")
+            "action_open_contacts" -> openApp("com.samsung.android.app.contacts")
+            "action_open_settings" -> openApp("com.android.settings")
         }
         // TODO: 다른 액션들(예: 스크린캡쳐)에 대한 처리 로직 추가
     }
