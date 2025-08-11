@@ -58,6 +58,21 @@ class MainActivity: FlutterActivity() {
                     openAppSettings()
                     result.success(null)
                 }
+                "setToggleState" -> {
+                    val state = call.argument<Boolean>("state")
+                    if (state != null) {
+                        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                        prefs.edit().putBoolean("toggle_state", state).apply()
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "State argument is missing", null)
+                    }
+                }
+                "getToggleState" -> {
+                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                    val state = prefs.getBoolean("toggle_state", false) // 기본값 false
+                    result.success(state)
+                }
                 else -> result.notImplemented()
             }
         }

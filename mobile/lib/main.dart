@@ -36,7 +36,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkInitialPermission();
+    _loadInitialToggleState(); // 앱 시작 시 저장된 토글 상태 불러오기
   }
 
   @override
@@ -47,29 +47,35 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkInitialPermission();
-    }
+    // 앱이 재개될 때마다 권한을 다시 확인하는 로직은 유지하되,
+    // 토글 상태를 강제로 켜지는 않도록 주석 처리 또는 로직 수정이 필요할 수 있음
+    // if (state == AppLifecycleState.resumed) {
+    //   _checkCameraPermission();
+    // }
   }
 
-  Future<void> _checkInitialPermission() async {
-    bool hasPermission = false;
+  // 앱 시작 시, 저장된 토글 상태를 불러와 UI에 반영
+  Future<void> _loadInitialToggleState() async {
+    bool savedState = false;
     try {
-      hasPermission = await toggleChannel.invokeMethod('checkCameraPermission');
-      print('카메라 권한 상태: $hasPermission');
+      savedState = await toggleChannel.invokeMethod('getToggleState');
     } on PlatformException catch (e) {
-      print("카메라 권한 확인 실패: '${e.message}'.");
+      print("❌ 토글 상태 불러오기 실패: ${e.message}");
     }
-
     setState(() {
-      isGestureEnabled = hasPermission;
+      isGestureEnabled = savedState;
     });
+    // 불러온 상태에 따라 서비스 상태 동기화
+    await functionToggle(savedState);
+  }
 
-    // 권한이 있으면 서비스 시작, 없으면 중지 (상태 동기화)
-    if (hasPermission) {
-      await functionToggle(true);
-    } else {
-      await functionToggle(false);
+  // 카메라 권한만 확인하는 함수 (토글 상태를 변경하지 않음)
+  Future<bool> _checkCameraPermission() async {
+    try {
+      return await toggleChannel.invokeMethod('checkCameraPermission');
+    } on PlatformException catch (e) {
+      print("❌ 카메라 권한 확인 실패: '${e.message}'.");
+      return false;
     }
   }
 
@@ -353,18 +359,12 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                     try {
                       // 사용자가 스위치를 켤 때
                       if (value) {
-                        bool hasPermission = false;
-                        try {
-                          hasPermission = await toggleChannel.invokeMethod(
-                            'checkCameraPermission',
-                          );
-                        } on PlatformException catch (e) {
-                          print("❌ 권한 확인 실패: ${e.message}");
-                        }
+                        bool hasPermission = await _checkCameraPermission();
 
                         if (hasPermission) {
-                          // 권한이 있으면 서비스 시작
+                          // 권한이 있으면 서비스 시작 및 상태 저장
                           await functionToggle(true);
+                          await toggleChannel.invokeMethod('setToggleState', {'state': true});
                           setState(() {
                             isGestureEnabled = true;
                           });
@@ -375,6 +375,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                       } else {
                         // 사용자가 스위치를 끌 때
                         await functionToggle(false);
+                        await toggleChannel.invokeMethod('setToggleState', {'state': false});
                         setState(() {
                           isGestureEnabled = false;
                         });
