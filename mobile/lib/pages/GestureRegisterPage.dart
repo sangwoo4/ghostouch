@@ -19,13 +19,30 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   static const resetChannel = MethodChannel(
     'com.pentagon.ghostouch/reset-gesture',
   );
+  static const listChannel = MethodChannel(
+    'com.pentagon.ghostouch/list-gesture',
+  );
 
-  final List<String> registeredGestures = [
-    '가위 제스처',
-    '주먹 제스처',
-    '보 제스처',
-    '한성대 제스처',
-  ];
+  List<String> registeredGestures = ['가위 제스처', '주먹 제스처', '보 제스처', '한성대 제스처'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGestureList();
+  }
+
+  Future<void> _loadGestureList() async {
+    try {
+      final List<dynamic> gestures = await listChannel.invokeMethod(
+        'list-gesture',
+      );
+      setState(() {
+        registeredGestures = gestures.cast<String>();
+      });
+    } catch (e) {
+      debugPrint("⚠ 제스처 목록 불러오기 실패: $e");
+    }
+  }
 
   // ✅ 추가: 다이얼로그 표시 함수
   Future<bool?> _showCameraDialog(BuildContext parentContext) {
@@ -175,170 +192,200 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   Widget build(BuildContext context) {
     final inputValidAndChecked = _isDuplicateChecked && _isNameValid;
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: Colors.white,
-      body: MediaQuery.removePadding(
-        context: context,
-        removeTop: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 상단 헤더
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0E1539),
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(30),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    '사용자 제스처 등록',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '새롭게 등록할 제스처의 이름을 설정해주세요.',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                ],
-              ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom, // 키보드 높이만큼 여백
             ),
-            const SizedBox(height: 20),
-
-            // 입력 + 중복검사
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: '제스처 이름을 적어주세요...',
-                      border: OutlineInputBorder(),
+                // 상단 헤더
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 24,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0E1539),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(30),
                     ),
-                    onChanged: (_) {
-                      setState(() {
-                        _isDuplicateChecked = false;
-                        _isNameValid = false;
-                      });
-                    },
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        '사용자 제스처 등록',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '새롭게 등록할 제스처의 이름을 설정해주세요.',
+                        style: TextStyle(fontSize: 12, color: Colors.white70),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Column(
-                  children: [
-                    Icon(
-                      _isDuplicateChecked
-                          ? (_isNameValid ? Icons.check_circle : Icons.cancel)
-                          : Icons.help_outline,
-                      color: _isDuplicateChecked
-                          ? (_isNameValid ? Colors.green : Colors.red)
-                          : Colors.grey,
+                const SizedBox(height: 20),
+
+                // 입력 + 중복검사
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          decoration: const InputDecoration(
+                            hintText: '제스처 이름을 적어주세요...',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (_) {
+                            setState(() {
+                              _isDuplicateChecked = false;
+                              _isNameValid = false;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        children: [
+                          Icon(
+                            _isDuplicateChecked
+                                ? (_isNameValid
+                                      ? Icons.check_circle
+                                      : Icons.cancel)
+                                : Icons.help_outline,
+                            color: _isDuplicateChecked
+                                ? (_isNameValid ? Colors.green : Colors.red)
+                                : Colors.grey,
+                          ),
+                          TextButton(
+                            onPressed: _checkDuplicate,
+                            child: const Text('중복검사'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    _errorMessage,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _isNameValid ? Colors.orange : Colors.redAccent,
                     ),
-                    TextButton(
-                      onPressed: _checkDuplicate,
-                      child: const Text('중복검사'),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+                // 제스처 촬영 버튼
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: inputValidAndChecked
+                          ? () async {
+                              final shouldStart = await _showCameraDialog(
+                                context,
+                              );
+                              if (shouldStart == true) {
+                                _startCamera();
+                              }
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor: inputValidAndChecked
+                            ? Colors.white
+                            : Colors.grey.shade300,
+                        side: const BorderSide(color: Colors.black),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('제스처 촬영'),
                     ),
-                  ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    '등록된 제스처 목록',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: registeredGestures.length,
+                  itemBuilder: (context, index) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        border: Border.all(color: Colors.black26),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(registeredGestures[index]),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+                // 제스처 초기화 버튼
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _resetGesture,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[400],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('제스처 초기화'),
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              _errorMessage,
-              style: TextStyle(
-                fontSize: 12,
-                color: _isNameValid ? Colors.orange : Colors.redAccent,
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // 제스처 촬영 버튼
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: inputValidAndChecked
-                    ? () async {
-                        final shouldStart = await _showCameraDialog(context);
-                        if (shouldStart == true) {
-                          _startCamera();
-                        }
-                      }
-                    : null,
-
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.black,
-                  backgroundColor: inputValidAndChecked
-                      ? Colors.white
-                      : Colors.grey.shade300,
-                  side: const BorderSide(color: Colors.black),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('제스처 촬영'),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-
-            const Text(
-              '등록된 제스처 목록',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-
-            // 등록된 제스처 리스트
-            Column(
-              children: registeredGestures
-                  .map(
-                    (gesture) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: TextFormField(
-                        initialValue: gesture,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const SizedBox(height: 20),
-
-            // 제스처 초기화 버튼
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _resetGesture,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[400],
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('제스처 초기화'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
