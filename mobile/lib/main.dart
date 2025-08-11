@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart'; // 크로스 채널용 import
 import 'package:flutter/material.dart';
+import 'package:ghostouch/pages/ControlAppPage.dart';
 import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
 import 'pages/TestPage.dart'; // ✅ 테스트 페이지 import
@@ -314,6 +315,18 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
           ),
 
           _buildBackgroundCard(),
+
+          _buildMenuCard(
+            icon: Icons.person,
+            title: '외부 앱 제어',
+            subtitle: 'OTT, T-map 등 다양한 앱을 제어할 수 있습니다.',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ControlAppPage()),
+              );
+            },
+          ),
 
           // ✅ 테스트 페이지 카드 (맨 아래)
           _buildMenuCard(

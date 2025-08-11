@@ -29,7 +29,7 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
             // 상단 헤더
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
               decoration: const BoxDecoration(
                 color: Color(0xFF0E1539),
                 borderRadius: BorderRadius.vertical(
