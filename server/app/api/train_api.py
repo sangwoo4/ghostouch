@@ -9,6 +9,7 @@ def train(request: TaskRequest):
     task_id = start_new_training_job(
         model_code=request.model_code,
         landmarks=request.landmarks,
+        gesture = request.gesture
     )
 
     return TaskResponse(task_id=task_id)

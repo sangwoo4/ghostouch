@@ -12,21 +12,24 @@ from ..services import firebase_service
 import time
 import asyncio
 
+from ..utils import utils
+
 logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True)
-def training_task(self, model_code, landmarks):
+def training_task(self, model_code, landmarks, gesture):
         new_model_code = generate_model_id()
         hparams_configs = HparamsConfig()
         path_configs = PathConfig(model_code, new_model_code)
 
+        # landmarks -> csv 변환
+        self.update_state(state='PROGRESS', meta={'current_step': '랜드마크 변환중 '})
 
         # 1. 데이터 준비
         self.update_state(state='PROGRESS', meta={'current_step': '데이터 준비 중...'})
-        time.sleep(5)
-
-        path_configs.incremental_csv_path = convert_landmarks_to_csv(landmarks)
         base = DataPreprocessor.csv_to_npy_mem(path_configs.base_csv_path)
+        # utils.convert_landmarks_to_csv(landmarks, path_configs.incremental_csv_path, gesture)
+        path_configs.incremental_csv_path = "models/incremental_hand_landmarks.csv"
         incremental = DataPreprocessor.csv_to_npy_mem(path_configs.incremental_csv_path)
 
         #2. 중복 검사
@@ -58,7 +61,10 @@ def training_task(self, model_code, landmarks):
         }
         tflite_url = asyncio.run(_upload_tflite_and_background(paths))
 
-        return tflite_url
+        return {
+            "tflite_url" : tflite_url,
+            "model_code" : new_model_code,
+        }
 
 
 

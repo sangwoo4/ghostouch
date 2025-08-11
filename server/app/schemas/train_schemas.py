@@ -4,6 +4,7 @@ from typing import List, Any, Optional
 class TaskRequest(BaseModel):
     model_code: str
     landmarks: List[Any]
+    gesture: str
 
 class TaskResponse(BaseModel):
     task_id: str

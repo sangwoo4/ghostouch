@@ -13,8 +13,9 @@ class DataPreprocessor:
     @staticmethod
     def csv_to_npy_mem(csv_path):
         if not os.path.exists(csv_path):
-            logger.error(f"CSV 파일이 존재하지 않습니다: {csv_path}")
-            sys.exit(1)
+            error_msg = f"CSV 파일이 존재하지 않습니다: {csv_path}"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
         df = pd.read_csv(csv_path)
         x = df.drop('label', axis=1).values
         y = df['label'].values
