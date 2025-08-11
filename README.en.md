@@ -1,5 +1,18 @@
 # 👋 Gesture Recognition Project
 
+<!-- TOC Start -->
+- [✨ Key Features](#-key-features)
+- [📂 Project Structure](#-project-structure)
+- [🚀 Getting Started](#-getting-started)
+  - [1. Environment Setup](#1-environment-setup)
+  - [2. Data Preparation](#2-data-preparation)
+  - [3. Model Training (`main.py`)](#3-model-training-mainpy)
+  - [4. Real-time Gesture Recognition (`live_test.py`)](#4-real-time-gesture-recognition-live-testpy)
+- [💻 System Requirements & Dependencies](#-system-requirements--dependencies)
+- [⚙️ How It Works](#-how-it-works)
+- [🛠️ Key Technologies Used](#-key-technologies-used)
+<!-- TOC End -->
+
 This is a deep learning project that recognizes hand gestures (e.g., 'rock', 'paper', 'scissors') in real-time via webcam. It extracts hand landmarks using MediaPipe and classifies gestures with a CNN model based on TensorFlow/Keras.
 
 **All code and trained models in this project are distributed under the MIT License.**
@@ -7,7 +20,6 @@ This is a deep learning project that recognizes hand gestures (e.g., 'rock', 'pa
 --- 
 
 ## ✨ Key Features
-
 -   **Real-time Gesture Recognition**: Detects and classifies hand gestures instantly using a webcam.
 -   **Incremental Learning**: Efficiently adds new gestures to an existing trained model.
 -   **Multiprocessing-based Data Processing**: Extracts hand landmarks from images in parallel, significantly speeding up preprocessing.
@@ -34,12 +46,25 @@ gesture/
 │   ├── combine_gesture_model.tflite# Incremental learning updated combined TFLite model
 │   └── combine_label_map.json      # Combined gesture label map
 └── src/
+    ├── __init__.py         # Package initialization file
     ├── main.py             # Executes data processing and model training pipeline
-    ├── live_test.py        # Executes real-time gesture recognition
-    ├── config.py           # Manages project configurations
-    ├── data_processor.py   # Image preprocessing and landmark extraction
-    ├── data_manager.py     # Dataset splitting, merging, and label management
-    └── model_trainer.py    # Model definition and training
+    ├── config/             # Project configuration management
+    │   ├── file_config.py
+    │   ├── test_config.py
+    │   └── train_config.py
+    ├── data/               # Data processing related modules
+    │   ├── data_combiner.py
+    │   ├── data_converter.py
+    │   └── data_preprocessor.py
+    ├── label/              # Label processing related modules
+    │   └── label_processor.py
+    ├── model/              # Model architecture definition
+    │   └── model_architect.py
+    ├── train/              # Model training related modules
+    │   └── model_train.py
+    └── utils/              # Utility functions and classes
+        ├── duplicate_checker.py
+        └── live_test.py    # Executes real-time gesture recognition
 ```
 
 --- 
@@ -57,6 +82,7 @@ python -m venv venv
 # Activate the virtual environment
 # Windows
 .\venv\Scripts\activate
+
 # macOS/Linux
 source venv/bin/activate
 ```
@@ -84,13 +110,13 @@ Run `main.py` to execute the entire pipeline from data processing to model train
 *   **Basic Model Training**:
     Based on images in `gesture/data/image_data/`, it generates `basic_hand_landmarks.csv`, `basic_train_data.npy`, `basic_test_data.npy`, and saves `basic_gesture_model.keras`, `basic_gesture_model.tflite`, `basic_label_map.json` in the `models` folder.
     ```bash
-    python gesture/src/main.py --mode train
+    python -m gesture.src.main --mode train
     ```
 
 *   **Update Combined Model (Incremental Learning)**:
     Uses existing data from `gesture/data/image_data/` and new data from `gesture/data/new_image_data/` to form a combined dataset. It performs incremental learning based on the existing `basic_gesture_model.keras`, saving `combine_gesture_model.keras`, `combine_gesture_model.tflite`, `combine_label_map.json` in the `models` folder. You can specify the path to the base model using the `--base_model_path` argument; if not specified, `basic_gesture_model.keras` will be used by default.
     ```bash
-    python gesture/src/main.py --mode update [--base_model_path gesture/models/basic_gesture_model.keras]
+    python -m gesture.src.main --mode update [--base_model_path gesture/models/basic_gesture_model.keras]
     ```
 
 ### 4. Real-time Gesture Recognition (`live_test.py`)
@@ -100,34 +126,45 @@ Run `live_test.py` to check the performance of the trained model in real-time vi
 *   **Test with Basic Model**:
     Performs real-time recognition using `basic_gesture_model.tflite` and `basic_label_map.json`.
     ```bash
-    python gesture/src/live_test.py --model_type basic
+    python -m gesture.src.utils.live_test --model_type basic
     ```
-    (Or, since `--model_type basic` is the default, you can simply run `python gesture/src/live_test.py`.)
+    (Or, since `--model_type basic` is the default, you can simply run `python -m gesture.src.utils.live_test`.)
 
 *   **Test with Combined Model**:
     Performs real-time recognition using `combine_gesture_model.tflite` and `combine_label_map.json`.
     ```bash
-    python gesture/src/live_test.py --model_type combine
+    python -m gesture.src.utils.live_test --model_type combine
     ```
 Press the ESC key to exit the program. If no hand is detected, "Unknown" will be displayed.
+
+## 💻 System Requirements & Dependencies
+
+This project has been tested in a Python 3.8+ environment. Please refer to the `requirements.txt` file for major library versions.
+
+*   **Python**: 3.8+
+*   **TensorFlow**: 2.x (CPU or GPU support)
+*   **MediaPipe**: 0.x
+*   **OpenCV**: 4.x
+
+While model training and inference are possible on a CPU, a GPU environment (with TensorFlow-GPU installed) is recommended for faster processing.
 
 --- 
 
 ## ⚙️ How It Works
 
-1.  **Data Processing (`data_processor.py`)**:
+1.  **Data Processing (`data_preprocessor.py`)**:
     -   Reads images from the `image_data` or `new_image_data` folders.
     -   **Multiprocessing** is used with MediaPipe Hands to extract 21 hand landmark coordinates (x, y, z) from each image in parallel.
     -   Normalizes the extracted landmarks for **translation, scale, and rotation** to ensure consistent features regardless of hand position, size, or orientation.
     -   Dynamically generates a label map based on the image folder structure and saves the processed landmark data and **string labels** to `basic_hand_landmarks.csv` or `incremental_hand_landmarks.csv` files.
 
-2.  **Data Management (`data_manager.py`)**:
+2.  **Data Management (`data_combiner.py`)**:
     -   Loads the generated landmark CSV files.
     -   Splits the data into training and testing sets and saves them as NumPy arrays (`.npy`) suitable for model training.
     -   Merges `basic` and `incremental` label maps to create `combine_label_map.json`. It prioritizes `basic` labels' indices and adds only new labels sequentially, **preventing label conflicts**.
     -   When merging `basic` and `incremental` data, it **re-maps** the labels of each dataset based on the combined label map to form an accurate integrated dataset.
 
-3.  **Model Training (`model_trainer.py`)**:
+3.  **Model Training (`model_train.py`)**:
     -   Loads the split `.npy` datasets.
     -   **Basic Training**: Constructs and trains a new CNN (Convolutional Neural Network) model. The best performing model is saved as `basic_gesture_model.keras` and converted to a lightweight `basic_gesture_model.tflite` file.
     -   **Incremental Training**: Loads the existing `basic_gesture_model.keras` as a feature extractor, adds new classification layers, and performs fine-tuning. It **applies `class_weight`** to automatically compensate for class imbalances within the dataset. The trained model is saved as `combine_gesture_model.keras` and converted to `combine_gesture_model.tflite`.
@@ -136,7 +173,7 @@ Press the ESC key to exit the program. If no hand is detected, "Unknown" will be
     -   Loads the selected model (`basic_gesture_model.tflite` or `combine_gesture_model.tflite`) and its corresponding label map.
     -   Uses OpenCV to get the webcam feed.
     -   Detects hands and extracts landmarks from each frame, then normalizes them in the same way as during training.
-    -   Predicts gestures using the TFLite model with the normalized landmarks as input, and displays the results on the screen if the prediction confidence is above `CONFIDENCE_THRESHOLD` (0.8).
+    -   TFLite model through the normalized landmarks as input to predict gestures, and if the prediction confidence is above `CONFIDENCE_THRESHOLD` (0.8), the results are displayed on the screen.
     -   If no hand is detected or confidence is low, "Unknown" will be displayed.
 
 --- 
