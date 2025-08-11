@@ -119,14 +119,12 @@ class MainActivity: FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        // 앱이 화면에 보이면 서비스에 알림
         GestureDetectionService.isAppInForeground = true
         android.util.Log.d("MainActivity", "onResume: isAppInForeground set to TRUE")
     }
 
     override fun onPause() {
         super.onPause()
-        // 앱이 화면에서 사라지면 서비스에 알림
         GestureDetectionService.isAppInForeground = false
         android.util.Log.d("MainActivity", "onPause: isAppInForeground set to FALSE")
     }
