@@ -1,4 +1,5 @@
 # 데이터셋을 생성, 통합, 관리하는 클래스 정의
+import io
 import os
 import pandas as pd
 import numpy as np
@@ -8,8 +9,6 @@ from sklearn.model_selection import train_test_split
 logger = logging.getLogger(__name__)
 
 class DataPreprocessor:
-
-    # 메모리 변환 (파일 저장 X)
     @staticmethod
     def csv_to_npy_mem(csv_path):
         if not os.path.exists(csv_path):
@@ -19,8 +18,10 @@ class DataPreprocessor:
         df = pd.read_csv(csv_path)
         x = df.drop('label', axis=1).values
         y = df['label'].values
+
         data = np.hstack((x, y.reshape(-1, 1)))
         return data
+
 
     @staticmethod
     def group_by_label(np_array):

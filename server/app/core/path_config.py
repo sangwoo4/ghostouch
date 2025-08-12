@@ -24,7 +24,7 @@ class PathConfig:
 
 
         self.base_csv_path = os.path.join(self.base_model_dir, f"{model_code}.csv")
-        self.incremental_csv_path = os.path.join(self.MODELS_DIR, self.new_model_code)
+        self.incremental_csv_path = os.path.join(self.new_model_dir, f"{new_model_code}.csv")
         self.combined_csv_path = os.path.join(self.new_model_dir, self.new_model_code + '.csv')
 
         self.base_keras_model_path = os.path.join(self.base_model_dir, f"{model_code}_model.keras")

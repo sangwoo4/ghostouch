@@ -9,5 +9,4 @@ __pycache__/
 models
 model-upload-server-firebase-adminsdk-fbsvc-1bd4b36995.json
 .env
-entrypoint.sh
 .dockerignore
