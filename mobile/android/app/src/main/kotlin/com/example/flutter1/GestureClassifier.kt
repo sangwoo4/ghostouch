@@ -6,22 +6,21 @@ import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 import org.json.JSONObject
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import kotlin.math.roundToInt
 
 // 손 제스처를 분류하는 클래스 (TFLite 모델 기반)
 class GestureClassifier(private val context: Context) {
 
     companion object {
         private const val TAG = "GestureClassifier"
-        private const val isCameraMirrored = true  // 전면 카메라 사용 시 true → x축 반전 필요
     }
 
     // TFLite 추론기
     private var interpreter: Interpreter? = null
-
-    // "gesture name" -> "정수 라벨" 매핑
-    private var labelMap: Map<String, Int> = emptyMap()
 
     // "정수 라벨" -> "gesture name" 역매핑
     private var reverseLabelMap: Map<Int, String> = emptyMap()
@@ -43,8 +42,8 @@ class GestureClassifier(private val context: Context) {
             // 입력/출력 텐서 형태 확인
             val input = interpreter?.getInputTensor(0)
             val output = interpreter?.getOutputTensor(0)
-            Log.d(TAG, "입력 텐서 형태: ${input?.shape()?.contentToString()}")
-            Log.d(TAG, "출력 텐서 형태: ${output?.shape()?.contentToString()}")
+            Log.d(TAG, "입력 텐서 형태: ${input?.shape()?.contentToString()}, 타입: ${input?.dataType()}")
+            Log.d(TAG, "출력 텐서 형태: ${output?.shape()?.contentToString()}, 타입: ${output?.dataType()}")
         } catch (e: Exception) {
             Log.e(TAG, "모델 로드 실패", e)
         }
@@ -57,17 +56,14 @@ class GestureClassifier(private val context: Context) {
             val jsonString = context.assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
             val jsonObject = JSONObject(jsonString)
 
-            val map = mutableMapOf<String, Int>()
             val reverseMap = mutableMapOf<Int, String>()
 
             // 각 제스처 이름과 인덱스를 맵에 추가
             jsonObject.keys().forEach { key ->
                 val value = jsonObject.getInt(key)
-                map[key] = value
                 reverseMap[value] = key
             }
-
-            labelMap = map
+            
             reverseLabelMap = reverseMap
 
             Log.d(TAG, "레이블 맵 로드됨: $reverseLabelMap")
@@ -84,118 +80,100 @@ class GestureClassifier(private val context: Context) {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, fileDescriptor.startOffset, fileDescriptor.declaredLength)
     }
 
-    // 제스처 분류 함수
+    // 제스처 분류 함수 (worldLandmarks 사용)
     fun classifyGesture(handLandmarkerResult: HandLandmarkerResult): String? {
-        // 모델 또는 입력 데이터가 없으면 리턴
-        if (interpreter == null || handLandmarkerResult.landmarks().isEmpty()) {
-            Log.d(TAG, "손이 감지되지 않았습니다.")
+        if (interpreter == null) {
+            Log.e(TAG, "Interpreter is not initialized.")
             return null
         }
 
-        return try {
-            // 첫 번째 손의 21개 랜드마크 가져오기
-            val landmarks = handLandmarkerResult.landmarks()[0]
-            val wrist = landmarks[0]  // 기준점: 손목
+        // 1. worldLandmarks를 사용하고, 랜드마크가 21개인지 확인
+        if (handLandmarkerResult.worldLandmarks().isEmpty() || handLandmarkerResult.worldLandmarks()[0].size != 21) {
+            return null // 손 감지 안됨
+        }
 
-            // 1. 손목을 기준으로 랜드마크 중앙 정렬
-            val centeredLandmarks = landmarks.map {
-                listOf(it.x() - wrist.x(), it.y() - wrist.y(), it.z() - wrist.z())
+        try {
+            val worldLandmarks = handLandmarkerResult.worldLandmarks()[0]
+
+            // 2. 랜드마크를 1차원 Float 리스트로 변환 (21 * 3 = 63)
+            val features = worldLandmarks.flatMap { landmark ->
+                listOf(landmark.x(), landmark.y(), landmark.z())
+            }.toMutableList()
+
+            // 3. 손 방향(handedness) 정보 추가 (전면 카메라 좌우 반전 보정)
+            val detectedHandedness = handLandmarkerResult.handedness().firstOrNull()?.firstOrNull()?.categoryName()?.lowercase() ?: "right"
+            // 전면 카메라 미러링으로 인해 좌우가 반전되므로, 감지된 값을 실제 값으로 보정합니다.
+            val correctedHandedness = if (detectedHandedness == "left") "right" else "left"
+            Log.d(TAG, "Handedness -> Detected: $detectedHandedness, Corrected: $correctedHandedness")
+
+            val handednessValue = if (correctedHandedness == "left") 0.0f else 1.0f
+            features.add(handednessValue)
+
+            // --- 로깅 추가 (Swift 코드 스타일) ---
+            // 매 프레임의 입력 벡터를 상세히 출력
+            val formattedFeatures = features.joinToString(separator = ", ") { String.format("%.15f", it.toDouble()) }
+            Log.d(TAG, "Input Vector (64): [$formattedFeatures]")
+            // --- 로깅 끝 ---
+
+            // 4. 입력 텐서 준비 및 양자화
+            val inputTensor = interpreter!!.getInputTensor(0)
+            val outputTensor = interpreter!!.getOutputTensor(0)
+
+            // 현재는 UINT8 양자화 모델만 지원
+            if (inputTensor.dataType() != org.tensorflow.lite.DataType.UINT8) {
+                Log.e(TAG, "This classifier only supports UINT8 quantized models.")
+                return null
             }
 
-            // 2. 손 회전 각도 계산 및 랜드마크 정규화 (세로 방향으로)
-            val wristCentered = centeredLandmarks[0]
-            val middleFingerMCP = centeredLandmarks[9]
+            val quantizationParams = inputTensor.quantizationParams()
+            val scale = quantizationParams.scale
+            val zeroPoint = quantizationParams.zeroPoint
 
-            // y축이 이미지 좌표에서 반전되므로 -y 사용
-            val angle = Math.atan2(
-                (middleFingerMCP[0] - wristCentered[0]).toDouble(),
-                -(middleFingerMCP[1] - wristCentered[1]).toDouble()
-            )
-            val rotationAngle = -angle
-
-            val cosAngle = Math.cos(rotationAngle).toFloat()
-            val sinAngle = Math.sin(rotationAngle).toFloat()
-
-            var rotatedLandmarks = centeredLandmarks.map { landmark ->
-                val x = landmark[0]
-                val y = landmark[1]
-                val newX = x * cosAngle - y * sinAngle
-                val newY = x * sinAngle + y * cosAngle
-                listOf(newX, newY, landmark[2]) // z는 동일하게 유지
+            val inputBuffer = ByteBuffer.allocateDirect(features.size).order(ByteOrder.nativeOrder())
+            for (feature in features) {
+                // q = round(v/scale) + zeroPoint
+                val qv = (feature / scale).roundToInt() + zeroPoint
+                inputBuffer.put(qv.coerceIn(0, 255).toByte())
             }
+            inputBuffer.rewind()
 
-            // 3. 미러링된 카메라 보정
-            val rawHandedness = handLandmarkerResult.handedness()
-                .firstOrNull()?.firstOrNull()?.categoryName()?.lowercase() ?: "right"
+            // 5. 추론 실행
+            val outputBuffer = ByteBuffer.allocateDirect(outputTensor.numBytes()).order(ByteOrder.nativeOrder())
+            interpreter!!.run(inputBuffer, outputBuffer)
+            outputBuffer.rewind()
 
-            val actualHandedness = if (isCameraMirrored) {
-                if (rawHandedness == "right") "left" else "right"
-            } else {
-                rawHandedness
+            // 6. 출력 디양자화 및 결과 처리
+            val outputQuantParams = outputTensor.quantizationParams()
+            val oScale = outputQuantParams.scale
+            val oZeroPoint = outputQuantParams.zeroPoint
+
+            val probs = FloatArray(outputTensor.shape()[1])
+            for (i in probs.indices) {
+                // p = (q - zeroPoint) * scale
+                val q = outputBuffer.get(i).toInt() and 0xFF
+                probs[i] = (q - oZeroPoint) * oScale
             }
-
-            // 4. 오른손인 경우, 왼손 기준 모델에 맞추기 위해 x 좌표 반전
-            if (actualHandedness == "right") {
-                rotatedLandmarks = rotatedLandmarks.map { listOf(-it[0], it[1], it[2]) }
-            }
-
-            // 5. 회전된 랜드마크를 사용하여 정규화를 위한 최대 길이 계산
-            val xs = rotatedLandmarks.map { it[0] }
-            val ys = rotatedLandmarks.map { it[1] }
-            val zs = rotatedLandmarks.map { it[2] }
-
-            val maxDim = maxOf(
-                xs.maxOrNull()!! - xs.minOrNull()!!,
-                ys.maxOrNull()!! - ys.minOrNull()!!,
-                zs.maxOrNull()!! - zs.minOrNull()!!
-            ).takeIf { it > 0f } ?: 1f  // 0 나누기 방지
-
-            // 6. 정규화된 좌표 리스트 생성
-            val floatList = mutableListOf<Float>()
-            for (landmark in rotatedLandmarks) {
-                floatList.add(landmark[0] / maxDim)
-                floatList.add(landmark[1] / maxDim)
-                floatList.add(landmark[2] / maxDim)
-            }
-
-            // 총 64개의 입력 벡터 만들기 (63개 + handedness)
-            while (floatList.size < 63) floatList.add(0.0f)
-
-            val handednessValue = 0.0f  // 오른손 기준 모델
-            floatList.add(handednessValue)
-
-            Log.d(TAG, "손 방향: MediaPipe=$rawHandedness -> 실제=$actualHandedness (값=$handednessValue)")
-            Log.d(TAG, "입력 벡터 (${floatList.size}개 항목): $floatList")
-
-            // [-1,1] 실수 → [0,255] 정수로 양자화
-            val input = Array(1) { Array(64) { ByteArray(1) } }
-            for (i in floatList.indices) {
-                val byteVal = ((floatList[i] + 1f) * 127.5f).toInt().coerceIn(0, 255)
-                input[0][i][0] = byteVal.toByte()
-            }
-
-            // 출력: 제스처 클래스 4개에 대한 확률
-            val output = Array(1) { ByteArray(4) }
-            interpreter?.run(input, output)
-
-            // 확률 출력 (uint8 → float)
-            val probs = output[0].map { (it.toInt() and 0xFF) / 255.0f }
-            Log.d(TAG, "출력 확률: $probs")
 
             // 가장 확률 높은 클래스 인덱스 추출
-            val maxIdx = probs.indices.maxByOrNull { probs[it] } ?: return "none"
-            val gesture = reverseLabelMap[maxIdx] ?: "unknown"
-            val confidence = probs[maxIdx]
+            val maxIdx = probs.indices.maxByOrNull { probs[it] } ?: -1
+            val confidence = if(maxIdx != -1) probs[maxIdx] else 0.0f
 
-            // 확률이 낮으면 none 처리
-            if (confidence < 0.5f) return "none"
+            val result = if (confidence < 0.5f) {
+                "none"
+            } else {
+                val gesture = reverseLabelMap[maxIdx] ?: "unknown"
+                "$gesture (${String.format("%.0f", confidence * 100)}%)"
+            }
 
-            // 결과 문자열 리턴 (예: "rock (87%)")
-            "$gesture (${String.format("%.0f", confidence * 100)}%)"
+            // --- 기존 결과 로깅 유지 ---
+            Log.d(TAG, "Classification Result: $result, Probabilities: ${probs.joinToString()}")
+            // ---
+
+            return result
 
         } catch (e: Exception) {
-            Log.e(TAG, "분류 중 오류 발생", e)
-            null
+            Log.e(TAG, "Error during gesture classification", e)
+            return null
         }
     }
 

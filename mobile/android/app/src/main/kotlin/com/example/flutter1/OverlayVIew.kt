@@ -88,13 +88,8 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
 
             for (landmark in handLandmarkerResult.landmarks()) {
                 for (normalizedLandmark in landmark) {
-                    var x = normalizedLandmark.x() * imageWidth * actualScaleFactor + xOffset
-                    var y = normalizedLandmark.y() * imageHeight * actualScaleFactor + yOffset
-
-                    // Apply mirroring for front camera
-                    if (isFrontCamera) {
-                        x = width - x // Mirror horizontally
-                    }
+                    val x = normalizedLandmark.x() * imageWidth * actualScaleFactor + xOffset
+                    val y = normalizedLandmark.y() * imageHeight * actualScaleFactor + yOffset
 
                     canvas.drawPoint(x, y, pointPaint)
                 }
@@ -105,18 +100,10 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                     val endX = landmark[it.end()].x() * imageWidth * actualScaleFactor + xOffset
                     val endY = landmark[it.end()].y() * imageHeight * actualScaleFactor + yOffset
 
-                    var transformedStartX = startX
-                    var transformedEndX = endX
-
-                    if (isFrontCamera) {
-                        transformedStartX = width - startX
-                        transformedEndX = width - endX
-                    }
-
                     canvas.drawLine(
-                        transformedStartX,
+                        startX,
                         startY,
-                        transformedEndX,
+                        endX,
                         endY,
                         linePaint
                     )
@@ -125,10 +112,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                 // Draw handedness (Left/Right hand)
                 handednesses?.getOrNull(handLandmarkerResult.landmarks().indexOf(landmark))?.let { handednessList ->
                     val handedness = handednessList[0] // Get the first Category object
+                    // 전면 카메라일 경우, 화면에 표시되는 텍스트 레이블을 보정합니다.
                     val handLabel = if (isFrontCamera) {
-                        // Invert for front camera
-                        if (handedness.categoryName().equals("Left", true)) "Right"
-                        else "Left"
+                        if (handedness.categoryName().equals("Left", true)) "Right" else "Left"
                     } else {
                         handedness.categoryName()
                     }
