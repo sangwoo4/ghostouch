@@ -7,6 +7,7 @@ class GestureShootingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 상태바가 100% 차고 나면 get으로 api 불러와서 progress 실행 및 status 로그 받아오기
     double progressPercent = 0.0; // 상태바
 
     return Scaffold(

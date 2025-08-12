@@ -44,7 +44,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     }
   }
 
-  // ✅ 추가: 다이얼로그 표시 함수
+  // 다이얼로그 표시 함수
   Future<bool?> _showCameraDialog(BuildContext parentContext) {
     return showDialog<bool>(
       context: parentContext,
