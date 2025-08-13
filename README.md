@@ -42,3 +42,4 @@
 | 포그라운드 자동 꺼짐 기능 설정  | `com.pentagon.ghostouch/foreground`      |           |     |         |
 | 안드로이드 백그라운드 시간 설정 | `com.pentagon.ghostouch/background`      | ✅        |     |         |
 | 외부 앱 사이트 들어가기         | `com.pentagon.ghostouch/control-app`     | ✅        |     |         |
+| 사용자 제스처 수집 상태바       | `com.pentagon.gesture/task-id`           | ✅        |     |         |
