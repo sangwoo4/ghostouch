@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class ModelTrainer:
     """
-    모델을 학습하고, 평가하며, TFLite로 변환하여 저장하는 클래스.
+    모델을 학습하고, 평가하며, TFLite로 변환하여 저장하는 클래스
     """
 
     def __init__(self, model_builder: ModelBuilder, file_config: FileConfig, train_config: TrainConfig, 
@@ -23,17 +23,17 @@ class ModelTrainer:
                  label_map: Dict[str, int] | None = None, data_path: str | None = None, 
                  is_incremental_learning: bool = False):
         """
-        ModelTrainer를 초기화합니다.
+        ModelTrainer를 초기화
 
         Args:
-            model_builder (ModelBuilder): 모델 아키텍처를 구축하는 빌더 객체.
-            file_config (FileConfig): 파일 경로 설정을 담고 있는 FileConfig 객체.
-            train_config (TrainConfig): 학습 관련 설정을 담고 있는 TrainConfig 객체.
-            model_save_path (str, optional): Keras 모델을 저장할 경로. 기본값은 None.
-            tflite_save_path (str, optional): TFLite 모델을 저장할 경로. 기본값은 None.
-            label_map (Dict[str, int], optional): 라벨 맵 딕셔너리. 기본값은 None.
-            data_path (str, optional): 학습 데이터를 로드할 NPY 파일 경로. 기본값은 None.
-            is_incremental_learning (bool, optional): 증분 학습 여부. 기본값은 False.
+            model_builder (ModelBuilder): 모델 아키텍처를 구축하는 빌더 객체
+            file_config (FileConfig): 파일 경로 설정을 담고 있는 FileConfig 객체
+            train_config (TrainConfig): 학습 관련 설정을 담고 있는 TrainConfig 객체
+            model_save_path (str, optional): Keras 모델을 저장할 경로. 기본값은 None
+            tflite_save_path (str, optional): TFLite 모델을 저장할 경로. 기본값은 None
+            label_map (Dict[str, int], optional): 라벨 맵 딕셔너리. 기본값은 None
+            data_path (str, optional): 학습 데이터를 로드할 NPY 파일 경로. 기본값은 None
+            is_incremental_learning (bool, optional): 증분 학습 여부. 기본값은 False
         """
         self.model_builder = model_builder
         self.file_config = file_config
@@ -47,11 +47,11 @@ class ModelTrainer:
 
     def train(self):
         """
-        모델 학습 프로세스를 실행합니다.
-        데이터 로드, 모델 구축, 컴파일, 학습, 평가 및 TFLite 변환을 포함합니다.
+        모델 학습 프로세스를 실행
+        데이터 로드, 모델 구축, 컴파일, 학습, 평가 및 TFLite 변환을 포함
         """
         if self.label_map is None or self.data_path is None:
-            logger.error("라벨 맵 또는 데이터 경로가 설정되지 않았습니다. 학습을 시작할 수 없습니다.")
+            logger.error("----- 라벨 맵 또는 데이터 경로가 설정되지 않았습니다. 학습을 시작할 수 없습니다")
             return
 
         X_train, y_train, X_test, y_test, y_train_labels, y_test_labels = self._load_and_prepare_data()
@@ -85,7 +85,7 @@ class ModelTrainer:
         reversed_label_map: Dict[int, str] = {v: k for k, v in self.label_map.items()}
         for cls, weight in class_weights_dict.items():
             label_name = reversed_label_map.get(cls, f"Unknown({cls})")
-            logger.info(f"        라벨 {cls} ({label_name}): 가중치 {weight:.4f}")
+            logger.info(f"----- 라벨 {cls} ({label_name}): 가중치 {weight:.4f}")
 
         logger.info("----- 모델 학습 시작")
         model.fit(X_train, y_train,
@@ -97,10 +97,8 @@ class ModelTrainer:
         logger.info("----- 모델 학습 완료")
 
         if self.model_save_path:
-            assert self.model_save_path.endswith(".keras"), "파일 확장자는 반드시 .keras여야 함"
-            model.save(self.model_save_path, save_format='keras')
-            # import zipfile # zipfile check is not strictly necessary for model.save
-            # assert zipfile.is_zipfile(self.model_save_path), "❌ 저장된 .keras 파일은 zip 포맷이 아님!"
+            assert self.model_save_path.endswith(".keras")
+            model.save(self.model_save_path)
             logger.info(f"----- Keras 모델 저장 완료: {self.model_save_path}")
         
         loss, acc = model.evaluate(X_test, y_test, verbose=0)
@@ -110,25 +108,61 @@ class ModelTrainer:
         if self.tflite_save_path:
             self._convert_to_tflite(model, X_train)
 
+    def _convert_to_tflite(self, model: tf.keras.Model, X_train_for_tflite: np.ndarray):
+        """
+        Keras 모델을 INT8 양자화된 TFLite 모델로 변환하고 저장
+        """
+        # 1) 대표데이터 형상/채널 가드 (경고/런타임 오류 예방)
+        assert X_train_for_tflite.ndim == 3 and X_train_for_tflite.shape[2] == 1
+
+        # 표본 수 안전 가드
+        take_n = min(300, len(X_train_for_tflite))
+
+        def representative_data_gen():
+            # 2) float32 캐스팅 + (1, L, 1) 배치.
+            dataset = tf.data.Dataset.from_tensor_slices(
+                tf.cast(X_train_for_tflite, tf.float32)
+            ).shuffle(min(len(X_train_for_tflite), 10_000)
+            ).batch(1
+            ).take(take_n
+            ).prefetch(tf.data.AUTOTUNE)
+
+            for batch in dataset: yield [batch]
+
+        converter = tf.lite.TFLiteConverter.from_keras_model(model)
+        converter.optimizations = [tf.lite.Optimize.DEFAULT]
+        converter.representative_dataset = representative_data_gen
+
+        # 3) 완전 정수화(내부 연산 INT8) + I/O=int8 (코드와 로그 일치)
+        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        converter.inference_input_type  = tf.uint8
+        converter.inference_output_type = tf.uint8
+
+        tflite_quant_model = converter.convert()
+
+        with open(self.tflite_save_path, "wb") as f:
+            f.write(tflite_quant_model)
+
+        logger.info(f"----- TFLite 모델 저장 완료 (FULL INT, I/O=int8): {self.tflite_save_path}")
+
     def _load_and_prepare_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환하여 학습 준비를 합니다.
+        Numpy 데이터를 로드하고 라벨을 원-핫 인코딩으로 변환하여 학습 준비
 
         Returns:
             Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: 
-            X_train, y_train, X_test, y_test, y_train_labels, y_test_labels 튜플.
+            X_train, y_train, X_test, y_test, y_train_labels, y_test_labels 튜플
         """
         if self.data_path is None:
-            raise ValueError("데이터 경로(data_path)가 설정되지 않았습니다.")
+            raise ValueError("----- 데이터 경로(data_path)가 설정되지 않았습니다")
 
         data = np.load(self.data_path, allow_pickle=True)
 
         X = data[:, :-1].astype(np.float32)
-        y_string_labels = data[:, -1].astype(str) # Load labels as strings
+        y_string_labels = data[:, -1].astype(str)
 
-        # Convert string labels to numeric labels using label_map
         if self.label_map is None:
-            raise ValueError("라벨 맵(label_map)이 설정되지 않았습니다.")
+            raise ValueError("----- 라벨 맵(label_map)이 설정되지 않았습니다")
         
         y_numeric_labels = np.array([self.label_map[label] for label in y_string_labels], dtype=int)
 
@@ -140,35 +174,3 @@ class ModelTrainer:
         y_test = to_categorical(y_test_numeric_labels, num_classes=len(self.label_map))
 
         return X_train, y_train, X_test, y_test, y_train_numeric_labels, y_test_numeric_labels
-
-    def _convert_to_tflite(self, model: tf.keras.Model, X_train_for_tflite: np.ndarray):
-        """
-        Keras 모델을 INT8 양자화된 TFLite 모델로 변환하고 저장합니다.
-
-        Args:
-            model (tf.keras.Model): 변환할 Keras 모델.
-            X_train_for_tflite (np.ndarray): 양자화를 위한 대표 데이터셋 (학습 데이터의 일부).
-        """
-        input_shape: Tuple[int, int] = (X_train_for_tflite.shape[1], 1)
-        
-        def representative_data_gen():
-            # 양자화를 위해 모델에 입력될 데이터의 분포를 알려주는 대표 데이터셋 생성
-            # 데이터셋을 무작위로 섞어(shuffle) 100개의 샘플을 추출하여 편향을 방지
-            dataset = tf.data.Dataset.from_tensor_slices(X_train_for_tflite)
-            for input_value in dataset.shuffle(buffer_size=len(X_train_for_tflite)).batch(1).take(100):
-                yield [tf.reshape(input_value, (1, *input_shape))]
-
-        converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]  # 기본 최적화 (양자화 포함)
-        converter.representative_dataset = representative_data_gen
-        # 연산자를 INT8로 제한하여 양자화 강제
-        converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-        # 모델의 최종 입출력 타입도 정수형으로 설정
-        converter.inference_input_type = tf.uint8
-        converter.inference_output_type = tf.uint8
-        
-        tflite_quant_model = converter.convert()
-
-        with open(self.tflite_save_path, "wb") as f:
-            f.write(tflite_quant_model)
-        logger.info(f"----- TFLite 모델 저장 완료 (INT8 양자화 적용): {self.tflite_save_path}")
