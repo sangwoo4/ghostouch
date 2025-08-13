@@ -33,17 +33,18 @@ class FileConfig:
         self.COMBINE_DATA_PATH = os.path.join(self.PROCESSED_DATA_DIR, 'combine_data.npy')
 
         # 03. 모델 타입별 경로 (라이브 테스트 및 학습용)
+        # 03-1. # 03. TFLite 타입별 경로 
         self.TFLITE_MODEL_PATHS = {
             'basic': os.path.join(self.MODELS_DIR, 'basic_gesture_model.tflite'),
             'combine': os.path.join(self.MODELS_DIR, 'combine_gesture_model.tflite'),
         }
-
+        # 03-2. # 03. JSON 타입별 경로 
         self.LABEL_MAP_PATHS = {
             'basic': os.path.join(self.MODELS_DIR, 'basic_label_map.json'),
             'incremental': os.path.join(self.MODELS_DIR, 'incremental_label_map.json'),
             'combine': os.path.join(self.MODELS_DIR, 'combine_label_map.json'),
         }
-
+        # 03-3. # 03. Keras 타입별 경로 
         self.KERAS_MODEL_PATHS = {
             'basic': os.path.join(self.MODELS_DIR, 'basic_gesture_model.keras'),
             'combine': os.path.join(self.MODELS_DIR, 'combine_gesture_model.keras'),

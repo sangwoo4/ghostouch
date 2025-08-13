@@ -13,20 +13,20 @@ logger = logging.getLogger(__name__)
 
 class DataPreprocessor:
     """
-    이미지 파일에서 손 랜드마크를 추출하고 전처리하여 CSV 파일로 저장하는 클래스.
+    이미지 파일에서 손 랜드마크를 추출하고 전처리하여 CSV 파일로 저장하는 클래스
     MediaPipe를 사용하여 손의 월드 랜드마크를 감지하고 이를 특징 벡터로 변환하며,
-    멀티프로세싱을 사용하여 대량의 이미지를 효율적으로 처리합니다.
+    멀티프로세싱을 사용하여 대량의 이미지를 효율적으로 처리
     """
 
     def __init__(self, config: FileConfig, data_dirs: List[str] = None, output_csv_path: str = None, label_map_path: str = None):
         """
-        DataPreprocessor를 초기화합니다.
+        DataPreprocessor를 초기화
 
         Args:
-            config (FileConfig): 파일 경로 설정을 담고 있는 FileConfig 객체.
-            data_dirs (List[str], optional): 처리할 이미지 데이터 디렉토리 목록. 기본값은 config.BASIC_IMAGE_DATA_DIR.
-            output_csv_path (str, optional): 랜드마크 데이터를 저장할 CSV 파일 경로. 기본값은 config.BASIC_LANDMARK_CSV_PATH.
-            label_map_path (str, optional): 라벨 맵을 저장할 JSON 파일 경로. 기본값은 config.BASIC_LABEL_MAP_PATH.
+            config (FileConfig): 파일 경로 설정을 담고 있는 FileConfig 객체
+            data_dirs (List[str], optional): 처리할 이미지 데이터 디렉토리 목록. 기본값은 config.BASIC_IMAGE_DATA_DIR
+            output_csv_path (str, optional): 랜드마크 데이터를 저장할 CSV 파일 경로. 기본값은 config.BASIC_LANDMARK_CSV_PATH
+            label_map_path (str, optional): 라벨 맵을 저장할 JSON 파일 경로. 기본값은 config.BASIC_LABEL_MAP_PATH
         """
         self.config = config
         self.image_data_dirs: List[str] = data_dirs if data_dirs else [self.config.BASIC_IMAGE_DATA_DIR]
@@ -36,14 +36,14 @@ class DataPreprocessor:
     @staticmethod
     def _process_image(args: Tuple[str, str]) -> Tuple[np.ndarray, str] | None:
         """
-        단일 이미지를 처리하여 손 랜드마크 특징 벡터와 라벨을 반환하는 정적 메서드.
-        멀티프로세싱의 `pool.map`에서 사용하기 위해 정적 메서드로 구현되었습니다.
+        단일 이미지를 처리하여 손 랜드마크 특징 벡터와 라벨을 반환하는 정적 메서드
+        멀티프로세싱의 `pool.map`에서 사용하기 위해 정적 메서드로 구현
 
         Args:
-            args (Tuple[str, str]): (이미지 파일 경로, 라벨 문자열) 튜플.
+            args (Tuple[str, str]): (이미지 파일 경로, 라벨 문자열) 튜플
 
         Returns:
-            Tuple[np.ndarray, str] | None: 특징 벡터와 라벨 튜플 또는 처리 실패 시 None.
+            Tuple[np.ndarray, str] | None: 특징 벡터와 라벨 튜플 또는 처리 실패 시 None
         """
         img_path, label = args
         # 각 프로세스에서 MediaPipe Hands 객체를 새로 생성해야 함
@@ -76,11 +76,11 @@ class DataPreprocessor:
 
     def process(self) -> Dict[str, int] | None:
         """
-        지정된 이미지 디렉토리의 모든 이미지를 순회하며 랜드마크를 추출하고 CSV로 저장합니다.
-        추출된 라벨 맵을 반환합니다.
+        지정된 이미지 디렉토리의 모든 이미지를 순회하며 랜드마크를 추출하고 CSV로 저장
+        추출된 라벨 맵을 반환
 
         Returns:
-            Dict[str, int] | None: 라벨 문자열을 정수 인덱스에 매핑하는 딕셔너리 또는 처리 실패 시 None.
+            Dict[str, int] | None: 라벨 문자열을 정수 인덱스에 매핑하는 딕셔너리 또는 처리 실패 시 None
         """
         all_image_paths_and_labels: List[Tuple[str, str]] = []
         for data_dir in self.image_data_dirs:
@@ -126,7 +126,7 @@ class DataPreprocessor:
         for i, label_str in enumerate(unique_string_labels):
             label_map[label_str] = i
         
-        os.makedirs(os.path.dirname(self.label_map_path), exist_ok=True) # Ensure directory exists
+        os.makedirs(os.path.dirname(self.label_map_path), exist_ok=True)
         with open(self.label_map_path, 'w') as f:
             json.dump(label_map, f, indent=4)
         logger.info(f"----- 라벨 맵 저장 완료: {self.label_map_path}")

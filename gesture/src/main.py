@@ -1,8 +1,9 @@
+import sys
 import os
 import argparse
 import logging
 import json
-import numpy as np # Added numpy import
+import numpy as np
 from typing import Dict, Any
 from gesture.src.config.file_config import FileConfig
 from gesture.src.config.train_config import TrainConfig
@@ -19,16 +20,16 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def _process_and_create_dataset(file_config: FileConfig, image_dir: str, csv_path: str, label_map_path: str, npy_path: str):
     """
-    이미지 데이터를 처리하고 CSV 및 NPY 데이터셋을 생성합니다.
+    이미지 데이터를 처리하고 CSV 및 NPY 데이터셋을 생성
 
     Args:
-        file_config (FileConfig): 파일 경로 설정을 담고 있는 FileConfig 객체.
-        image_dir (str): 이미지 데이터가 있는 디렉토리 경로.
-        csv_path (str): 랜드마크 CSV 파일을 저장할 경로.
-        label_map_path (str): 라벨 맵 JSON 파일을 저장할 경로.
-        npy_path (str): NPY 데이터셋을 저장할 경로.
+        file_config (FileConfig): 파일 경로 설정을 담고 있는 FileConfig 객체
+        image_dir (str): 이미지 데이터가 있는 디렉토리 경로
+        csv_path (str): 랜드마크 CSV 파일을 저장할 경로
+        label_map_path (str): 라벨 맵 JSON 파일을 저장할 경로
+        npy_path (str): NPY 데이터셋을 저장할 경로
     """
-    # 1. 이미지에서 랜드마크를 추출하고 CSV로 저장 (DataPreprocessor).
+    # 1. 이미지에서 랜드마크를 추출하고 CSV로 저장 (DataPreprocessor)
     data_preprocessor = DataPreprocessor(
         file_config,
         data_dirs=[image_dir],
@@ -37,13 +38,7 @@ def _process_and_create_dataset(file_config: FileConfig, image_dir: str, csv_pat
     )
     data_preprocessor.process()
 
-    # 2. CSV를 NPY 데이터셋으로 변환 (DataConverter).
-    # Pass the label_map created by DataPreprocessor.process() to create_npy_dataset
-    # This label_map is saved to label_map_path inside DataPreprocessor.process()
-    # We need to load it here to pass to create_npy_dataset
-    with open(label_map_path, 'r') as f:
-        current_label_map = json.load(f)
-
+    # 2. CSV를 NPY 데이터셋으로 변환 (DataConverter)
     data_converter = DataConverter()
     data_converter.create_npy_dataset(
         csv_path,
@@ -53,8 +48,8 @@ def _process_and_create_dataset(file_config: FileConfig, image_dir: str, csv_pat
 
 def main():
     """
-    가위바위보 제스처 인식 모델 학습 파이프라인의 메인 실행 함수.
-    CLI 인자를 파싱하여 'train' 또는 'update' 모드를 실행합니다.
+    가위바위보 제스처 인식 모델 학습 파이프라인의 메인 실행 함수
+    CLI 인자를 파싱하여 'train' 또는 'update' 모드를 실행
     """
     parser = argparse.ArgumentParser(description="----- 가위바위보 제스처 인식 모델 학습 파이프라인")
     parser.add_argument('--mode', type=str, choices=['train', 'update'], default='train',
@@ -81,8 +76,7 @@ def main():
             file_config.BASIC_DATA_PATH
         )
 
-        # Generate label_map from NPY data for ModelTrainer
-        data_converter = DataConverter()
+
         data_from_npy = np.load(file_config.BASIC_DATA_PATH, allow_pickle=True)
         unique_labels_from_npy = np.unique(data_from_npy[:, -1].astype(str))
         basic_label_map = {label: i for i, label in enumerate(sorted(unique_labels_from_npy))}
@@ -94,8 +88,8 @@ def main():
         model_trainer = ModelTrainer(model_builder, file_config, train_config,
                                      model_save_path=file_config.KERAS_MODEL_PATHS['basic'],
                                      tflite_save_path=file_config.TFLITE_MODEL_PATHS['basic'],
-                                     label_map=basic_label_map, # Pass the newly generated label_map
-                                     data_path=file_config.BASIC_DATA_PATH) # FIXED: Changed from COMBINE_DATA_PATH
+                                     label_map=basic_label_map,
+                                     data_path=file_config.BASIC_DATA_PATH)
         model_trainer.train()
         logging.info("----- [train] 모드 완료: 기본 모델 생성이 완료되었습니다.")
 
@@ -116,8 +110,7 @@ def main():
             file_config.INCREMENTAL_DATA_PATH
         )
 
-        # Generate incremental_label_map from NPY data for ModelTrainer
-        data_converter = DataConverter()
+
         data_from_npy = np.load(file_config.INCREMENTAL_DATA_PATH, allow_pickle=True)
         unique_labels_from_npy = np.unique(data_from_npy[:, -1].astype(str))
         incremental_label_map = {label: i for i, label in enumerate(sorted(unique_labels_from_npy))}
@@ -151,6 +144,7 @@ def main():
         for inc_label, inc_vectors in inc_grouped.items():
             for basic_label, basic_vectors in basic_grouped.items():
                 report: Dict[str, Any] = checker.check(inc_vectors, basic_vectors)
+                logging.debug(f"[DEBUG] Report from check: {report}")
                 logging.info(f"----- [검사] Inc '{inc_label}' vs Basic '{basic_label}': {report['duplicate_count']}/{report['total_count']} ({report['duplicate_rate']:.2f}%) 중복")
                 if report['duplicate_rate'] > args.dup_threshold:
                     logging.error(f"----- 중복 허용 임계값 초과! ({report['duplicate_rate']:.2f}% > {args.dup_threshold}%)")
