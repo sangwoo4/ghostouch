@@ -53,7 +53,7 @@ class ModelTrainer:
         num_classes = len(self.label_map)
 
         model = self.model_builder.build(input_shape, num_classes)
-        model.compile(optimizer=tf.keras.optimizers.Adam(self.config.INCREMENTAL_LEARNING_RATE), loss='categorical_crossentropy', metrics=['accuracy'])
+        model.compile(optimizer=tf.keras.optimizers.Adam(self.hparams_config.INCREMENTAL_LEARNING_RATE), loss='categorical_crossentropy', metrics=['accuracy'])
 
         # 클래스 불균형을 고려하여 클래스 가중치 계산
         all_classes = np.arange(num_classes, dtype=int)
