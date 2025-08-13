@@ -100,13 +100,11 @@ class GestureClassifier(private val context: Context) {
                 listOf(landmark.x(), landmark.y(), landmark.z())
             }.toMutableList()
 
-            // 3. 손 방향(handedness) 정보 추가 (전면 카메라 좌우 반전 보정)
+            // 3. 손 방향(handedness) 정보 추가 - 보정 없이 감지된 값 그대로 사용해보기
             val detectedHandedness = handLandmarkerResult.handedness().firstOrNull()?.firstOrNull()?.categoryName()?.lowercase() ?: "right"
-            // 전면 카메라 미러링으로 인해 좌우가 반전되므로, 감지된 값을 실제 값으로 보정합니다.
-            val correctedHandedness = if (detectedHandedness == "left") "right" else "left"
-            Log.d(TAG, "Handedness -> Detected: $detectedHandedness, Corrected: $correctedHandedness")
+            Log.d(TAG, "Handedness -> Detected: $detectedHandedness (using as-is for testing)")
 
-            val handednessValue = if (correctedHandedness == "left") 0.0f else 1.0f
+            val handednessValue = if (detectedHandedness == "left") 0.0f else 1.0f
             features.add(handednessValue)
 
             // --- 로깅 추가 (Swift 코드 스타일) ---
@@ -158,7 +156,7 @@ class GestureClassifier(private val context: Context) {
             val maxIdx = probs.indices.maxByOrNull { probs[it] } ?: -1
             val confidence = if(maxIdx != -1) probs[maxIdx] else 0.0f
 
-            val result = if (confidence < 0.5f) {
+            val result = if (confidence < 0.5f || maxIdx >= reverseLabelMap.size) {
                 "none"
             } else {
                 val gesture = reverseLabelMap[maxIdx] ?: "unknown"
@@ -166,7 +164,10 @@ class GestureClassifier(private val context: Context) {
             }
 
             // --- 기존 결과 로깅 유지 ---
-            Log.d(TAG, "Classification Result: $result, Probabilities: ${probs.joinToString()}")
+            Log.d(TAG, "Classification Result: $result")
+            Log.d(TAG, "Max Index: $maxIdx, Confidence: $confidence")
+            Log.d(TAG, "Probabilities: ${probs.mapIndexed { idx, prob -> "$idx:${String.format("%.3f", prob)}" }.joinToString()}")
+            Log.d(TAG, "Label Map: $reverseLabelMap")
             // ---
 
             return result

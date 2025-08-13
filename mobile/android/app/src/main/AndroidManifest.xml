@@ -2,13 +2,16 @@
     package="com.pentagon.ghostouch">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 
     <application
         android:label="flutter1"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -43,6 +46,14 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        
+        <!-- 서버 설정 -->
+        <meta-data
+            android:name="com.pentagon.ghostouch.SERVER_IP"
+            android:value="YOUR_ACTUAL_WIFI_IP" />
+        <meta-data
+            android:name="com.pentagon.ghostouch.SERVER_PORT"
+            android:value="8000" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

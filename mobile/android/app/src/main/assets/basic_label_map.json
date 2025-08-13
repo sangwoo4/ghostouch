@@ -1,6 +1,5 @@
 {
-    "none": 0,
-    "paper": 1,
-    "rock": 2,
-    "scissors": 3
+    "paper": 0,
+    "rock": 1,
+    "scissors": 2
 }

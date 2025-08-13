@@ -85,7 +85,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    const GestureShootingPage(),
+                                    GestureShootingPage(gestureName: _controller.text),
                               ),
                             );
 
@@ -97,7 +97,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                                   parentContext,
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        const GestureShootingPage(),
+                                        GestureShootingPage(gestureName: _controller.text),
                                   ),
                                 );
                               }

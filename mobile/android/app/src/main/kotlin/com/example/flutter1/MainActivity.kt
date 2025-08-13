@@ -23,7 +23,7 @@ class MainActivity: FlutterActivity() {
         flutterEngine
             .platformViewsController
             .registry
-            .registerViewFactory("hand_detection_view", HandDetectionViewFactory(this))
+            .registerViewFactory("hand_detection_view", HandDetectionViewFactory(this, flutterEngine.dartExecutor.binaryMessenger))
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
             call, result ->
