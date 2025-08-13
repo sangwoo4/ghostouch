@@ -1,17 +1,3 @@
-// Copyright 2023 The MediaPipe Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 import UIKit
 import MediaPipeTasksVision
 
@@ -33,6 +19,12 @@ struct HandOverlay {
 class OverlayView: UIView {
 
   var handOverlays: [HandOverlay] = []
+
+  // MARK: - Public properties for customization
+  var pointColor: UIColor = DefaultConstants.pointColor
+  var pointFillColor: UIColor = DefaultConstants.pointFillColor
+  var lineColor: UIColor = DefaultConstants.lineColor
+  var lineWidth: CGFloat = DefaultConstants.lineWidth
 
   private var contentImageSize: CGSize = CGSizeZero
   var imageContentMode: UIView.ContentMode = .scaleAspectFit
@@ -151,8 +143,8 @@ class OverlayView: UIView {
         width: DefaultConstants.pointRadius,
         height: DefaultConstants.pointRadius)
       let path = UIBezierPath(ovalIn: dotRect)
-      DefaultConstants.pointFillColor.setFill()
-      DefaultConstants.pointColor.setStroke()
+      self.pointFillColor.setFill()
+      self.pointColor.setStroke()
       path.stroke()
       path.fill()
     }
@@ -164,8 +156,8 @@ class OverlayView: UIView {
       path.move(to: line.from)
       path.addLine(to: line.to)
     }
-    path.lineWidth = DefaultConstants.lineWidth
-    DefaultConstants.lineColor.setStroke()
+    path.lineWidth = self.lineWidth
+    self.lineColor.setStroke()
     path.stroke()
   }
 

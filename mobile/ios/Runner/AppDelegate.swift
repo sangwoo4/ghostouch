@@ -27,6 +27,11 @@ import UIKit
           let cameraFactory = CameraPlatformViewFactory(messenger: registrar.messenger())
           registrar.register(cameraFactory, withId: "camera_view")
       }
+      
+      //TestPage Platform 등록
+      if let testReg = registrar(forPlugin: "test-page-view-plugin") {
+          TestPagePlatformViewFactory.register(with: testReg)
+      }
 
 
 //      // PlatformViewFactory 등록
