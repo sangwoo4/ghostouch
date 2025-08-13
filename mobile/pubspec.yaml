@@ -58,10 +58,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/youtube.png
-    # - assets/netflix.png
+    - assets/netflix.png
     # - assets/coupang.png
     # - assets/tving.png
-    # - assets/disney.png
+    - assets/disney.png
     # - assets/tmap.png
     # - assets/kakaomap.png
 

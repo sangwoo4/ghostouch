@@ -20,7 +20,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
       {"name": "NetFlix", "icon": "assets/netflix.png", "package": "netflix"},
       {
         "name": "Coupang Play",
-        "icon": "assets/coupang.png",
+        "icon": "assets/coupangplay.png",
         "package": "coupang",
       },
       {"name": "Tving", "icon": "assets/tving.png", "package": "tving"},
