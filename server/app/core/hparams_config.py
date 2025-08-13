@@ -6,5 +6,5 @@ class HparamsConfig:
         # 하이퍼파라미터 정의
         self.EPOCHS = 500
         self.BATCH_SIZE = 32
-        self.INCREMENTAL_LEARNING_RATE = 0.0001
+        self.INCREMENTAL_LEARNING_RATE = 0.0005
         self.DUP_THRESHOLD = 10.0 # 중복 허용 임계값 (%)

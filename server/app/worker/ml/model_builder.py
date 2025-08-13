@@ -1,6 +1,7 @@
 import logging
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Dense, Dropout, Input, Conv1D, MaxPooling1D, Flatten
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.regularizers import l2
 
 logger = logging.getLogger(__name__)
 # 기존 모델을 기반으로 증분 학습 모델을 구축하는 클래스
@@ -9,7 +10,7 @@ class ModelBuilder:
         raise NotImplementedError("서브클래스에서 build()를 구현해야 합니다.")
 
 class UpdateModelBuilder(ModelBuilder):
-    def __init__(self, base_model_path):
+    def __init__(self, base_keras_model_path):
         self.base_keras_model_path = base_keras_model_path
         logger.info(f"UpdateModelBuilder 객체 초기화 완료 (기반 모델: {self.base_keras_model_path})")
 
@@ -22,16 +23,16 @@ class UpdateModelBuilder(ModelBuilder):
         logger.info("기반 모델 로드 완료")
 
         # 특징 추출기 부분만 사용 (마지막 두 레이어 제외)
-        feature_extractor = Sequential(base_model.layers[:-2], name="feature_extractor")
+        feature_extractor = Sequential(base_model.layers[:-3], name="feature_extractor")
         feature_extractor.trainable = True
         logger.info("특징 추출기 설정 완료")
 
         # 새로운 분류 레이어를 추가하여 증분 학습 모델 구축
         model = Sequential([
             feature_extractor,
-            Dense(128, activation='relu', name="combine_dense1"),
-            Dropout(0.3),
-            Dense(num_classes, activation='softmax', name="combine_output")
+            Dense(64, activation='relu', kernel_regularizer=l2(1e-4)),
+            Dropout(0.35),
+            Dense(num_classes, activation='softmax')
         ])
 
         model.build(input_shape=(None, *input_shape))
