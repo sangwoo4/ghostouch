@@ -34,7 +34,20 @@ class GestureClassifier(private val context: Context) {
     // TFLite 모델 로드 함수
     private fun loadModel() {
         try {
-            val modelBuffer = loadModelFile("basic_gesture_model.tflite")
+            val customModelFile = java.io.File(context.filesDir, TrainingCoordinator.CUSTOM_MODEL_NAME)
+            val modelBuffer: MappedByteBuffer
+
+            if (customModelFile.exists()) {
+                Log.d(TAG, "커스텀 모델 파일 사용: ${customModelFile.absolutePath}")
+                val inputStream = FileInputStream(customModelFile)
+                val fileChannel = inputStream.channel
+                modelBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size())
+                inputStream.close()
+            } else {
+                Log.d(TAG, "기본 모델 파일 사용: basic_gesture_model.tflite")
+                modelBuffer = loadModelFile("basic_gesture_model.tflite")
+            }
+
             interpreter = Interpreter(modelBuffer)
 
             Log.d(TAG, "모델 로드 성공")
@@ -52,10 +65,20 @@ class GestureClassifier(private val context: Context) {
     // JSON 파일로부터 레이블 맵 로드
     private fun loadLabelMap() {
         try {
-            // 자산 폴더에서 basic_label_map.json 읽기
-            val jsonString = context.assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
+            var jsonString: String
+            
+            // 먼저 업데이트된 label_map 파일이 있는지 확인
+            val updatedLabelMapFile = java.io.File(context.filesDir, "updated_label_map.json")
+            if (updatedLabelMapFile.exists()) {
+                Log.d(TAG, "업데이트된 레이블 맵 파일 사용: ${updatedLabelMapFile.absolutePath}")
+                jsonString = updatedLabelMapFile.readText()
+            } else {
+                Log.d(TAG, "기본 레이블 맵 파일 사용")
+                // 자산 폴더에서 basic_label_map.json 읽기
+                jsonString = context.assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
+            }
+            
             val jsonObject = JSONObject(jsonString)
-
             val reverseMap = mutableMapOf<Int, String>()
 
             // 각 제스처 이름과 인덱스를 맵에 추가

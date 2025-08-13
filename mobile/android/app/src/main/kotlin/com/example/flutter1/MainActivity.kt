@@ -107,6 +107,30 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // 학습 관련 MethodChannel
+        val TRAINING_CHANNEL = "com.pentagon.ghostouch/training"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TRAINING_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startTraining" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    val frames = call.argument<ArrayList<ArrayList<Double>>>("frames")
+
+                    if (gestureName != null && frames != null) {
+                        // 서비스에 학습 요청 전달
+                        val serviceIntent = Intent(this, GestureDetectionService::class.java)
+                        serviceIntent.action = "ACTION_START_TRAINING"
+                        serviceIntent.putExtra("gestureName", gestureName)
+                        serviceIntent.putExtra("frames", frames)
+                        startService(serviceIntent)
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "제스처 이름 또는 프레임이 없습니다.", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun openAppSettings() {

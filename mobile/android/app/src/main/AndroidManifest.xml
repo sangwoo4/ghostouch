@@ -50,7 +50,7 @@
         <!-- 서버 설정 -->
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_IP"
-            android:value="YOUR_ACTUAL_WIFI_IP" />
+            android:value="172.30.1.59" />
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_PORT"
             android:value="8000" />

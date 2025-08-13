@@ -14,6 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileWriter
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -22,9 +23,32 @@ import java.util.concurrent.TimeUnit
 
 class TrainingCoordinator(private val context: Context, private val listener: TrainingListener?) {
 
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
     private val pollingExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var pollingFuture: ScheduledFuture<*>? = null
+
+    private val baseUrl: String
+
+    init {
+        val appInfo = context.packageManager.getApplicationInfo(
+            context.packageName,
+            PackageManager.GET_META_DATA
+        )
+        val serverIp = appInfo.metaData.getString("com.pentagon.ghostouch.SERVER_IP")
+        val serverPort = appInfo.metaData.getInt("com.pentagon.ghostouch.SERVER_PORT")
+
+        if (serverIp == null || serverPort == 0) {
+            Log.e(TAG, "Server IP or Port not found in AndroidManifest.xml metadata.")
+            baseUrl = "http://localhost:8000" // Fallback or error handling
+        } else {
+            baseUrl = "http://$serverIp:$serverPort"
+            Log.d(TAG, "Server URL from manifest: $baseUrl")
+        }
+    }
 
     interface TrainingListener {
         fun onModelReady()
@@ -33,28 +57,7 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
     companion object {
         private const val TAG = "TrainingCoordinator"
         const val CUSTOM_MODEL_NAME = "custom_model.tflite"
-    }
-
-    private val baseUrl: String by lazy {
-        getServerUrlFromManifest()
-    }
-
-    private fun getServerUrlFromManifest(): String {
-        return try {
-            val packageManager = context.packageManager
-            val applicationInfo = packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
-            val metaData = applicationInfo.metaData
-            
-            val serverIp = metaData?.getString("com.pentagon.ghostouch.SERVER_IP") ?: "10.0.2.2"
-            val serverPort = metaData?.getInt("com.pentagon.ghostouch.SERVER_PORT", 8000).toString()
-            
-            val url = "http://$serverIp:$serverPort"
-            Log.d(TAG, "Server URL from manifest: $url")
-            url
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to read server config from manifest, using default", e)
-            "http://10.0.2.2:8000"
-        }
+        const val LABEL_MAP_FILE_NAME = "updated_label_map.json"
     }
 
     fun uploadAndTrain(gestureName: String, frames: List<List<Float>>) {
@@ -106,7 +109,7 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
                         val taskId = jsonResponse.optString("task_id", null)
                         if (taskId != null) {
                             Log.d(TAG, "Training task started successfully. Task ID: $taskId")
-                            startPolling(taskId)
+                            startPolling(taskId, gestureName)
                         } else {
                             Log.e(TAG, "Could not find 'task_id' in the server response.")
                         }
@@ -118,57 +121,71 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
         })
     }
 
-    private fun startPolling(taskId: String) {
+    private fun startPolling(taskId: String, gestureName: String) {
         pollingFuture = pollingExecutor.scheduleAtFixedRate({ 
-            val request = Request.Builder()
-                .url("$baseUrl/status/$taskId")
-                .get()
-                .build()
+            try {
+                val request = Request.Builder()
+                    .url("$baseUrl/status/$taskId")
+                    .get()
+                    .build()
 
-            client.newCall(request).enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    Log.e(TAG, "Polling request for task $taskId failed", e)
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    if (!response.isSuccessful) {
-                        Log.e(TAG, "Server returned an error on /status: ${response.code} ${response.message}")
-                        return
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        Log.e(TAG, "Polling request for task $taskId failed", e)
+                        // Don't cancel polling on network failure - keep trying
                     }
 
-                    val responseBody = response.body?.string() ?: return
+                    override fun onResponse(call: Call, response: Response) {
+                        try {
+                            if (!response.isSuccessful) {
+                                Log.e(TAG, "Server returned an error on /status: ${response.code} ${response.message}")
+                                return
+                            }
 
-                    try {
-                        val jsonResponse = JSONObject(responseBody)
-                        val status = jsonResponse.optString("status", "")
-                        Log.d(TAG, "Polling for task $taskId: Status is $status")
+                            val responseBody = response.body?.string() ?: return
 
-                        when (status) {
-                            "SUCCESS" -> {
-                                pollingFuture?.cancel(true)
-                                Log.d(TAG, "Training successfully completed for task $taskId.")
-                                val result = jsonResponse.optJSONObject("result")
-                                val modelUrl = result?.optString("model_url")
-                                if (!modelUrl.isNullOrEmpty()) {
-                                    downloadAndSaveModel(modelUrl)
-                                } else {
-                                    Log.e(TAG, "Status is SUCCESS but model_url is missing or empty.")
+                            val jsonResponse = JSONObject(responseBody)
+                            val status = jsonResponse.optString("status", "")
+                            Log.d(TAG, "Polling for task $taskId: Status is $status")
+
+                            when (status) {
+                                "SUCCESS" -> {
+                                    pollingFuture?.cancel(true)
+                                    Log.d(TAG, "Training successfully completed for task $taskId.")
+                                    val result = jsonResponse.optJSONObject("result")
+                                    val modelUrl = result?.optString("tflite_url") // 실제 키는 tflite_url
+                                    val modelCode = result?.optString("model_code")
+
+                                    if (!modelUrl.isNullOrEmpty()) {
+                                        Log.d(TAG, "New model URL: $modelUrl")
+                                        Log.d(TAG, "Model code: $modelCode")
+                                        downloadAndSaveModel(modelUrl)
+                                        updateLabelMap(gestureName)
+                                    } else {
+                                        Log.e(TAG, "Status is SUCCESS but tflite_url is missing or empty.")
+                                    }
+                                }
+                                "FAILURE", "ERROR" -> {
+                                    Log.e(TAG, "Training failed for task $taskId. Info: ${jsonResponse.optString("error_info")}")
+                                    pollingFuture?.cancel(true)
+                                }
+                                "PENDING" -> {
+                                    // Continue polling
+                                    Log.d(TAG, "Task $taskId still in progress...")
                                 }
                             }
-                            "FAILURE", "ERROR" -> {
-                                Log.e(TAG, "Training failed for task $taskId. Info: ${jsonResponse.optString("error_info")}")
-                                pollingFuture?.cancel(true)
-                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to parse /status response for task $taskId", e)
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to parse /status response", e)
                     }
-                }
-            })
+                })
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception in polling task $taskId", e)
+            }
         }, 0, 2, TimeUnit.SECONDS)
     }
 
-    private fun downloadAndSaveModel(url: String) {
+    private fun downloadAndSaveModel(url: String, labelMap: JSONObject? = null) {
         Log.d(TAG, "Downloading new model from: $url")
         val request = Request.Builder().url(url).build()
 
@@ -197,6 +214,43 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
                 }
             }
         })
+    }
+
+    private fun updateLabelMap(gestureName: String) {
+        try {
+            val labelMapFile = File(context.filesDir, LABEL_MAP_FILE_NAME)
+            val jsonObject: JSONObject
+
+            if (labelMapFile.exists()) {
+                val jsonString = labelMapFile.readText()
+                jsonObject = JSONObject(jsonString)
+            } else {
+                // Fallback to basic_label_map.json from assets if updated_label_map.json doesn't exist
+                val jsonString = context.assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
+                jsonObject = JSONObject(jsonString)
+            }
+
+            // Find the maximum existing index
+            var maxIndex = -1
+            jsonObject.keys().forEach { key ->
+                val index = jsonObject.getInt(key)
+                if (index > maxIndex) {
+                    maxIndex = index
+                }
+            }
+
+            // Assign the new index (maxIndex + 1)
+            val newIndex = maxIndex + 1
+
+            // Add or update the new gesture and its index
+            jsonObject.put(gestureName, newIndex)
+
+            // Write the updated JSON back to the file
+            labelMapFile.writeText(jsonObject.toString(4)) // Use 4 for indentation for readability
+            Log.d(TAG, "Label map updated successfully with $gestureName:$newIndex")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update label map", e)
+        }
     }
 
     fun shutdown() {

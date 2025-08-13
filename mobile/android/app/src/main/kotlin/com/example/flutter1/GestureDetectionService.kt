@@ -22,7 +22,7 @@ import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListener, LifecycleOwner {
+class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListener, LifecycleOwner, TrainingCoordinator.TrainingListener {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private var handLandmarkerHelper: HandLandmarkerHelper? = null
@@ -30,6 +30,7 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var backgroundExecutor: ExecutorService
     private var lastActionTimestamp: Long = 0
+    private lateinit var trainingCoordinator: TrainingCoordinator
 
     companion object {
         private const val TAG = "GestureDetectionService"
@@ -49,6 +50,14 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
         Log.d(TAG, "서비스 생성됨")
         backgroundExecutor = Executors.newSingleThreadExecutor()
         createNotificationChannel()
+        trainingCoordinator = TrainingCoordinator(this, this) // TrainingCoordinator 인스턴스화
+    }
+
+    override fun onModelReady() {
+        Log.d(TAG, "새로운 모델이 준비되었습니다. GestureClassifier를 재로드합니다.")
+        // GestureClassifier를 재인스턴스화하여 새로운 모델을 로드하도록 함
+        gestureClassifier?.close() // 기존 인터프리터 닫기
+        gestureClassifier = GestureClassifier(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -60,8 +69,25 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
             .build()
         startForeground(NOTIFICATION_ID, notification)
 
-        // 서비스가 시작될 때 항상 카메라 준비
-        setupCamera()
+        when (intent?.action) {
+            "ACTION_START_TRAINING" -> {
+                val gestureName = intent.getStringExtra("gestureName")
+                val frames = intent.getSerializableExtra("frames") as? ArrayList<ArrayList<Double>>
+                if (gestureName != null && frames != null) {
+                    // Double을 Float으로 변환
+                    val floatFrames = frames.map { innerList ->
+                        innerList.map { it.toFloat() }
+                    }
+                    trainingCoordinator.uploadAndTrain(gestureName, floatFrames)
+                } else {
+                    Log.e(TAG, "학습 시작을 위한 제스처 이름 또는 프레임이 누락되었습니다.")
+                }
+            }
+            else -> {
+                // 서비스가 시작될 때 항상 카메라 준비
+                setupCamera()
+            }
+        }
 
         return START_STICKY
     }

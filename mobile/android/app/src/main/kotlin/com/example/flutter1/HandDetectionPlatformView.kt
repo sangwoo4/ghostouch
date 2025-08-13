@@ -237,7 +237,7 @@ class HandDetectionPlatformView(
                 gestureClassifier = GestureClassifier(context)
                 trainingCoordinator = TrainingCoordinator(context, object : TrainingCoordinator.TrainingListener {
                     override fun onModelReady() {
-                        Log.d("HandDetectionPlatformView", "New model is ready. Reloading HandLandmarkerHelper.")
+                        Log.d("HandDetectionPlatformView", "New model is ready. Reloading HandLandmarkerHelper and GestureClassifier.")
                         // Optionally, notify Flutter that a new model is ready
                         mainHandler.post {
                             methodChannel.invokeMethod("modelReady", null)
@@ -249,6 +249,9 @@ class HandDetectionPlatformView(
                             runningMode = RunningMode.LIVE_STREAM,
                             handLandmarkerHelperListener = this@HandDetectionPlatformView
                         )
+                        // Reinitialize GestureClassifier to load the new label map
+                        gestureClassifier?.close()
+                        gestureClassifier = GestureClassifier(context)
                     }
                 })
             }
