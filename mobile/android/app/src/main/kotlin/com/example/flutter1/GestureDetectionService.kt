@@ -22,7 +22,7 @@ import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListener, LifecycleOwner, TrainingCoordinator.TrainingListener {
+class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListener, LifecycleOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private var handLandmarkerHelper: HandLandmarkerHelper? = null
@@ -50,12 +50,7 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
         Log.d(TAG, "서비스 생성됨")
         backgroundExecutor = Executors.newSingleThreadExecutor()
         createNotificationChannel()
-        trainingCoordinator = TrainingCoordinator(this, this) // TrainingCoordinator 인스턴스화
-    }
-
-    override fun onModelReady() {
-        Log.d(TAG, "새로운 모델이 준비되었습니다. GestureClassifier를 재로드합니다.")
-        reloadModel()
+        trainingCoordinator = TrainingCoordinator(this) // TrainingCoordinator 인스턴스화
     }
     
     private fun reloadModel() {

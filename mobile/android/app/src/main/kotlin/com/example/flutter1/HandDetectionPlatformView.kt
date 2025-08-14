@@ -57,6 +57,12 @@ class HandDetectionPlatformView(
     private var isCollecting: Boolean = false
     private var collectedFrames: MutableList<List<Float>> = mutableListOf()
     private var currentGestureName: String? = null
+    private var totalFrameAttempts: Int = 0
+    
+    companion object {
+        private const val MIN_CONFIDENCE_THRESHOLD = 0.5f // 신뢰도 임계값 (낮춤)
+        private const val TARGET_FRAME_COUNT = 100 // 목표 프레임 수
+    }
 
     init {
         setupView()
@@ -108,6 +114,7 @@ class HandDetectionPlatformView(
         isCollecting = true
         currentGestureName = gestureName
         collectedFrames.clear()
+        totalFrameAttempts = 0
         // Optionally, send a signal to Flutter that collection has started
         mainHandler.post {
             methodChannel.invokeMethod("collectionStarted", null)
@@ -235,25 +242,7 @@ class HandDetectionPlatformView(
                     handLandmarkerHelperListener = this
                 )
                 gestureClassifier = GestureClassifier(context)
-                trainingCoordinator = TrainingCoordinator(context, object : TrainingCoordinator.TrainingListener {
-                    override fun onModelReady() {
-                        Log.d("HandDetectionPlatformView", "New model is ready. Reloading HandLandmarkerHelper and GestureClassifier.")
-                        // Optionally, notify Flutter that a new model is ready
-                        mainHandler.post {
-                            methodChannel.invokeMethod("modelReady", null)
-                        }
-                        // Reinitialize HandLandmarkerHelper to load the new model
-                        handLandmarkerHelper?.clearHandLandmarker()
-                        handLandmarkerHelper = HandLandmarkerHelper(
-                            context = context,
-                            runningMode = RunningMode.LIVE_STREAM,
-                            handLandmarkerHelperListener = this@HandDetectionPlatformView
-                        )
-                        // Reinitialize GestureClassifier to load the new label map
-                        gestureClassifier?.close()
-                        gestureClassifier = GestureClassifier(context)
-                    }
-                })
+                trainingCoordinator = TrainingCoordinator(context)
             }
 
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
@@ -318,25 +307,40 @@ class HandDetectionPlatformView(
         if (handLandmarkerResult != null) {
             // Collect frames if collecting is enabled
             if (isCollecting) {
+                totalFrameAttempts++
+                
                 val worldLandmarks = handLandmarkerResult.worldLandmarks().firstOrNull()
-                if (worldLandmarks != null) {
-                    val flatLandmarks = worldLandmarks.map { listOf(it.x(), it.y(), it.z()) }.flatten()
-                    collectedFrames.add(flatLandmarks)
-
-                    // Send progress update to Flutter
-                    val progress = (collectedFrames.size / 100.0 * 100).toInt().coerceAtMost(100)
-                    mainHandler.post {
-                        methodChannel.invokeMethod("updateProgress", progress)
-                    }
-
-                    // Auto-complete when 100 frames are collected
-                    if (collectedFrames.size >= 100) {
-                        Log.d("HandDetectionPlatformView", "100 frames collected. Auto-completing collection.")
-                        isCollecting = false
+                val handedness = handLandmarkerResult.handedness().firstOrNull()?.firstOrNull()
+                
+                if (worldLandmarks != null && worldLandmarks.size == 21) {
+                    // MediaPipe handedness confidence 확인
+                    val confidence = handedness?.score() ?: 0.0f
+                    
+                    if (confidence >= MIN_CONFIDENCE_THRESHOLD) {
+                        val flatLandmarks = worldLandmarks.map { listOf(it.x(), it.y(), it.z()) }.flatten()
+                        collectedFrames.add(flatLandmarks)
+                        
+                        Log.d("HandDetectionPlatformView", "Frame accepted: ${collectedFrames.size}/$TARGET_FRAME_COUNT (confidence: ${String.format("%.2f", confidence)})")
+                        
+                        // Send progress update to Flutter
+                        val progress = (collectedFrames.size / TARGET_FRAME_COUNT.toDouble() * 100).toInt().coerceAtMost(100)
                         mainHandler.post {
-                            methodChannel.invokeMethod("collectionComplete", null)
+                            methodChannel.invokeMethod("updateProgress", progress)
                         }
+
+                        // Auto-complete when target frames are collected
+                        if (collectedFrames.size >= TARGET_FRAME_COUNT) {
+                            Log.d("HandDetectionPlatformView", "Target frames ($TARGET_FRAME_COUNT) collected from $totalFrameAttempts attempts. Auto-completing collection.")
+                            isCollecting = false
+                            mainHandler.post {
+                                methodChannel.invokeMethod("collectionComplete", null)
+                            }
+                        }
+                    } else {
+                        Log.d("HandDetectionPlatformView", "Frame rejected: Low confidence (${String.format("%.2f", confidence)} < $MIN_CONFIDENCE_THRESHOLD)")
                     }
+                } else {
+                    Log.d("HandDetectionPlatformView", "Frame rejected: Hand not detected or incomplete landmarks (${worldLandmarks?.size ?: 0}/21)")
                 }
             }
 
@@ -391,6 +395,5 @@ class HandDetectionPlatformView(
         cameraProvider?.unbindAll()
         handLandmarkerHelper?.clearHandLandmarker()
         gestureClassifier?.close()
-        trainingCoordinator?.shutdown()
     }
 } 
