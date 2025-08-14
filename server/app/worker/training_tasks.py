@@ -6,6 +6,7 @@ from tensorflow.python.data.experimental.ops.testing import sleep
 from app.core import celery_app, HparamsConfig, PathConfig
 from .ml.data_preprocessor import DataPreprocessor
 from .ml.dataset_combiner import DatasetCombiner
+from .ml.duplicate_chacker import DuplicateChecker
 from .ml.label_manager import LabelManager
 from .ml.model_summary_printer import ModelSummaryPrinter
 from .ml.model_trainer import ModelTrainer
@@ -25,7 +26,6 @@ def training_task(self, model_code, landmarks, gesture):
         hparams_configs = HparamsConfig()
         path_configs = PathConfig(model_code, new_model_code)
 
-        sleep(5000)
         # landmarks -> csv 변환
         self.update_state(state='PROGRESS', meta={'current_step': '랜드마크 변환중 '})
         utils.convert_landmarks_to_csv(landmarks, path_configs.incremental_csv_path, gesture)
@@ -36,6 +36,23 @@ def training_task(self, model_code, landmarks, gesture):
         incremental = DataPreprocessor.csv_to_npy_mem(path_configs.incremental_csv_path)
 
         #2. 중복 검사
+        duplicate_checker = DuplicateChecker()
+        base_grouped = DataPreprocessor.group_by_label(base)
+        incremental_grouped = DataPreprocessor.group_by_label(incremental)
+
+        is_dup = duplicate_checker.check_incremental_vs_all(
+            incremental_grouped,
+            base_grouped,
+            hparams_configs.DUP_THRESHOLD,
+            hparams_configs.TOLERANCE_THRESHOLD
+        )
+
+        if is_dup:
+            logger.warning("중복 데이터 발생, 작업을 건너뜁니다.")
+            self.update_state(state='DUPLICATE', meta={'message': '제스처 데이터 중복'})
+            return {"new_model_code": None, "tflite_url": None,
+                    "status_message": "제스처 데이터 중복."}
+
 
         # 3.데이터 병합 및 저장
         dataset_combiner = DatasetCombiner(path_configs.combined_csv_path)

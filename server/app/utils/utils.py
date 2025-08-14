@@ -15,6 +15,7 @@ def preprocess_landmarks(feature_vector):
     """
 
     feature_vector_np = np.array(feature_vector)
+
     coords_flat = feature_vector_np[:-1]
     handedness_val = feature_vector_np[-1]
 

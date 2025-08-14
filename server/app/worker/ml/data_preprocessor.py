@@ -4,7 +4,6 @@ import os
 import pandas as pd
 import numpy as np
 import logging
-from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,12 @@ class DataPreprocessor:
     @staticmethod
     def group_by_label(np_array):
         x = np_array[:, :-1]
-        y = np_array[:, -1]
+        y = np_array[:, -1].astype(str)
+
+        # 비교(중복검사)용으로 X만 float 변경
+        if x.dtype.kind in ('U', 'S', 'O'):
+            x = x.astype(np.float32, copy=False)
+
         unique_labels = np.unique(y)
         grouped_data = {label: x[y == label] for label in unique_labels}
         return grouped_data

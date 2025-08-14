@@ -8,3 +8,4 @@ class HparamsConfig:
         self.BATCH_SIZE = 32
         self.INCREMENTAL_LEARNING_RATE = 0.0005
         self.DUP_THRESHOLD = 10.0 # 중복 허용 임계값 (%)
+        self.TOLERANCE_THRESHOLD = 0.00005
