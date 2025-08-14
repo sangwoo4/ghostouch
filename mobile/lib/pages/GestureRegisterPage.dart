@@ -19,13 +19,60 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   static const resetChannel = MethodChannel(
     'com.pentagon.ghostouch/reset-gesture',
   );
+  static const gestureChannel = MethodChannel('com.pentagon.ghostouch/toggle');
 
-  final List<String> registeredGestures = [
+  List<String> registeredGestures = [
     '가위 제스처',
     '주먹 제스처',
     '보 제스처',
     '한성대 제스처',
   ];
+  
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegisteredGestures();
+  }
+
+  Future<void> _loadRegisteredGestures() async {
+    try {
+      final result = await gestureChannel.invokeMethod('getAvailableGestures');
+      if (result is Map) {
+        List<String> gestureNames = [];
+        
+        result.forEach((key, value) {
+          String englishKey = key.toString();
+          String koreanName = _getKoreanName(englishKey);
+          gestureNames.add(koreanName);
+        });
+        
+        setState(() {
+          registeredGestures = gestureNames;
+          isLoading = false;
+        });
+      }
+    } on PlatformException catch (e) {
+      print("Failed to load gestures: '${e.message}'");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String _getKoreanName(String englishKey) {
+    // 기본 제스처들의 한글 매핑
+    const defaultMapping = {
+      'scissors': '가위 제스처',
+      'rock': '주먹 제스처',
+      'paper': '보 제스처',
+      'hs': '한성대 제스처',
+    };
+    
+    // 기본 매핑에 있으면 해당 한글명 반환, 없으면 사용자 정의 제스처로 표시
+    return defaultMapping[englishKey] ?? '$englishKey 제스처';
+  }
 
   // ✅ 추가: 다이얼로그 표시 함수
   Future<bool?> _showCameraDialog(BuildContext parentContext) {
@@ -274,7 +321,9 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                     ? () async {
                         final shouldStart = await _showCameraDialog(context);
                         if (shouldStart == true) {
-                          _startCamera();
+                          await _startCamera();
+                          // 제스처 촬영 페이지에서 돌아온 후 목록 새로고침
+                          _loadRegisteredGestures();
                         }
                       }
                     : null,
@@ -302,24 +351,31 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
             const SizedBox(height: 12),
 
             // 등록된 제스처 리스트
-            Column(
-              children: registeredGestures
-                  .map(
-                    (gesture) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: TextFormField(
-                        initialValue: gesture,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
+            isLoading
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: CircularProgressIndicator(),
                     ),
                   )
-                  .toList(),
-            ),
+                : Column(
+                    children: registeredGestures
+                        .map(
+                          (gesture) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: TextFormField(
+                              initialValue: gesture,
+                              readOnly: true,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                border: const OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
             const SizedBox(height: 20),
 
             // 제스처 초기화 버튼

@@ -28,7 +28,7 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
-    private val pollingExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var pollingExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private var pollingFuture: ScheduledFuture<*>? = null
 
     private val baseUrl: String
@@ -122,67 +122,93 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
     }
 
     private fun startPolling(taskId: String, gestureName: String) {
-        pollingFuture = pollingExecutor.scheduleAtFixedRate({ 
-            try {
-                val request = Request.Builder()
-                    .url("$baseUrl/status/$taskId")
-                    .get()
-                    .build()
+        // Ensure we have a fresh executor for polling
+        if (pollingExecutor.isShutdown || pollingExecutor.isTerminated) {
+            Log.w(TAG, "PollingExecutor was shutdown, creating new one...")
+            pollingExecutor = Executors.newSingleThreadScheduledExecutor()
+        }
+        
+        Log.d(TAG, "Starting polling for task $taskId with 2 second interval")
+        
+        try {
+            pollingFuture = pollingExecutor.scheduleAtFixedRate({ 
+                Log.d(TAG, "Polling attempt for task $taskId...")
+                try {
+                    val request = Request.Builder()
+                        .url("$baseUrl/status/$taskId")
+                        .get()
+                        .build()
 
-                client.newCall(request).enqueue(object : Callback {
-                    override fun onFailure(call: Call, e: IOException) {
-                        Log.e(TAG, "Polling request for task $taskId failed", e)
-                        // Don't cancel polling on network failure - keep trying
-                    }
+                    Log.d(TAG, "Making HTTP request to: $baseUrl/status/$taskId")
 
-                    override fun onResponse(call: Call, response: Response) {
-                        try {
-                            if (!response.isSuccessful) {
-                                Log.e(TAG, "Server returned an error on /status: ${response.code} ${response.message}")
-                                return
-                            }
+                    client.newCall(request).enqueue(object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            Log.e(TAG, "Polling request for task $taskId failed", e)
+                            // Don't cancel polling on network failure - keep trying
+                        }
 
-                            val responseBody = response.body?.string() ?: return
+                        override fun onResponse(call: Call, response: Response) {
+                            try {
+                                Log.d(TAG, "Received response for task $taskId, code: ${response.code}")
+                                
+                                if (!response.isSuccessful) {
+                                    Log.e(TAG, "Server returned an error on /status: ${response.code} ${response.message}")
+                                    return
+                                }
 
-                            val jsonResponse = JSONObject(responseBody)
-                            val status = jsonResponse.optString("status", "")
-                            Log.d(TAG, "Polling for task $taskId: Status is $status")
+                                val responseBody = response.body?.string() ?: return
+                                Log.d(TAG, "Response body for task $taskId: $responseBody")
 
-                            when (status) {
-                                "SUCCESS" -> {
-                                    pollingFuture?.cancel(true)
-                                    Log.d(TAG, "Training successfully completed for task $taskId.")
-                                    val result = jsonResponse.optJSONObject("result")
-                                    val modelUrl = result?.optString("tflite_url") // 실제 키는 tflite_url
-                                    val modelCode = result?.optString("model_code")
+                                val jsonResponse = JSONObject(responseBody)
+                                val status = jsonResponse.optString("status", "")
+                                Log.d(TAG, "Polling for task $taskId: Status is $status")
 
-                                    if (!modelUrl.isNullOrEmpty()) {
-                                        Log.d(TAG, "New model URL: $modelUrl")
-                                        Log.d(TAG, "Model code: $modelCode")
-                                        downloadAndSaveModel(modelUrl)
-                                        updateLabelMap(gestureName)
-                                    } else {
-                                        Log.e(TAG, "Status is SUCCESS but tflite_url is missing or empty.")
+                                when (status) {
+                                    "SUCCESS" -> {
+                                        pollingFuture?.cancel(true)
+                                        Log.d(TAG, "Training successfully completed for task $taskId.")
+                                        val result = jsonResponse.optJSONObject("result")
+                                        val modelUrl = result?.optString("tflite_url")
+                                        val modelCode = result?.optString("model_code")
+
+                                        if (!modelUrl.isNullOrEmpty()) {
+                                            Log.d(TAG, "New model URL: $modelUrl")
+                                            Log.d(TAG, "Model code: $modelCode")
+                                            downloadAndSaveModel(modelUrl)
+                                            updateLabelMap(gestureName)
+                                        } else {
+                                            Log.e(TAG, "Status is SUCCESS but tflite_url is missing or empty.")
+                                        }
+                                    }
+                                    "PROGRESS" -> {
+                                        val progress = jsonResponse.optJSONObject("progress")
+                                        val currentStep = progress?.optString("current_step", "진행 중...")
+                                        Log.d(TAG, "Task $taskId in progress: $currentStep")
+                                    }
+                                    "PENDING" -> {
+                                        Log.d(TAG, "Task $taskId is pending...")
+                                    }
+                                    "FAILURE", "ERROR" -> {
+                                        Log.e(TAG, "Training failed for task $taskId. Info: ${jsonResponse.optString("error_info")}")
+                                        pollingFuture?.cancel(true)
                                     }
                                 }
-                                "FAILURE", "ERROR" -> {
-                                    Log.e(TAG, "Training failed for task $taskId. Info: ${jsonResponse.optString("error_info")}")
-                                    pollingFuture?.cancel(true)
-                                }
-                                "PENDING" -> {
-                                    // Continue polling
-                                    Log.d(TAG, "Task $taskId still in progress...")
-                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to parse /status response for task $taskId", e)
+                                // Don't cancel polling on parse failure - keep trying
                             }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to parse /status response for task $taskId", e)
                         }
-                    }
-                })
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception in polling task $taskId", e)
-            }
-        }, 0, 2, TimeUnit.SECONDS)
+                    })
+                } catch (e: Exception) {
+                    Log.e(TAG, "Exception in polling task $taskId", e)
+                    // Don't let exception stop the scheduled task
+                }
+            }, 0, 2, TimeUnit.SECONDS)
+            
+            Log.d(TAG, "Polling scheduled successfully for task $taskId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start polling for task $taskId", e)
+        }
     }
 
     private fun downloadAndSaveModel(url: String, labelMap: JSONObject? = null) {

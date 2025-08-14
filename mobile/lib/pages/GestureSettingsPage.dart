@@ -9,13 +9,62 @@ class GestureSettingsPage extends StatefulWidget {
 }
 
 class _GestureSettingsPageState extends State<GestureSettingsPage> {
-  // 영어 이름과 한글 이름 매핑
-  final Map<String, String> gestureNames = const {
+  static const platform = MethodChannel('com.pentagon.ghostouch/toggle');
+  
+  // 동적으로 로드할 제스처 맵
+  Map<String, String> gestureNames = {
     'scissors': '가위 제스처',
-    'rock': '주먹 제스처',
+    'rock': '주먹 제스처', 
     'paper': '보 제스처',
     'hs': '한성대 제스처',
   };
+  
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailableGestures();
+  }
+
+  Future<void> _loadAvailableGestures() async {
+    try {
+      final result = await platform.invokeMethod('getAvailableGestures');
+      if (result is Map) {
+        setState(() {
+          // 새로 로드된 제스처들을 기존 맵에 추가하면서 한글 이름 매핑
+          Map<String, String> newGestureNames = {};
+          
+          result.forEach((key, value) {
+            String englishKey = key.toString();
+            String koreanName = _getKoreanName(englishKey);
+            newGestureNames[englishKey] = koreanName;
+          });
+          
+          gestureNames = newGestureNames;
+          isLoading = false;
+        });
+      }
+    } on PlatformException catch (e) {
+      print("Failed to load gestures: '${e.message}'");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String _getKoreanName(String englishKey) {
+    // 기본 제스처들의 한글 매핑
+    const defaultMapping = {
+      'scissors': '가위 제스처',
+      'rock': '주먹 제스처',
+      'paper': '보 제스처',
+      'hs': '한성대 제스처',
+    };
+    
+    // 기본 매핑에 있으면 해당 한글명 반환, 없으면 사용자 정의 제스처로 표시
+    return defaultMapping[englishKey] ?? '$englishKey 제스처';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,20 +115,24 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
 
             // 제스처 리스트
             Expanded(
-              child: ListView.separated(
-                itemCount: gestureNames.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  // 영어 키와 한글 값 가져오기
-                  String gestureKey = gestureNames.keys.elementAt(index);
-                  String gestureValue = gestureNames.values.elementAt(index);
-                  
-                  return ListTile(
-                    title: Text(gestureValue),
-                    trailing: GestureActionDropdown(gestureKey: gestureKey), // 영어 키 전달
-                  );
-                },
-              ),
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : ListView.separated(
+                      itemCount: gestureNames.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        // 영어 키와 한글 값 가져오기
+                        String gestureKey = gestureNames.keys.elementAt(index);
+                        String gestureValue = gestureNames.values.elementAt(index);
+                        
+                        return ListTile(
+                          title: Text(gestureValue),
+                          trailing: GestureActionDropdown(gestureKey: gestureKey), // 영어 키 전달
+                        );
+                      },
+                    ),
             ),
           ],
         ),
