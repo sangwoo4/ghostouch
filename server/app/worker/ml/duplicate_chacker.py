@@ -37,3 +37,9 @@ class DuplicateChecker:
                     )
                     return True  # True면 학습 종료
         return False  # False면 통과
+
+class DuplicateDataError(Exception):
+    """중복 데이터 예외"""
+    pass
+
+

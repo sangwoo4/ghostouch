@@ -1,12 +1,11 @@
 
 import logging
 
-from tensorflow.python.data.experimental.ops.testing import sleep
 
 from app.core import celery_app, HparamsConfig, PathConfig
 from .ml.data_preprocessor import DataPreprocessor
 from .ml.dataset_combiner import DatasetCombiner
-from .ml.duplicate_chacker import DuplicateChecker
+from .ml.duplicate_chacker import DuplicateChecker, DuplicateDataError
 from .ml.label_manager import LabelManager
 from .ml.model_summary_printer import ModelSummaryPrinter
 from .ml.model_trainer import ModelTrainer
@@ -48,11 +47,8 @@ def training_task(self, model_code, landmarks, gesture):
         )
 
         if is_dup:
-            logger.warning("중복 데이터 발생, 작업을 건너뜁니다.")
-            self.update_state(state='DUPLICATE', meta={'message': '제스처 데이터 중복'})
-            return {"new_model_code": None, "tflite_url": None,
-                    "status_message": "제스처 데이터 중복."}
-
+            logger.warning("중복 데이터가 허용치를 초과하여 작업을 건너뜜니다.")
+            raise DuplicateDataError("데이터 중복입니다. 랜드마크를 다시 등록하세요")
 
         # 3.데이터 병합 및 저장
         dataset_combiner = DatasetCombiner(path_configs.combined_csv_path)
@@ -80,8 +76,8 @@ def training_task(self, model_code, landmarks, gesture):
         tflite_url = asyncio.run(_upload_tflite_and_background(paths))
 
         return {
-            "tflite_url" : tflite_url,
-            "model_code" : new_model_code,
+            "tflite_url": tflite_url,
+            "model_code": new_model_code
         }
 
 async def _upload_tflite_and_background(paths: dict):

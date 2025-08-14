@@ -12,7 +12,7 @@ class TaskResponse(BaseModel):
 class StatusResponse(BaseModel):
     task_id: str
     status: str
-    result: Optional[Any] = None
-    error_info: Optional[str] = None
     progress: Optional[dict] = None
+    result: Optional[Any] = None # 'result' 대신 'data'
+    error_info: Optional[str] = None # 'error_info' 대신 'error'
 
