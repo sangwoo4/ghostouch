@@ -16,8 +16,6 @@ class GestureRecognizer {
     
     private var interpreter: Interpreter?
     private var reverseLabelMap: [Int: String] = [:]
-    private var collectedFloatLists: [[Float]] = []
-
     init?(modelPath: String, labelPath: String) {
         print("제스처 인식기 초기화를 시도합니다...")
         
@@ -59,25 +57,14 @@ class GestureRecognizer {
         print("제스처 인식기 초기화 성공.")
     }
     
-    func classifyGesture(handLandmarkerResult: HandLandmarkerResult) -> String? {
+    func classifyGesture(handLandmarkerResult: HandLandmarkerResult) -> (label: String?, features: [Float]?) {
         guard let interpreter = interpreter,
-              let pts = handLandmarkerResult.worldLandmarks.first, pts.count == 21 else { return nil }
+              let pts = handLandmarkerResult.worldLandmarks.first, pts.count == 21 else { return (nil, nil) }
 
-        // 1) flatten(63) + handedness(1) = 64
-//        var features = [Float]()
-//        features.reserveCapacity(64)
-//        for lm in pts { features += [lm.x, lm.y, lm.z] }
-        
-        var features : [Float32] = pts.flatMap { [$0.x, $0.y, $0.z] } // <- 한줄로 변경한거
+        var features : [Float] = pts.flatMap { [$0.x, $0.y, $0.z] }
 
         let isLeft = (handLandmarkerResult.handedness.first?.first?.categoryName?.lowercased() == "left")
         features.append(isLeft ? 0.0 : 1.0)
-        
-        self.collectedFloatLists.append(features)
-        if self.collectedFloatLists.count >= 100 {
-            print("100개의 worldlandmark된 좌표 배열 : \(self.collectedFloatLists)")
-            self.collectedFloatLists.removeAll()
-        }
             
         //print(features)
         let formatted = features.map { String(format: "%.15f", Double($0)) }
@@ -87,8 +74,8 @@ class GestureRecognizer {
         do {
             // 입력: UInt8 가정
             let inTensor = try interpreter.input(at: 0)
-            guard inTensor.dataType == .uInt8 else { return nil }
-            guard let iq = inTensor.quantizationParameters else { return nil }
+            guard inTensor.dataType == .uInt8 else { return (nil, features) }
+            guard let iq = inTensor.quantizationParameters else { return (nil, features) }
             let iscale = Float(iq.scale)        // 보통 1/255 또는 모델 정의값
             let izero  = Int(iq.zeroPoint)
 
@@ -104,7 +91,7 @@ class GestureRecognizer {
 
             // 출력: UInt8 확률(소프트맥스 포함) 가정
             let outTensor = try interpreter.output(at: 0)
-            guard outTensor.dataType == .uInt8 else { return nil }
+            guard outTensor.dataType == .uInt8 else { return (nil, features) }
             let outBytes = outTensor.data.toArray(type: UInt8.self)
 
             // dequantize: p = (q - zeroPoint) * scale  (보통 0~1 근처)
@@ -114,16 +101,18 @@ class GestureRecognizer {
             let probs: [Float] = outBytes.map { (Float(Int($0) - oz) * os) }
 
             // Argmax + 임계값
-            guard let maxIdx = probs.argmax() else { return "none" }
+            guard let maxIdx = probs.argmax() else { return ("none", features) }
             let conf = probs[maxIdx]
-            if conf < 0.5 { return "none" }
+            if conf < 0.5 { return ("none", features) }
 
             let label = self.reverseLabelMap[maxIdx] ?? "unknown"
-            return "\(label) (\(String(format: "%.0f", conf * 100))%)"
+            let resultLabel = "\(label) (\(String(format: "%.0f", conf * 100))%)"
+            
+            return (resultLabel, features)
 
         } catch {
             print("inference error: \(error)")
-            return nil
+            return (nil, features)
         }
     }
     

@@ -87,20 +87,15 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
 
     // MARK: - Service Setup
     private func setupServices() {
-        handLandmarkerService = HandLandmarkerService.liveStreamHandLandmarkerService(
-            modelPath: DefaultConstants.modelPath,
-            numHands: DefaultConstants.numHands,
-            minHandDetectionConfidence: DefaultConstants.minHandDetectionConfidence,
-            minHandPresenceConfidence: DefaultConstants.minHandPresenceConfidence,
-            minTrackingConfidence: DefaultConstants.minTrackingConfidence,
-            liveStreamDelegate: self,
-            delegate: DefaultConstants.delegate
-        )
-
         cameraFeedService = CameraFeedService(previewView: previewView)
         cameraFeedService?.delegate = self
 
-        gestureRecognizer = GestureRecognizer(modelPath: "basic_gesture_model", labelPath: "basic_label_map")
+        // GestureRecognitionService의 공유 인스턴스를 사용하도록 수정
+        self.handLandmarkerService = GestureRecognitionService.shared.handLandmarkerService
+        self.gestureRecognizer = GestureRecognitionService.shared.gestureRecognizer
+        
+        // liveStreamDelegate를 self로 설정하여, 랜드마크 감지 결과를 이 클래스에서 받을 수 있도록 함
+        self.handLandmarkerService?.liveStreamDelegate = self
     }
 
     // MARK: - CameraFeedServiceDelegate
@@ -161,8 +156,9 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
                 imageContentMode: .scaleAspectFill
             )
 
-            if let gesture = self.gestureRecognizer?.classifyGesture(handLandmarkerResult: handLandmarkerResult!) { // 기존 handLandmarkerResult: handLandmarkerResult!
-                self.gestureLabel.text = gesture
+            if let handLandmarkerResult = handLandmarkerResult {
+                let gesture = GestureRecognitionService.shared.recognizeAndCollect(result: handLandmarkerResult)
+                self.gestureLabel.text = gesture ?? " "
             } else {
                 self.gestureLabel.text = " "
             }

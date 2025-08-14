@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -105,6 +105,10 @@
 		FAF4CDB63E6D9B872A83501E /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1BEDAD492E4DB1340096B33F /* Server */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Server; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		31287B2282C465AF82138208 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -158,7 +162,6 @@
 			children = (
 				1BEDAD362E4C8E970096B33F /* BottomCamera.swift */,
 				1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */,
-				1BEDAD382E4C8E970096B33F /* GestureRecognitionService.swift */,
 				1BEDAD392E4C8E970096B33F /* TestPage.swift */,
 				1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */,
 			);
@@ -217,9 +220,11 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				1BEDAD492E4DB1340096B33F /* Server */,
 				1BEDAD332E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite */,
 				1BEDAD3B2E4C8E970096B33F /* TestPage */,
 				1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */,
+				1BEDAD382E4C8E970096B33F /* GestureRecognitionService.swift */,
 				1B14AE532E44AF80001055A0 /* Configurations */,
 				1B14AE4E2E44AF7B001055A0 /* Services */,
 				1B14AE4A2E44AF74001055A0 /* Views */,
@@ -293,6 +298,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1BEDAD492E4DB1340096B33F /* Server */,
 			);
 			name = Runner;
 			productName = Runner;
