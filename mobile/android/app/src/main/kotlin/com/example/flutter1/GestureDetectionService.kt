@@ -55,9 +55,17 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
 
     override fun onModelReady() {
         Log.d(TAG, "새로운 모델이 준비되었습니다. GestureClassifier를 재로드합니다.")
-        // GestureClassifier를 재인스턴스화하여 새로운 모델을 로드하도록 함
-        gestureClassifier?.close() // 기존 인터프리터 닫기
-        gestureClassifier = GestureClassifier(this)
+        reloadModel()
+    }
+    
+    private fun reloadModel() {
+        backgroundExecutor.execute {
+            Log.d(TAG, "백그라운드에서 GestureClassifier 재로드 중...")
+            // GestureClassifier를 재인스턴스화하여 새로운 모델을 로드하도록 함
+            gestureClassifier?.close() // 기존 인터프리터 닫기
+            gestureClassifier = GestureClassifier(this)
+            Log.d(TAG, "GestureClassifier 재로드 완료")
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -82,6 +90,10 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
                 } else {
                     Log.e(TAG, "학습 시작을 위한 제스처 이름 또는 프레임이 누락되었습니다.")
                 }
+            }
+            "ACTION_RELOAD_MODEL" -> {
+                Log.d(TAG, "새로운 모델 로드 요청 받음")
+                reloadModel()
             }
             else -> {
                 // 서비스가 시작될 때 항상 카메라 준비

@@ -1,6 +1,7 @@
 package com.pentagon.ghostouch
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
 import okhttp3.Call
@@ -235,6 +236,9 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
                     }
                     Log.d(TAG, "Model successfully downloaded and saved to ${modelFile.absolutePath}")
                     listener?.onModelReady()
+                    
+                    // 백그라운드 서비스에도 새 모델이 준비되었다고 알림
+                    notifyServiceOfNewModel()
                 } catch (e: IOException) {
                     Log.e(TAG, "Failed to save model to file", e)
                 }
@@ -276,6 +280,17 @@ class TrainingCoordinator(private val context: Context, private val listener: Tr
             Log.d(TAG, "Label map updated successfully with $gestureName:$newIndex")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update label map", e)
+        }
+    }
+
+    private fun notifyServiceOfNewModel() {
+        try {
+            val intent = Intent(context, GestureDetectionService::class.java)
+            intent.action = "ACTION_RELOAD_MODEL"
+            context.startService(intent)
+            Log.d(TAG, "Notified service of new model")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to notify service of new model", e)
         }
     }
 
