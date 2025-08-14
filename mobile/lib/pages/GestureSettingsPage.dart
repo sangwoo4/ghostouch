@@ -4,17 +4,43 @@ import 'package:flutter/services.dart';
 class GestureSettingsPage extends StatefulWidget {
   const GestureSettingsPage({super.key});
 
+  static const listChannel = MethodChannel(
+    'com.pentagon.ghostouch/list-gesture',
+  );
+
   @override
   State<GestureSettingsPage> createState() => _GestureSettingsPageState();
 }
 
 class _GestureSettingsPageState extends State<GestureSettingsPage> {
-  final List<String> gestureNames = const [
+  final List<String> listGestures = const [
     '가위 제스처',
     '주먹 제스처',
     '보 제스처',
     '한성대 제스처',
   ];
+
+  // 리스트 불러오는 매소드 채널 - GestureRegisterPage와 같은 메소드 채널 사용
+  // List<String> listGestures = ['가위 제스처', '주먹 제스처', '보 제스처', '한성대 제스처'];
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _loadGestureList();
+  // }
+
+  // Future<void> _loadGestureList() async {
+  //   try {
+  //     final List<dynamic> gestures = await listChannel.invokeMethod(
+  //       'list-gesture',
+  //     );
+  //     setState(() {
+  //       listGestures = gestures.cast<String>();
+  //     });
+  //   } catch (e) {
+  //     debugPrint("⚠ 제스처 목록 불러오기 실패: $e");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +55,7 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
             // 상단 헤더
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
               decoration: const BoxDecoration(
                 color: Color(0xFF0E1539),
                 borderRadius: BorderRadius.vertical(
@@ -66,11 +92,11 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
             // 제스처 리스트
             Expanded(
               child: ListView.separated(
-                itemCount: gestureNames.length,
+                itemCount: listGestures.length,
                 separatorBuilder: (_, __) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   return ListTile(
-                    title: Text(gestureNames[index]),
+                    title: Text(listGestures[index]),
                     trailing: const GestureActionDropdown(),
                   );
                 },
@@ -94,6 +120,7 @@ class GestureActionDropdown extends StatefulWidget {
 class _GestureActionDropdownState extends State<GestureActionDropdown> {
   String selectedAction = '동작 없음';
 
+  // 동작 상태 메소드 채널 추가
   final List<String> options = ['동작 없음', '앱 실행', '스크린 캡처', '플레이/정지'];
 
   @override

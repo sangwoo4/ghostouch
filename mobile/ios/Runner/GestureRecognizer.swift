@@ -16,6 +16,7 @@ class GestureRecognizer {
     
     private var interpreter: Interpreter?
     private var reverseLabelMap: [Int: String] = [:]
+
     init?(modelPath: String, labelPath: String) {
         print("제스처 인식기 초기화를 시도합니다...")
         
@@ -65,6 +66,7 @@ class GestureRecognizer {
 
         let isLeft = (handLandmarkerResult.handedness.first?.first?.categoryName?.lowercased() == "left")
         features.append(isLeft ? 0.0 : 1.0)
+
             
         //print(features)
         let formatted = features.map { String(format: "%.15f", Double($0)) }
@@ -74,8 +76,10 @@ class GestureRecognizer {
         do {
             // 입력: UInt8 가정
             let inTensor = try interpreter.input(at: 0)
+
             guard inTensor.dataType == .uInt8 else { return (nil, features) }
             guard let iq = inTensor.quantizationParameters else { return (nil, features) }
+
             let iscale = Float(iq.scale)        // 보통 1/255 또는 모델 정의값
             let izero  = Int(iq.zeroPoint)
 
@@ -91,7 +95,9 @@ class GestureRecognizer {
 
             // 출력: UInt8 확률(소프트맥스 포함) 가정
             let outTensor = try interpreter.output(at: 0)
+
             guard outTensor.dataType == .uInt8 else { return (nil, features) }
+
             let outBytes = outTensor.data.toArray(type: UInt8.self)
 
             // dequantize: p = (q - zeroPoint) * scale  (보통 0~1 근처)
@@ -113,6 +119,7 @@ class GestureRecognizer {
         } catch {
             print("inference error: \(error)")
             return (nil, features)
+
         }
     }
     

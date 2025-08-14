@@ -162,6 +162,7 @@
 			children = (
 				1BEDAD362E4C8E970096B33F /* BottomCamera.swift */,
 				1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */,
+
 				1BEDAD392E4C8E970096B33F /* TestPage.swift */,
 				1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */,
 			);
@@ -220,7 +221,9 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+
 				1BEDAD492E4DB1340096B33F /* Server */,
+
 				1BEDAD332E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite */,
 				1BEDAD3B2E4C8E970096B33F /* TestPage */,
 				1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */,

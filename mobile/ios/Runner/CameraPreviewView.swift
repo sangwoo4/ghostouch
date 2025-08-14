@@ -87,6 +87,7 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
 
     // MARK: - Service Setup
     private func setupServices() {
+
         cameraFeedService = CameraFeedService(previewView: previewView)
         cameraFeedService?.delegate = self
 
@@ -96,6 +97,7 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
         
         // liveStreamDelegate를 self로 설정하여, 랜드마크 감지 결과를 이 클래스에서 받을 수 있도록 함
         self.handLandmarkerService?.liveStreamDelegate = self
+
     }
 
     // MARK: - CameraFeedServiceDelegate
@@ -159,6 +161,7 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
             if let handLandmarkerResult = handLandmarkerResult {
                 let gesture = GestureRecognitionService.shared.recognizeAndCollect(result: handLandmarkerResult)
                 self.gestureLabel.text = gesture ?? " "
+
             } else {
                 self.gestureLabel.text = " "
             }
