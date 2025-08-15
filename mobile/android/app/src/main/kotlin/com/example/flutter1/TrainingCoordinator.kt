@@ -53,6 +53,22 @@ class TrainingCoordinator(private val context: Context) {
         const val CUSTOM_MODEL_NAME = "custom_model.tflite"
         const val LABEL_MAP_FILE_NAME = "updated_label_map.json"
         private const val MODEL_CODE_PREFS_KEY = "current_model_code"
+        
+        fun getServerUrl(context: Context): String {
+            val appInfo = context.packageManager.getApplicationInfo(
+                context.packageName,
+                PackageManager.GET_META_DATA
+            )
+            val serverIp = appInfo.metaData?.getString("com.pentagon.ghostouch.SERVER_IP")
+            val serverPort = appInfo.metaData?.getInt("com.pentagon.ghostouch.SERVER_PORT") ?: 0
+
+            return if (serverIp == null || serverPort == 0) {
+                Log.e(TAG, "Server IP or Port not found in AndroidManifest.xml metadata.")
+                "http://localhost:8000" // Fallback
+            } else {
+                "http://$serverIp:$serverPort"
+            }
+        }
     }
 
     fun uploadAndTrain(gestureName: String, frames: List<List<Float>>) {

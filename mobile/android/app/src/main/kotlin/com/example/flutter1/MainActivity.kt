@@ -83,6 +83,14 @@ class MainActivity: FlutterActivity() {
                         result.error("ERROR", "Failed to get available gestures: ${e.message}", null)
                     }
                 }
+                "getServerUrl" -> {
+                    try {
+                        val serverUrl = TrainingCoordinator.getServerUrl(this)
+                        result.success(serverUrl)
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to get server URL: ${e.message}", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

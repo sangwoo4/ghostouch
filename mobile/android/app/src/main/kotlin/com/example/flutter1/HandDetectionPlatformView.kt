@@ -331,10 +331,8 @@ class HandDetectionPlatformView(
                         // Auto-complete when target frames are collected
                         if (collectedFrames.size >= TARGET_FRAME_COUNT) {
                             Log.d("HandDetectionPlatformView", "Target frames ($TARGET_FRAME_COUNT) collected from $totalFrameAttempts attempts. Auto-completing collection.")
-                            isCollecting = false
-                            mainHandler.post {
-                                methodChannel.invokeMethod("collectionComplete", null)
-                            }
+                            // stopCollecting() 메소드 호출로 서버 업로드도 함께 처리
+                            stopCollecting()
                         }
                     } else {
                         Log.d("HandDetectionPlatformView", "Frame rejected: Low confidence (${String.format("%.2f", confidence)} < $MIN_CONFIDENCE_THRESHOLD)")

@@ -125,7 +125,14 @@ class TrainingService : Service() {
                         "SUCCESS" -> {
                             val result = jsonResponse.optJSONObject("result")
                             val modelUrl = result?.optString("tflite_url")
+                            val newModelCode = result?.optString("model_code")
+                            
                             if (!modelUrl.isNullOrEmpty()) {
+                                // 새로운 모델 코드가 있으면 저장
+                                if (!newModelCode.isNullOrEmpty()) {
+                                    saveNewModelCode(newModelCode)
+                                    Log.d(TAG, "Updated model code from $newModelCode")
+                                }
                                 downloadAndSaveModel(modelUrl, gestureName)
                             } else {
                                 Log.e(TAG, "SUCCESS but no model URL!")
@@ -229,6 +236,16 @@ class TrainingService : Service() {
             Log.d(TAG, "Notified GestureDetectionService of new model")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to notify service", e)
+        }
+    }
+
+    private fun saveNewModelCode(newModelCode: String) {
+        try {
+            val prefs = getSharedPreferences("training_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("current_model_code", newModelCode).apply()
+            Log.d(TAG, "Saved new model code: $newModelCode")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save new model code", e)
         }
     }
 

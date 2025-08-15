@@ -341,8 +341,10 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   bool _isCollecting = false;
   bool _isCompleted = false;
   String? taskId;
+  String? serverUrl;
   String instructionText = '📸 손을 카메라에 잘 보여주세요 🙌';
 
+  static const toggleChannel = MethodChannel('com.pentagon.ghostouch/toggle');
   static const taskIdChannel = MethodChannel('com.pentagon.gesture/task-id');
   static const handDetectionChannel = MethodChannel(
     'com.pentagon.ghostouch/hand_detection',
@@ -352,6 +354,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   void initState() {
     super.initState();
     _getTaskIdFromNative();
+    _getServerUrl();
     handDetectionChannel.setMethodCallHandler(_handleMethodCall);
   }
 
@@ -363,6 +366,22 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
       });
     } on PlatformException catch (e) {
       debugPrint("Failed to get task_id: ${e.message}");
+    }
+  }
+
+  Future<void> _getServerUrl() async {
+    try {
+      final String result = await toggleChannel.invokeMethod('getServerUrl');
+      setState(() {
+        serverUrl = result;
+      });
+      debugPrint("Server URL: $serverUrl");
+    } on PlatformException catch (e) {
+      debugPrint("Failed to get server URL: ${e.message}");
+      // 폴백 URL 설정
+      setState(() {
+        serverUrl = "http://localhost:8000";
+      });
     }
   }
 
@@ -429,7 +448,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
 
   // 제스처 수집 완료 후 서버 상태 확인 + 모델 다운로드 처리
   Future<void> _handleGestureCompletion() async {
-    if (taskId == null) return;
+    if (taskId == null || serverUrl == null) return;
 
     // 1. 카메라 종료
     await _stopCollecting();
@@ -453,7 +472,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
     while (!completed) {
       try {
         final response = await http.get(
-          Uri.parse("http://172.30.1.88:8000/status/$taskId"),
+          Uri.parse("$serverUrl/status/$taskId"),
         );
 
         if (response.statusCode == 200) {
