@@ -1,8 +1,9 @@
 import 'package:flutter/services.dart'; // 크로스 채널용 import
 import 'package:flutter/material.dart';
+import 'package:ghostouch/pages/ControlAppPage.dart';
 import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
-import 'pages/TestPage.dart'; // ✅ 테스트 페이지 import
+import 'pages/TestPage.dart'; // 테스트 페이지 import
 
 void main() {
   runApp(const AirCommandApp());
@@ -321,6 +322,32 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
           _buildBackgroundCard(),
 
+          _buildMenuCard(
+            icon: Icons.person,
+            title: '외부 앱 제어',
+            subtitle: 'OTT, T-map 등 다양한 앱을 제어할 수 있습니다.',
+            onTap: () {
+              // 알림창 띄우기
+              if (!isGestureEnabled) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('⚠️ 사용 안 함 상태에서는 기능을 사용할 수 없습니다.'),
+                    behavior: SnackBarBehavior.floating, // 떠 있는 형태
+                    margin: const EdgeInsets.only(top: 50, left: 20, right: 20),
+                    backgroundColor: Colors.blue,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+
+              // 페이지 이동은 그대로
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ControlAppPage()),
+              );
+            },
+          ),
+
           // ✅ 테스트 페이지 카드 (맨 아래)
           _buildMenuCard(
             icon: Icons.bug_report,
@@ -416,6 +443,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
     );
   }
 
+  // 추후 분기처리로 안드로이드에게만 카드 보이도록 설정. ios는 포그라운드
   Widget _buildBackgroundCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
