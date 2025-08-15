@@ -101,8 +101,9 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    const GestureShootingPage(),
+                                builder: (context) => GestureShootingPage(
+                                  gestureName: _controller.text,
+                                ),
                               ),
                             );
 
@@ -113,8 +114,9 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                                 Navigator.push(
                                   parentContext,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        const GestureShootingPage(),
+                                    builder: (context) => GestureShootingPage(
+                                      gestureName: _controller.text,
+                                    ),
                                   ),
                                 );
                               }
