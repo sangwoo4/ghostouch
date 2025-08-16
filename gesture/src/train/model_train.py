@@ -70,8 +70,8 @@ class ModelTrainer:
                       metrics=['accuracy'])
 
         # 콜백 설정: 조기 종료 및 학습률 동적 조정
-        early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True)
-        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True, verbose=1)
+        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001, verbose=1)
 
         # 클래스 불균형 처리를 위한 클래스 가중치 계산
         unique_classes: np.ndarray = np.unique(y_train_labels).astype(int) # unique_classes를 정수형으로 명시적 캐스팅
@@ -143,7 +143,7 @@ class ModelTrainer:
         with open(self.tflite_save_path, "wb") as f:
             f.write(tflite_quant_model)
 
-        logger.info(f"----- TFLite 모델 저장 완료 (FULL INT, I/O=int8): {self.tflite_save_path}")
+        logger.info(f"----- TFLite 모델 저장 완료 (FULL INT, I/O=uint8): {self.tflite_save_path}")
 
     def _load_and_prepare_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
