@@ -318,7 +318,13 @@ class HandDetectionPlatformView(
                     
                     if (confidence >= MIN_CONFIDENCE_THRESHOLD) {
                         val flatLandmarks = worldLandmarks.map { listOf(it.x(), it.y(), it.z()) }.flatten()
-                        collectedFrames.add(flatLandmarks)
+                        val handednessValue = when (handedness?.categoryName()) {
+                            "Left" -> 0.0f // 왼손
+                            "Right" -> 1.0f // 오른손
+                            else -> -1.0f // 알 수 없는 경우 (오류 방지 또는 처리 필요)
+                        }
+                        val fullLandmarkVector = flatLandmarks.toMutableList().apply { add(handednessValue) }
+                        collectedFrames.add(fullLandmarkVector)
                         
                         Log.d("HandDetectionPlatformView", "Frame accepted: ${collectedFrames.size}/$TARGET_FRAME_COUNT (confidence: ${String.format("%.2f", confidence)})")
                         

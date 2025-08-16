@@ -18,10 +18,6 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/**
- * Manages the initial training request to the server.
- * The actual polling for results is delegated to TrainingService.
- */
 class TrainingCoordinator(private val context: Context) {
 
     private val client = OkHttpClient.Builder()
@@ -46,14 +42,26 @@ class TrainingCoordinator(private val context: Context) {
         } else {
             "http://$serverIp:$serverPort"
         }
+
+        // Load the last known model code from disk to initialize the static variable
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        currentModelCode = prefs.getString(MODEL_CODE_PREFS_KEY, "base_v1") ?: "base_v1"
+        currentModelFileName = prefs.getString(MODEL_FILENAME_PREFS_KEY, "basic_gesture_model.tflite") ?: "basic_gesture_model.tflite"
+        Log.d(TAG, "Initialized TrainingCoordinator with model_code: $currentModelCode and model_filename: $currentModelFileName")
     }
 
     companion object {
         private const val TAG = "TrainingCoordinator"
-        const val CUSTOM_MODEL_NAME = "custom_model.tflite"
         const val LABEL_MAP_FILE_NAME = "updated_label_map.json"
-        private const val MODEL_CODE_PREFS_KEY = "current_model_code"
-        
+        const val PREFS_NAME = "training_prefs"
+        const val MODEL_CODE_PREFS_KEY = "current_model_code"
+        const val MODEL_FILENAME_PREFS_KEY = "current_model_filename"
+
+        @JvmStatic
+        var currentModelCode: String = "base_v1"
+        @JvmStatic
+        var currentModelFileName: String = "basic_gesture_model.tflite"
+
         fun getServerUrl(context: Context): String {
             val appInfo = context.packageManager.getApplicationInfo(
                 context.packageName,
@@ -74,30 +82,25 @@ class TrainingCoordinator(private val context: Context) {
     fun uploadAndTrain(gestureName: String, frames: List<List<Float>>) {
         Log.d(TAG, "Preparing to upload ${frames.size} frames for gesture: $gestureName")
 
-        if (frames.size < 100) {
-            Log.w(TAG, "Not enough frames collected to start training. Required: 100, Found: ${frames.size}")
+        if (frames.isEmpty()) {
+            Log.w(TAG, "Frame list is empty, cannot start training.")
             return
         }
-
-        val currentModelCode = getCurrentModelCode()
-        val currentLabelMap = getCurrentLabelMap()
 
         val jsonPayload = JSONObject().apply {
             put("model_code", currentModelCode)
             put("gesture", gestureName)
-            put("current_labels", currentLabelMap)
             put("landmarks", JSONArray(frames.map { JSONArray(it.map { v -> v.toDouble() }) }))
         }
 
         val requestBody = jsonPayload.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder().url("$baseUrl/train").post(requestBody).build()
 
-        Log.d(TAG, "Sending training request to $baseUrl/train")
+        Log.d(TAG, "Sending training request to $baseUrl/train with payload: $jsonPayload")
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e(TAG, "Training request failed", e)
-                // Optionally, notify UI of this initial failure
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -111,7 +114,6 @@ class TrainingCoordinator(private val context: Context) {
                     val taskId = jsonResponse.optString("task_id", null)
                     if (taskId != null) {
                         Log.d(TAG, "Training task started successfully. Task ID: $taskId. Delegating to TrainingService.")
-                        // Delegate polling to the foreground service
                         val serviceIntent = Intent(context, TrainingService::class.java).apply {
                             putExtra("task_id", taskId)
                             putExtra("gesture_name", gestureName)
@@ -129,11 +131,6 @@ class TrainingCoordinator(private val context: Context) {
                 }
             }
         })
-    }
-
-    private fun getCurrentModelCode(): String {
-        val prefs = context.getSharedPreferences("training_prefs", Context.MODE_PRIVATE)
-        return prefs.getString(MODEL_CODE_PREFS_KEY, "base_v1") ?: "base_v1"
     }
 
     private fun getCurrentLabelMap(): JSONObject {
