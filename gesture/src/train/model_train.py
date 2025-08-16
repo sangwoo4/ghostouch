@@ -1,12 +1,14 @@
-import numpy as np
-import tensorflow as tf
 import logging
+from typing import Dict, Tuple
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
 
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
-from typing import Tuple, Dict, List # Added typing imports
 from gesture.src.config.file_config import FileConfig
 from gesture.src.config.train_config import TrainConfig
 from gesture.src.model.model_architect import ModelBuilder
@@ -74,7 +76,7 @@ class ModelTrainer:
         lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001, verbose=1)
 
         # 클래스 불균형 처리를 위한 클래스 가중치 계산
-        unique_classes: np.ndarray = np.unique(y_train_labels).astype(int) # unique_classes를 정수형으로 명시적 캐스팅
+        unique_classes: np.ndarray = pd.unique(y_train_labels).astype(int)
         class_weights: np.ndarray = compute_class_weight(
             class_weight='balanced',
             classes=unique_classes,

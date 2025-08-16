@@ -1,19 +1,21 @@
-import sys
-import os
 import argparse
 import logging
-import json
+import os
+import sys
+from typing import Any, Dict
+
 import numpy as np
-from typing import Dict, Any
+import pandas as pd
+
 from gesture.src.config.file_config import FileConfig
 from gesture.src.config.train_config import TrainConfig
-from gesture.src.data.data_preprocessor import DataPreprocessor
 from gesture.src.data.data_combiner import DataCombiner
 from gesture.src.data.data_converter import DataConverter
+from gesture.src.data.data_preprocessor import DataPreprocessor
+from gesture.src.label.label_processor import LabelProcessor
 from gesture.src.model.model_architect import BasicCNNBuilder, UpdateModelBuilder
 from gesture.src.train.model_train import ModelTrainer
 from gesture.src.utils.duplicate_checker import DuplicateChecker
-from gesture.src.label.label_processor import LabelProcessor
 
 # 로깅 설정: 스크립트 실행 전반에 걸쳐 정보를 제공
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -117,8 +119,8 @@ def main():
 
         # 기존(basic) 데이터의 라벨 맵은 NPY 데이터에서 생성
         data_from_npy_basic = np.load(file_config.BASIC_DATA_PATH, allow_pickle=True)
-        unique_labels_from_npy_basic = np.unique(data_from_npy_basic[:, -1].astype(str))
-        basic_label_map: Dict[str, int] = {label: i for i, label in enumerate(sorted(unique_labels_from_npy_basic))}
+        unique_labels_from_npy_basic = pd.unique(data_from_npy_basic[:, -1].astype(str))
+        basic_label_map: Dict[str, int] = {label: i for i, label in enumerate(unique_labels_from_npy_basic)}
         logging.info(f"----- 기존 라벨 맵 로드 완료 (NPY 데이터 기반): {file_config.LABEL_MAP_PATHS['basic']}")
 
         logging.debug(f"[DEBUG] Update mode - basic_label_map (from NPY): {basic_label_map}")
