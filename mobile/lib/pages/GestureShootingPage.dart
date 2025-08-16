@@ -58,6 +58,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
       case 'updateProgress':
         final int progress = call.arguments as int;
         setState(() {
+          instructionText = '📸 손을 카메라에 잘 보여주세요 🙌';
           _progressPercent = progress / 100.0;
         });
         break;
@@ -273,15 +274,17 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                     width: 350,
                     height: 350,
                     color: Colors.black12,
-                    child: Platform.isAndroid
-                        ? const AndroidView(
-                            viewType: 'hand_detection_view',
-                            layoutDirection: TextDirection.ltr,
-                          )
-                        : const UiKitView(
-                            viewType: 'camera_view',
-                            creationParamsCodec: StandardMessageCodec(),
-                          ),
+                    child: _isCollecting
+                        ? (Platform.isAndroid
+                              ? const AndroidView(
+                                  viewType: 'hand_detection_view',
+                                  layoutDirection: TextDirection.ltr,
+                                )
+                              : const UiKitView(
+                                  viewType: 'camera_view',
+                                  creationParamsCodec: StandardMessageCodec(),
+                                ))
+                        : const SizedBox(), // _isCollecting = false면 카메라 OFF
                   ),
                 ),
               ),
