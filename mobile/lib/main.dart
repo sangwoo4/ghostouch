@@ -305,6 +305,21 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
             title: '사용자 제스처 등록',
             subtitle: '새로운 제스처를 등록할 수 있습니다.',
             onTap: () {
+              if (!isGestureEnabled) {
+                // ⚠️ 사용 안 함일 때는 SnackBar만 띄우고 페이지 이동 안 함
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('⚠️ 사용 안 함 상태에서는 기능을 사용할 수 없습니다.'),
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.only(top: 50, left: 20, right: 20),
+                    backgroundColor: Colors.blue,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+                return; // 🚫 여기서 바로 리턴해서 아래 Navigator 실행 안 됨
+              }
+
+              // ✅ 사용 중일 때만 페이지 이동
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -337,7 +352,10 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               // 페이지 이동은 그대로
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ControlAppPage()),
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ControlAppPage(isToggleEnabled: isGestureEnabled),
+                ),
               );
             },
           ),
