@@ -1,10 +1,18 @@
 
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, Input, Conv1D, MaxPooling1D, Flatten
-from tensorflow.keras import regularizers
 from abc import ABC, abstractmethod
 from typing import Tuple
+
+import tensorflow as tf
+from tensorflow.keras import regularizers
+from tensorflow.keras.layers import (
+    Conv1D,
+    Dense,
+    Dropout,
+    Flatten,
+    Input,
+    MaxPooling1D,
+)
+from tensorflow.keras.models import Sequential
 
 class ModelBuilder(ABC):
     """

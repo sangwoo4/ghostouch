@@ -1,12 +1,14 @@
+import logging
 import os
+import json
+import multiprocessing
+from typing import Dict, List, Tuple
+
 import cv2
 import mediapipe as mp
 import numpy as np
 import pandas as pd
-import logging
-import json
-import multiprocessing
-from typing import List, Tuple, Dict, Any
+
 from gesture.src.config.file_config import FileConfig
 
 logger = logging.getLogger(__name__)

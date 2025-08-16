@@ -1,6 +1,6 @@
-import json
-import os
 import logging
+import os
+import json
 from typing import Dict
 
 logger = logging.getLogger(__name__)
@@ -29,13 +29,13 @@ class LabelProcessor:
         current_idx = 0
 
         # 기본 라벨 맵 로드 및 결합
-        for label_str in sorted(basic_map.keys()):
+        for label_str in basic_map.keys():
             if label_str not in combined_map:
                 combined_map[label_str] = current_idx
                 current_idx += 1
 
         # 증분 라벨 맵 로드 및 결합 (기존 라벨과 중복되지 않는 경우에만 추가)
-        for label_str in sorted(incremental_map.keys()):
+        for label_str in incremental_map.keys():
             if label_str not in combined_map:
                 combined_map[label_str] = current_idx
                 current_idx += 1

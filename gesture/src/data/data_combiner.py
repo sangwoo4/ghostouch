@@ -1,7 +1,9 @@
-import numpy as np
 import logging
 import os
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple
+
+import numpy as np
+
 from gesture.src.config.file_config import FileConfig
 from gesture.src.data.data_converter import DataConverter
 

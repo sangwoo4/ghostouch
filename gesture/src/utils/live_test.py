@@ -1,14 +1,16 @@
-import cv2
+import argparse
+import json
+import logging
 import os
+import queue
+import threading
+from typing import Any, Dict, List, Optional, Tuple
+
+import cv2
 import mediapipe as mp
 import numpy as np
 import tensorflow as tf
-import json
-import argparse
-import logging
-import threading
-import queue
-from typing import Tuple, Dict, Any, Optional, List
+
 from gesture.src.config.file_config import FileConfig
 from gesture.src.config.test_config import TestConfig
 
