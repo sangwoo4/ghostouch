@@ -11,7 +11,7 @@ import Foundation
 private enum Config {
     static var baseURL: URL {
         guard let ip = Bundle.main.object(forInfoDictionaryKey: "ServerIP") as? String else {
-            print("⚠️ WARNING: 'ServerIP' not found in Info.plist. Defaulting to localhost.")
+            print("WARNING: 'ServerIP' not found in Info.plist. Defaulting to localhost.")
             // 로컬 개발 환경을 위해 localhost를 기본값으로 사용합니다.
             return URL(string: "http://127.0.0.1:8000/")!
         }
@@ -38,8 +38,15 @@ final class TrainingAPI {
         var request = URLRequest(url: baseURL.appendingPathComponent("train"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(body)
         
+        let jsonData = try JSONEncoder().encode(body)
+        request.httpBody = jsonData
+        
+        // 디버깅을 위해 이 코드를 추가합니다.
+        if let jsonString = String(data: jsonData, encoding: .utf8) {
+            print("✅ [Request JSON]: \(jsonString)")
+        }
+
         let (data, resp) = try await session.data(for: request)
         guard let http = resp as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
             throw URLError(.badServerResponse)

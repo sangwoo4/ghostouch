@@ -19,6 +19,7 @@ import AVFoundation
 /**
  This protocol must be adopted by any class that wants to get the detection results of the hand landmarker in live stream mode.
  */
+@MainActor
 protocol HandLandmarkerServiceLiveStreamDelegate: AnyObject {
   func handLandmarkerService(_ handLandmarkerService: HandLandmarkerService,
                              didFinishDetection result: ResultBundle?,
@@ -28,6 +29,7 @@ protocol HandLandmarkerServiceLiveStreamDelegate: AnyObject {
 /**
  This protocol must be adopted by any class that wants to take appropriate actions during  different stages of hand landmark on videos.
  */
+@MainActor
 protocol HandLandmarkerServiceVideoDelegate: AnyObject {
  func handLandmarkerService(_ handLandmarkerService: HandLandmarkerService,
                                   didFinishDetectionOnVideoFrame index: Int)
@@ -260,6 +262,7 @@ class HandLandmarkerService: NSObject {
 }
 
 // MARK: - HandLandmarkerLiveStreamDelegate Methods
+
 extension HandLandmarkerService: HandLandmarkerLiveStreamDelegate {
   func handLandmarker(
     _ handLandmarker: HandLandmarker,
@@ -269,10 +272,12 @@ extension HandLandmarkerService: HandLandmarkerLiveStreamDelegate {
       let resultBundle = ResultBundle(
         inferenceTime: Date().timeIntervalSince1970 * 1000 - Double(timestampInMilliseconds),
         handLandmarkerResults: [result])
-      liveStreamDelegate?.handLandmarkerService(
-        self,
-        didFinishDetection: resultBundle,
-        error: error)
+      DispatchQueue.main.async {
+          self.liveStreamDelegate?.handLandmarkerService(
+            self,
+            didFinishDetection: resultBundle,
+            error: error)
+      }
   }
 }
 

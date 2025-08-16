@@ -12,6 +12,9 @@ import AVFoundation // 카메라 권한 확인을 위해
 
 // MARK:  플러터와 연동되는 클래스
 class OpenSetting : NSObject {
+    // 앱 전체에서 토글 상태를 공유하기 위한 static 변수
+    static var isGestureServiceEnabled = false
+
     static func register(with registar: FlutterPluginRegistrar) {
         //플러터와 통신할 채널이름 설정
         let channel = FlutterMethodChannel(
@@ -52,13 +55,13 @@ extension OpenSetting: FlutterPlugin {
             }
 
         case "startGestureService":
-            // 더 이상 설정 화면을 열지 않음
-            print("Swift: startGestureService 호출됨")
-            // 실제 서비스 시작 코드가 필요하면 추가
+            print("Swift: startGestureService 호출됨 -> 상태: ON")
+            OpenSetting.isGestureServiceEnabled = true
             result(true)
 
         case "stopGestureService":
-            print("Swift: stopGestureService 호출됨")
+            print("Swift: stopGestureService 호출됨 -> 상태: OFF")
+            OpenSetting.isGestureServiceEnabled = false
             result(true)
             
         default:

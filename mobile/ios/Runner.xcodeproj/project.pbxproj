@@ -26,9 +26,11 @@
 		1BEDAD3E2E4C8E970096B33F /* TestPagePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */; };
 		1BEDAD3F2E4C8E970096B33F /* CameraForLandmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */; };
 		1BEDAD402E4C8E970096B33F /* GestureRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD382E4C8E970096B33F /* GestureRecognitionService.swift */; };
-		1BEDAD422E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite in Resources */ = {isa = PBXBuildFile; fileRef = 1BEDAD332E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite */; };
 		1BEDAD462E4C90750096B33F /* PinLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 1BEDAD452E4C90750096B33F /* PinLayout */; };
 		1BEDAD482E4C90780096B33F /* FlexLayout in Frameworks */ = {isa = PBXBuildFile; productRef = 1BEDAD472E4C90780096B33F /* FlexLayout */; };
+		1BEDAD612E4F0D6E0096B33F /* LabelMapManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD602E4F0D6E0096B33F /* LabelMapManager.swift */; };
+		1BEDAD632E4F80490096B33F /* 1755267492_d58052fe_model.tflite in Resources */ = {isa = PBXBuildFile; fileRef = 1BEDAD622E4F80490096B33F /* 1755267492_d58052fe_model.tflite */; };
+		1BEDAD652E505F870096B33F /* ProgressBarChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD642E505F870096B33F /* ProgressBarChannel.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		3F30A604B129F1348433422E /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF198E2487127232DAF6AB38 /* Pods_Runner.framework */; };
@@ -76,12 +78,14 @@
 		1B14AE522E44AF80001055A0 /* InferenceConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceConfigurationManager.swift; sourceTree = "<group>"; };
 		1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizer.swift; sourceTree = "<group>"; };
 		1B8175432E3341CD00792FD3 /* OpenSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSetting.swift; sourceTree = "<group>"; };
-		1BEDAD332E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite */ = {isa = PBXFileReference; lastKnownFileType = file; path = 1754987611_a47a36ac_model.tflite; sourceTree = "<group>"; };
 		1BEDAD362E4C8E970096B33F /* BottomCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomCamera.swift; sourceTree = "<group>"; };
 		1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraForLandmark.swift; sourceTree = "<group>"; };
 		1BEDAD382E4C8E970096B33F /* GestureRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognitionService.swift; sourceTree = "<group>"; };
 		1BEDAD392E4C8E970096B33F /* TestPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPage.swift; sourceTree = "<group>"; };
 		1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPagePlatformView.swift; sourceTree = "<group>"; };
+		1BEDAD602E4F0D6E0096B33F /* LabelMapManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelMapManager.swift; sourceTree = "<group>"; };
+		1BEDAD622E4F80490096B33F /* 1755267492_d58052fe_model.tflite */ = {isa = PBXFileReference; lastKnownFileType = file; path = 1755267492_d58052fe_model.tflite; sourceTree = "<group>"; };
+		1BEDAD642E505F870096B33F /* ProgressBarChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressBarChannel.swift; sourceTree = "<group>"; };
 		22E8596937ADDB0DAD2AB8F8 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -162,9 +166,9 @@
 			children = (
 				1BEDAD362E4C8E970096B33F /* BottomCamera.swift */,
 				1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */,
-
 				1BEDAD392E4C8E970096B33F /* TestPage.swift */,
 				1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */,
+				1BEDAD602E4F0D6E0096B33F /* LabelMapManager.swift */,
 			);
 			path = TestPage;
 			sourceTree = "<group>";
@@ -221,10 +225,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
-
 				1BEDAD492E4DB1340096B33F /* Server */,
-
-				1BEDAD332E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite */,
 				1BEDAD3B2E4C8E970096B33F /* TestPage */,
 				1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */,
 				1BEDAD382E4C8E970096B33F /* GestureRecognitionService.swift */,
@@ -232,6 +233,7 @@
 				1B14AE4E2E44AF7B001055A0 /* Services */,
 				1B14AE4A2E44AF74001055A0 /* Views */,
 				1B14AE472E44AF59001055A0 /* hand_landmarker.task */,
+				1BEDAD622E4F80490096B33F /* 1755267492_d58052fe_model.tflite */,
 				1B14AE432E44AF52001055A0 /* basic_gesture_model.tflite */,
 				1B14AE442E44AF52001055A0 /* basic_label_map.json */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
@@ -245,6 +247,7 @@
 				1B8175432E3341CD00792FD3 /* OpenSetting.swift */,
 				1B14AE3F2E449D07001055A0 /* CameraPreviewView.swift */,
 				1B14AE412E449D1F001055A0 /* CameraPlatformView.swift */,
+				1BEDAD642E505F870096B33F /* ProgressBarChannel.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -365,7 +368,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1BEDAD422E4C8E970096B33F /* 1754987611_a47a36ac_model.tflite in Resources */,
+				1BEDAD632E4F80490096B33F /* 1755267492_d58052fe_model.tflite in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				1B14AE452E44AF52001055A0 /* basic_label_map.json in Resources */,
@@ -512,6 +515,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+				1BEDAD612E4F0D6E0096B33F /* LabelMapManager.swift in Sources */,
 				1B14AE542E44AF80001055A0 /* InferenceConfigurationManager.swift in Sources */,
 				1BEDAD3C2E4C8E970096B33F /* TestPage.swift in Sources */,
 				1BEDAD3D2E4C8E970096B33F /* BottomCamera.swift in Sources */,
@@ -522,6 +526,7 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				1B14AE422E449D1F001055A0 /* CameraPlatformView.swift in Sources */,
 				1B14AE4B2E44AF74001055A0 /* HandOverlay.swift in Sources */,
+				1BEDAD652E505F870096B33F /* ProgressBarChannel.swift in Sources */,
 				1B14AE4F2E44AF7B001055A0 /* CameraFeedService.swift in Sources */,
 				1B14AE572E44AF91001055A0 /* GestureRecognizer.swift in Sources */,
 				1B14AE502E44AF7B001055A0 /* HandLandmarkerService.swift in Sources */,

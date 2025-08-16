@@ -57,27 +57,36 @@ final class TrainingManager {
                     do {
                         // async 호출은 반드시 await
                         let st = try await self.api.getStatus(taskId: taskId)
-
+                        print(st.status)
                         switch st.status.uppercased() {
                         case "PENDING", "PROGRESS":
                             self.delegate?.trainingDidProgress(taskId: taskId,
                                                                step: st.progress?.current_step)
 
                         case "SUCCESS":
-                            self.isPollingInFlight = false
-                            self.stopPolling() // Task 취소
                             let tfliteURL = st.result?.tflite_url
                             let modelCode = st.result?.model_code
-                            TrainingStore.shared.lastModelCode = modelCode
-                            TrainingStore.shared.lastModelURLString = tfliteURL
+                            
+                            // 델리게이트 호출을 먼저 실행
                             self.delegate?.trainingDidSucceed(taskId: taskId,
                                                               tfliteURL: tfliteURL,
                                                               modelCode: modelCode)
 
+                            // 상태 저장
+                            TrainingStore.shared.lastModelCode = modelCode
+                            TrainingStore.shared.lastModelURLString = tfliteURL
+                            
+                            // 폴링 중단
+                            self.isPollingInFlight = false
+                            self.stopPolling()
+
+                            // Task에서 수행하여 폴링 Task의 취소에 영향을 받지 않도록
                             if let s = tfliteURL, let url = URL(string: s) {
-                                await self.downloadAndSaveModel(from: url, modelCode: modelCode)
+                                Task { [weak self] in
+                                    await self?.downloadAndSaveModel(from: url, modelCode: modelCode)
+                                }
                             }
-                            return  // 성공 후 루프 종료
+                            return // 성공 후 루프 종료
 
                         default:
                             self.isPollingInFlight = false
@@ -86,8 +95,12 @@ final class TrainingManager {
                                                            errorInfo: st.error_info)
                             return
                         }
+
+                        // 다음 폴링을 위해 플래그를 리셋합니다.
+                        self.isPollingInFlight = false
                     } catch {
-                        // 네트워크 흔들림: 다음 사이클에 재시도
+                        // 오류를 출력하여 디버깅을 돕습니다.
+                        print("🚨 Polling 중 오류 발생: \(error)")
                         self.isPollingInFlight = false
                     }
                 }

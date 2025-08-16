@@ -15,8 +15,8 @@ class CameraPlatformView: NSObject, FlutterPlatformView {
 
   init(frame: CGRect, viewIdentifier: Int64, arguments: Any?, messenger: FlutterBinaryMessenger) {
     // CameraPreviewView 컨트롤러 인스턴스를 생성합니다.
-   //   _view = CameraPreviewView(frame: frame)
-    _cameraController = CameraPreviewView()
+    let isCameraEnabled = OpenSetting.isGestureServiceEnabled
+    _cameraController = CameraPreviewView(isCameraEnabled: isCameraEnabled)
     super.init()
   }
 
@@ -24,6 +24,15 @@ class CameraPlatformView: NSObject, FlutterPlatformView {
   func view() -> UIView {
       //return _view
       return _cameraController.view
+  }
+
+  // CameraPlatformView가 소멸될 때 호출되어 데이터 수집을 확실히 중단하고 초기화합니다.
+  deinit {
+      print("CameraPlatformView 소멸. 데이터 수집을 중단하고 초기화합니다.")
+      Task { @MainActor in
+          GestureRecognitionService.shared.stopRecording()
+      }
+      
   }
 }
 

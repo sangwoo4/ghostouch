@@ -1,3 +1,5 @@
+// camerapreviewview
+
 import UIKit
 import AVFoundation
 import Flutter
@@ -5,7 +7,7 @@ import MediaPipeTasksVision
 import PinLayout // PinLayout import
 import FlexLayout // FlexLayout import
 
-// 1. 클래스 타입을 UIViewController로 유지하고 필요한 델리게이트를 채택합니다.
+// 1. 클래스 타입을 UIViewController로 유지하고 필요한 델리게이트를 가져옴
 class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandmarkerServiceLiveStreamDelegate {
 
     // MARK: - UI Components
@@ -13,6 +15,10 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
     private var previewView: UIView!
     private var overlayView: OverlayView!
     private var gestureLabel: UILabel!
+    private var disabledLabel: UILabel! // 카메라 비활성화 라벨
+
+    // MARK: - Properties
+    private let isCameraEnabled: Bool
 
     // MARK: - MediaPipe Services
     private var cameraFeedService: CameraFeedService?
@@ -21,16 +27,43 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
     
     private let backgroundQueue = DispatchQueue(label: "com.google.mediapipe.camera.backgroundQueue")
 
+    // MARK: - Initializer
+    init(isCameraEnabled: Bool) {
+        self.isCameraEnabled = isCameraEnabled
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
     // MARK: - View Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         view.addSubview(root) // root 뷰를 뷰 컨트롤러의 뷰에 추가
         setupUI()
-        setupServices()
+        
+        if isCameraEnabled {
+            setupServices()
+        }
+        
+        // 앱이 백그라운드로 갈 때를 감지하는 옵저버 추가
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+    }
+    
+    deinit {
+        // 옵저버 정리
+        NotificationCenter.default.removeObserver(self)
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        guard isCameraEnabled else { return }
         cameraFeedService?.startLiveCameraSession { [weak self] cameraConfiguration in
             DispatchQueue.main.async {
                 switch cameraConfiguration {
@@ -47,7 +80,9 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        guard isCameraEnabled else { return }
         cameraFeedService?.stopSession()
+        // `CameraPlatformView`의 `deinit`에서 `stopRecording`을 호출하므로 여기서는 중복 호출을 피하기 위해 삭제함.
     }
 
     override func viewDidLayoutSubviews() {
@@ -56,32 +91,43 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
         root.pin.all().margin(view.safeAreaInsets) // root 뷰를 superview의 safeAreaInsets에 맞춰 마진 적용
         root.flex.layout()
         // previewView의 bounds에 맞춰 previewLayer를 업데이트
-        cameraFeedService?.updateVideoPreviewLayer(toFrame: previewView.bounds)
+        if isCameraEnabled {
+            cameraFeedService?.updateVideoPreviewLayer(toFrame: previewView.bounds)
+        }
     }
 
     // MARK: - UI Setup
     private func setupUI() {
         // FlexLayout을 사용하여 UI 요소들을 배치합니다.
         root.flex.define { flex in
-            // 프리뷰 뷰: 카메라 영상이 보일 뷰
-            previewView = UIView()
-            previewView.contentMode = .scaleAspectFill
-            flex.addItem(previewView).position(.absolute).all(0) // root 뷰 전체를 채움
+            if isCameraEnabled {
+                // 프리뷰 뷰: 카메라 영상이 보일 뷰
+                previewView = UIView()
+                previewView.contentMode = .scaleAspectFill
+                flex.addItem(previewView).position(.absolute).all(0) // root 뷰 전체를 채움
 
-            // 오버레이 뷰: 랜드마크를 그릴 뷰
-            overlayView = OverlayView()
-            overlayView.backgroundColor = .clear
-            flex.addItem(overlayView).position(.absolute).all(0) // root 뷰 전체를 채움
+                // 오버레이 뷰: 랜드마크를 그릴 뷰
+                overlayView = OverlayView()
+                overlayView.backgroundColor = .clear
+                flex.addItem(overlayView).position(.absolute).all(0) // root 뷰 전체를 채움
 
-            // 제스처 결과 라벨
-            gestureLabel = UILabel()
-            gestureLabel.textColor = .white
-            gestureLabel.backgroundColor = UIColor(white: 0, alpha: 0.7)
-            gestureLabel.textAlignment = .center
-            gestureLabel.font = .systemFont(ofSize: 22, weight: .bold)
-            gestureLabel.text = " "
-            // 라벨을 하단에 배치
-            flex.addItem(gestureLabel).position(.absolute).bottom(30).width(100%).height(50)
+                // 제스처 결과 라벨
+                gestureLabel = UILabel()
+                gestureLabel.textColor = .white
+                gestureLabel.backgroundColor = UIColor(white: 0, alpha: 0.7)
+                gestureLabel.textAlignment = .center
+                gestureLabel.font = .systemFont(ofSize: 22, weight: .bold)
+                gestureLabel.text = " "
+                // 라벨을 하단에 배치
+                flex.addItem(gestureLabel).position(.absolute).bottom(30).width(100%).height(50)
+            } else {
+                disabledLabel = UILabel()
+                disabledLabel.text = "카메라 비활성화"
+                disabledLabel.textColor = .white
+                disabledLabel.textAlignment = .center
+                disabledLabel.font = .systemFont(ofSize: 18)
+                flex.addItem(disabledLabel).grow(1).alignSelf(.center).justifyContent(.center)
+            }
         }
     }
 
@@ -99,16 +145,24 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
         self.handLandmarkerService?.liveStreamDelegate = self
 
     }
+    
+    // MARK: - Notification Handlers
+    @objc private func handleAppDidEnterBackground() {
+        print("앱이 백그라운드로 전환됨. 데이터 수집을 중단하고 초기화.")
+        GestureRecognitionService.shared.stopRecording()
+    }
 
     // MARK: - CameraFeedServiceDelegate
     func didOutput(sampleBuffer: CMSampleBuffer, orientation: UIImage.Orientation) {
         let currentTimeMs = Date().timeIntervalSince1970 * 1000
         backgroundQueue.async { [weak self] in
-            self?.handLandmarkerService?.detectAsync(
-                sampleBuffer: sampleBuffer,
-                orientation: orientation,
-                timeStamps: Int(currentTimeMs)
-            )
+            autoreleasepool { //메모리 누수 방지
+                self?.handLandmarkerService?.detectAsync(
+                    sampleBuffer: sampleBuffer,
+                    orientation: orientation,
+                    timeStamps: Int(currentTimeMs)
+                )
+            }
         }
     }
 

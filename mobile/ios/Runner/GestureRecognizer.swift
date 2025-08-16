@@ -57,6 +57,39 @@ class GestureRecognizer {
         
         print("제스처 인식기 초기화 성공.")
     }
+
+    init?(modelURL: URL, labelURL: URL) {
+        print("제스처 인식기를 URL로 초기화합니다...")
+        print("모델 URL: \(modelURL.path)")
+        print("레이블 URL: \(labelURL.path)")
+
+        // 1. Load TFLite model from URL
+        do {
+            interpreter = try Interpreter(modelPath: modelURL.path)
+            try interpreter?.allocateTensors()
+            print("모델 로드 성공")
+        } catch {
+            print("인터프리터 생성 실패: \(error)")
+            return nil
+        }
+        
+        // 2. Load label map from URL
+        do {
+            let data = try Data(contentsOf: labelURL)
+            let labelDict = try JSONDecoder().decode([String: Int].self, from: data)
+            
+            // Create reverse map from int to string
+            self.reverseLabelMap = Dictionary(uniqueKeysWithValues: labelDict.map { ($0.value, $0.key) })
+            
+            print("레이블 맵 로드됨: \(self.reverseLabelMap)")
+        }
+        catch {
+            print("레이블 URL에서 로드 실패: \(error)")
+            return nil
+        }
+        
+        print("제스처 인식기 초기화 성공.")
+    }
     
     func classifyGesture(handLandmarkerResult: HandLandmarkerResult) -> (label: String?, features: [Float]?) {
         guard let interpreter = interpreter,
@@ -70,7 +103,7 @@ class GestureRecognizer {
             
         //print(features)
         let formatted = features.map { String(format: "%.15f", Double($0)) }
-        print("[\(formatted.joined(separator: ", "))]")
+        //print("[\(formatted.joined(separator: ", "))]")
         
         
         do {
@@ -122,131 +155,42 @@ class GestureRecognizer {
 
         }
     }
-    
-    //기존
-//    func classifyGesture(handLandmarkerResult: HandLandmarkerResult) -> String? {
-//        guard let interpreter = interpreter,
-//              let landmarks = handLandmarkerResult.landmarks.first, // landmarks -> worldLandmarks
-//              landmarks.count > 9 else { // 회전 계산을 위한 충분한 랜드마크가 있는지 체크
-//            return nil
-//        }
-//
-//        do {
-//            // 1. 손목 주변의 랜드마크를 중앙 배치
-//            let wrist = landmarks[0]
-//            var centeredLandmarks = landmarks.map {
-//                [$0.x - wrist.x, $0.y - wrist.y, $0.z - wrist.z]
-//            }
-//
-//            // 2. 손의 회전 계산 + 랜드마크를 수직으로 정규화
-//            let wristCentered = centeredLandmarks[0]
-//            let middleFingerMCP = centeredLandmarks[9]
-//            
-//            // 수직축에 대한 손의 각도를 계산
-//            // y축 -> -y를 사용 (이미지 좌표에서 반전되니까)
-//            let angle = atan2(middleFingerMCP[0] - wristCentered[0], -(middleFingerMCP[1] - wristCentered[1]))
-//            
-//            // 계산된 각도의 반대
-//            let rotationAngle = -angle
-//            
-//            let cosAngle = cos(rotationAngle)
-//            let sinAngle = sin(rotationAngle)
-//            
-//            var rotatedLandmarks = centeredLandmarks.map { landmark -> [Float] in
-//                let x = landmark[0]
-//                let y = landmark[1]
-//                let newX = x * cosAngle - y * sinAngle
-//                let newY = x * sinAngle + y * cosAngle
-//                return [newX, newY, landmark[2]]
-//            }
-//
-//            // 3. 미러링된 카메라
-//            let rawHandedness = handLandmarkerResult.handedness.first?.first?.categoryName?.lowercased() ?? "right"
-//            let actualHandedness = isCameraMirrored ? (rawHandedness == "right" ? "left" : "right") : rawHandedness
-//
-//            // 4. 오른손의 x 좌표를 뒤집어 왼손 기반 모델에 맞춤
-//            if actualHandedness == "right" {
-//                rotatedLandmarks = rotatedLandmarks.map { [-$0[0], $0[1], $0[2]] }
-//            }
-//
-//            // 5. 회전된 랜드마크를 사용해서 스케일 정규화를 위한 최대 차원을 계산
-//            let xs = rotatedLandmarks.map { $0[0] }
-//            let ys = rotatedLandmarks.map { $0[1] }
-//            let zs = rotatedLandmarks.map { $0[2] }
-//
-//            guard let minX = xs.min(), let maxX = xs.max(),
-//                  let minY = ys.min(), let maxY = ys.max(),
-//                  let minZ = zs.min(), let maxZ = zs.max() else {
-//                return nil
-//            }
-//            
-//            let maxDim = max(maxX - minX, maxY - minY, maxZ - minZ)
-//            let scaleFactor = maxDim > 0 ? maxDim : 1.0
-//
-//            // 6. 정규화된 좌표 목록
-//            var floatList = [Float]()
-//            for landmark in rotatedLandmarks {
-//                floatList.append(landmark[0] / scaleFactor)
-//                floatList.append(landmark[1] / scaleFactor)
-//                floatList.append(landmark[2] / scaleFactor)
-//            }
-//
-//            // 7. 64개 요소의 입력 벡터를 생성
-//            while floatList.count < 63 { floatList.append(0.0) }
-//            let handednessValue: Float = (actualHandedness == "right") ? 0.0 : 1.0
-//            floatList.append(handednessValue)
-//            print("정규화된 64개 좌표: \(floatList)")
-//            
-//            // 100개 정규화 좌표
-//            self.collectedFloatLists.append(floatList)
-//            if self.collectedFloatLists.count >= 100 {
-//                print("수집된 100개의 정규화된 좌표 배열: \(self.collectedFloatLists)")
-//                self.collectedFloatLists.removeAll()
-//            }
-//            
-//            // 8. float 목록을 바이트 배열로 양자화: [-1,1] float -> [0,255] uint8
-//            let inputData = Data(floatList.map {
-//                let byteVal = Int(($0 + 1.0) * 127.5)
-//                return UInt8(clamping: byteVal)
-//            })
-//            
-//            let inputTensor = try interpreter.input(at: 0)
-//            guard inputTensor.dataType == .uInt8 else {
-//                print("Input tensor is not UInt8. This implementation assumes a UInt8 model.")
-//                return nil
-//            }
-//
-//            // 9. 추론 실행
-//            try interpreter.copy(inputData, toInputAt: 0)
-//            try interpreter.invoke()
-//
-//            // 10. 출력 양자화 해제: uint8 -> float 확률
-//            let outputTensor = try interpreter.output(at: 0)
-//            let outputBytes = outputTensor.data.toArray(type: UInt8.self)
-//            let probabilities = outputBytes.map { Float(Int($0)) / 255.0 }
-//
-//            // 11. 가장 높은 확률을 갖는 제스처 확인
-//            guard let maxIndex = probabilities.argmax() else { return "none" }
-//            
-//            let gesture = self.reverseLabelMap[maxIndex] ?? "unknown"
-//            let confidence = probabilities[maxIndex]
-//
-//            // 12. 임계값 설정
-//            if confidence < 0.5 {
-//                return "none"
-//            }
-//
-//            // 13. 문자열로 변환
-//            return "\(gesture) (\(String(format: "%.0f", confidence * 100))%)"
-//
-//        } catch {
-//            print("Error during gesture classification: \(error)")
-//            return nil
-//        }
-//    }
+
     
     func close() {
         interpreter = nil
+    }
+    
+    public func updateModel(modelURL: URL) -> Bool {
+        print("🔄 모델을 실시간으로 업데이트합니다. 경로: \(modelURL.path)")
+        do {
+            let newInterpreter = try Interpreter(modelPath: modelURL.path)
+            try newInterpreter.allocateTensors()
+            // If successful, replace the old interpreter
+            self.interpreter = newInterpreter
+            print("✅ 모델 업데이트 성공.")
+            return true
+        } catch {
+            print("🚨 모델 업데이트 실패: \(error)")
+            return false
+        }
+    }
+
+    public func updateLabelMap(labelURL: URL) -> Bool {
+        print("🔄 레이블 맵을 실시간으로 업데이트합니다. 경로: \(labelURL.path)")
+        do {
+            let data = try Data(contentsOf: labelURL)
+            let labelDict = try JSONDecoder().decode([String: Int].self, from: data)
+            
+            // Create reverse map from int to string
+            self.reverseLabelMap = Dictionary(uniqueKeysWithValues: labelDict.map { ($0.value, $0.key) })
+            
+            print("✅ 레이블 맵 업데이트 성공: \(self.reverseLabelMap)")
+            return true
+        } catch {
+            print("🚨 레이블 맵 업데이트 실패: \(error)")
+            return false
+        }
     }
 }
 
