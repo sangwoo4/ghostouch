@@ -5,6 +5,6 @@ class TrainConfig:
     """
     # 학습 관련 설정
     EPOCHS = 1000
-    BATCH_SIZE = 32
+    BATCH_SIZE = 16
     LEARNING_RATE = 0.001
-    INCREMENTAL_LEARNING_RATE = 0.0005
+    INCREMENTAL_LEARNING_RATE = 0.001
