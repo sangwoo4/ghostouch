@@ -1,8 +1,8 @@
-import 'dart:convert';
+// import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 
 class GestureShootingPage extends StatefulWidget {
   final String gestureName;
@@ -19,7 +19,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   bool _isCollecting = false;
   bool _isCompleted = false;
   String? taskId;
-  String instructionText = '📸 손을 카메라에 잘 보여주세요 🙌';
+  String instructionText = ' ';
 
   static const taskIdChannel = MethodChannel('com.pentagon.gesture/task-id');
   static const handDetectionChannel = MethodChannel(
@@ -54,6 +54,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
 
   Future<void> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
+      // 상태바 업데이트 진행 함수
       case 'updateProgress':
         final int progress = call.arguments as int;
         setState(() {
@@ -61,13 +62,33 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
         });
         break;
 
+      // 상태바 업데이트 완료 함수
       case 'collectionComplete':
         setState(() {
           _isCollecting = false;
           _progressPercent = 1.0; // 상태바 100%
         });
-        // 수집 완료 처리 및 서버 업로드/모델 다운로드 시작
-        _handleGestureCompletion();
+        break;
+
+      // 모델 학습중 함수
+      case 'modelDownloading':
+        final Map<String, dynamic> args = Map<String, dynamic>.from(
+          call.arguments,
+        );
+        final Map<String, dynamic>? progress = args['progress'];
+        setState(() {
+          instructionText = progress?['current_step'] ?? '모델 학습 중...';
+          _isCollecting = false; // 카메라 OFF
+        });
+        break;
+
+      // 모델 학습 및 다운로드 완료 함수
+      case 'modelDownloadComplete':
+        setState(() {
+          instructionText = '모델 학습 완료!';
+          _isCollecting = false; // 카메라 OFF
+          _isCompleted = true; // 저장하기 버튼 활성화
+        });
         break;
 
       default:
@@ -106,68 +127,68 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   }
 
   // 제스처 수집 완료 후 서버 상태 확인 + 모델 다운로드 처리
-  Future<void> _handleGestureCompletion() async {
-    if (taskId == null) return;
+  // Future<void> _handleGestureCompletion() async {
+  //   if (taskId == null) return;
 
-    // 1. 카메라 종료
-    await _stopCollecting();
+  //   // 1. 카메라 종료
+  //   await _stopCollecting();
 
-    // 2. 서버 업로드/훈련 시작 안내
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("서버에 데이터를 업로드하고 모델 훈련을 시작합니다..."),
-        duration: Duration(seconds: 3),
-      ),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("훈련이 완료되면 새로운 제스처를 인식할 수 있습니다."),
-        duration: Duration(seconds: 5),
-      ),
-    );
+  //   // 2. 서버 업로드/훈련 시작 안내
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(
+  //       content: Text("서버에 데이터를 업로드하고 모델 훈련을 시작합니다..."),
+  //       duration: Duration(seconds: 3),
+  //     ),
+  //   );
+  //   ScaffoldMessenger.of(context).showSnackBar(
+  //     const SnackBar(
+  //       content: Text("훈련이 완료되면 새로운 제스처를 인식할 수 있습니다."),
+  //       duration: Duration(seconds: 5),
+  //     ),
+  //   );
 
-    // 3. 서버 상태 확인 (폴링)
-    bool completed = false;
-    while (!completed) {
-      try {
-        final response = await http.get(
-          Uri.parse("http://172.30.1.88:8000/status/$taskId"),
-        );
+  //   // 3. 서버 상태 확인 (폴링)
+  //   bool completed = false;
+  //   while (!completed) {
+  //     try {
+  //       final response = await http.get(
+  //         Uri.parse("http://172.30.1.88:8000/status/$taskId"),
+  //       );
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final currentStep = data["progress"]?["current_step"] ?? "";
-          final status = data["status"] ?? "";
+  //       if (response.statusCode == 200) {
+  //         final data = jsonDecode(response.body);
+  //         final currentStep = data["progress"]?["current_step"] ?? "";
+  //         final status = data["status"] ?? "";
 
-          debugPrint("Server response: ${response.body}");
-          debugPrint("Fetched step: $currentStep, status: $status");
+  //         debugPrint("Server response: ${response.body}");
+  //         debugPrint("Fetched step: $currentStep, status: $status");
 
-          setState(() {
-            instructionText = currentStep.isNotEmpty
-                ? currentStep
-                : '📸 손을 카메라에 잘 보여주세요 🙌';
-          });
+  //         setState(() {
+  //           instructionText = currentStep.isNotEmpty
+  //               ? currentStep
+  //               : '📸 손을 카메라에 잘 보여주세요 🙌';
+  //         });
 
-          if (status.toString().toLowerCase() == "success") {
-            // 4. 모델 다운로드 완료 → 저장 버튼 활성화
-            setState(() {
-              _isCompleted = true;
-              _isCollecting = false;
-            });
-            completed = true;
-          } else {
-            await Future.delayed(const Duration(seconds: 2));
-          }
-        } else {
-          debugPrint("Failed to load status: ${response.statusCode}");
-          await Future.delayed(const Duration(seconds: 2));
-        }
-      } catch (e) {
-        debugPrint("Error fetching status: $e");
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    }
-  }
+  //         if (status.toString().toLowerCase() == "success") {
+  //           // 4. 모델 다운로드 완료 → 저장 버튼 활성화
+  //           setState(() {
+  //             _isCompleted = true;
+  //             _isCollecting = false;
+  //           });
+  //           completed = true;
+  //         } else {
+  //           await Future.delayed(const Duration(seconds: 2));
+  //         }
+  //       } else {
+  //         debugPrint("Failed to load status: ${response.statusCode}");
+  //         await Future.delayed(const Duration(seconds: 2));
+  //       }
+  //     } catch (e) {
+  //       debugPrint("Error fetching status: $e");
+  //       await Future.delayed(const Duration(seconds: 2));
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -301,7 +322,10 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                           child: ElevatedButton(
                             onPressed: _isCompleted
                                 ? () {
-                                    // 저장 로직
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      '/',
+                                    );
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(
