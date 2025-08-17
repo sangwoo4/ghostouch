@@ -204,34 +204,52 @@ class TrainingService : Service() {
     }
 
     private fun updateLabelMap(newGestureName: String) {
-        try {
-            val labelMapFile = File(filesDir, TrainingCoordinator.LABEL_MAP_FILE_NAME)
-            val baseJsonObject = if (labelMapFile.exists()) {
-                JSONObject(labelMapFile.readText())
-            } else {
-                val jsonString = assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
-                JSONObject(jsonString)
-            }
+    try {
+        val labelMapFile = File(filesDir, TrainingCoordinator.LABEL_MAP_FILE_NAME)
 
-            val gestureList = baseJsonObject.keys().asSequence().toMutableList()
-
-            if (!gestureList.contains(newGestureName)) {
-                gestureList.add(newGestureName)
-            }
-
-            gestureList.sort()
-
-            val sortedJsonObject = JSONObject()
-            gestureList.forEachIndexed { index, gesture ->
-                sortedJsonObject.put(gesture, index)
-            }
-
-            labelMapFile.writeText(sortedJsonObject.toString(4))
-            Log.d(TAG, "Label map updated successfully with sorted labels: $sortedJsonObject")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update label map", e)
+        // 1) 현재 라벨맵 불러오기 (gesture -> index)
+        val currentMap: MutableMap<String, Int> = if (labelMapFile.exists()) {
+            val jsonObj = JSONObject(labelMapFile.readText())
+            buildMap {
+                val it = jsonObj.keys()
+                while (it.hasNext()) {
+                    val k = it.next()
+                    put(k, jsonObj.getInt(k))
+                }
+            }.toMutableMap()
+        } else {
+            val jsonString = assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
+            val jsonObj = JSONObject(jsonString)
+            buildMap {
+                val it = jsonObj.keys()
+                while (it.hasNext()) {
+                    val k = it.next()
+                    put(k, jsonObj.getInt(k))
+                }
+            }.toMutableMap()
         }
+
+        // 2) 이미 존재하면 아무 것도 하지 않음 (서버 인덱스 보존)
+        if (currentMap.containsKey(newGestureName)) {
+            Log.d(TAG, "Label map unchanged. '$newGestureName' already exists with index=${currentMap[newGestureName]}")
+        } else {
+            // 3) 새 라벨은 현재 최대 인덱스 + 1 로만 추가 (정렬 금지, 재번호 금지)
+            val nextIndex = (currentMap.values.maxOrNull() ?: -1) + 1
+            currentMap[newGestureName] = nextIndex
+            Log.d(TAG, "Added new label '$newGestureName' with index=$nextIndex")
+        }
+
+        // 4) 그대로 저장 (키 순서 강제/정렬 X)
+        val out = JSONObject()
+        // JSONObject는 내부적으로 순서를 보장하지 않지만, 인덱스는 값으로 보존되므로 문제 없음
+        currentMap.forEach { (k, v) -> out.put(k, v) }
+        labelMapFile.writeText(out.toString(4))
+
+        Log.d(TAG, "Label map persisted without reindexing: $out")
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to update label map", e)
     }
+}
 
     private fun notifyServiceOfNewModel() {
         try {
