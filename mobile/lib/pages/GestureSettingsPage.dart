@@ -171,6 +171,27 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
   void initState() {
     super.initState();
     _loadAvailableGestures();
+    // 메서드 채널 핸들러 등록
+    platform.setMethodCallHandler(_handleMethodCall);
+  }
+
+  Future<void> _handleMethodCall(MethodCall call) async {
+    switch (call.method) {
+      case 'refreshGestureList':
+        await _loadAvailableGestures();
+        break;
+      default:
+        break;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 페이지가 다시 보일 때마다 제스처 목록 새로고침
+    if (mounted) {
+      _loadAvailableGestures();
+    }
   }
 
   Future<void> _loadAvailableGestures() async {

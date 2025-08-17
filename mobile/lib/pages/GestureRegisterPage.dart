@@ -34,6 +34,15 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     _loadGestureList();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 페이지가 다시 보일 때마다 제스처 목록 새로고침
+    if (mounted) {
+      _loadGestureList();
+    }
+  }
+
   Future<void> _loadGestureList() async {
     try {
       final List<dynamic> gestures = await listChannel.invokeMethod(
@@ -192,15 +201,21 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     try {
       await resetChannel.invokeMethod('reset');
       print('🔄 제스처 초기화 완료');
+      // 제스처 목록 새로고침
+      await _loadGestureList();
       // 필요 시 사용자에게 알림 표시
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      }
     } on PlatformException catch (e) {
       print('❌ 제스처 초기화 실패: ${e.message}');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('초기화 실패: ${e.message}')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('초기화 실패: ${e.message}')));
+      }
     }
   }
 

@@ -229,6 +229,38 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // GestureRegisterPage용 MethodChannel들
+        val LIST_GESTURE_CHANNEL = "com.pentagon.ghostouch/list-gesture"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LIST_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "list-gesture" -> {
+                    try {
+                        val gestureMap = getAvailableGestures()
+                        val gestureList = gestureMap.keys.map { getKoreanGestureName(it) }
+                        result.success(gestureList)
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to get gesture list: ${e.message}", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        val RESET_GESTURE_CHANNEL = "com.pentagon.ghostouch/reset-gesture"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESET_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "reset" -> {
+                    try {
+                        resetToOriginalModel()
+                        result.success("제스처가 초기화되었습니다.")
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to reset gestures: ${e.message}", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun openAppSettings() {
@@ -273,6 +305,63 @@ class MainActivity: FlutterActivity() {
         }
         
         return gestureMap
+    }
+
+    private fun getKoreanGestureName(englishKey: String): String {
+        // 기본 제스처들의 한글 매핑
+        val defaultMapping = mapOf(
+            "scissors" to "가위 제스처",
+            "rock" to "주먹 제스처", 
+            "paper" to "보 제스처",
+            "hs" to "한성대 제스처"
+        )
+        
+        // 기본 매핑에 있으면 해당 한글명 반환, 없으면 사용자 정의 제스처로 표시
+        return defaultMapping[englishKey] ?: "$englishKey 제스처"
+    }
+
+    private fun resetToOriginalModel() {
+        try {
+            // 1. 기본 모델 파일로 복원
+            val originalModelFile = File(filesDir, "basic_gesture_model.tflite")
+            if (!originalModelFile.exists()) {
+                // assets에서 기본 모델 복사
+                assets.open("basic_gesture_model.tflite").use { inputStream ->
+                    originalModelFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                android.util.Log.d("MainActivity", "Original model restored from assets")
+            }
+
+            // 2. 기본 레이블 맵으로 복원
+            val labelMapFile = File(filesDir, "updated_label_map.json")
+            if (labelMapFile.exists()) {
+                labelMapFile.delete()
+            }
+            android.util.Log.d("MainActivity", "Updated label map deleted, will use basic_label_map.json")
+
+            // 3. 모델 정보 초기화
+            TrainingCoordinator.currentModelCode = "base_v1"
+            TrainingCoordinator.currentModelFileName = "basic_gesture_model.tflite"
+            
+            val prefs = getSharedPreferences(TrainingCoordinator.PREFS_NAME, MODE_PRIVATE)
+            prefs.edit()
+                .putString(TrainingCoordinator.MODEL_CODE_PREFS_KEY, "base_v1")
+                .putString(TrainingCoordinator.MODEL_FILENAME_PREFS_KEY, "basic_gesture_model.tflite")
+                .apply()
+
+            // 4. 제스처 서비스에 모델 리로드 알림
+            val intent = Intent(this, GestureDetectionService::class.java)
+            intent.action = "ACTION_RELOAD_MODEL"
+            startService(intent)
+
+            android.util.Log.d("MainActivity", "Gesture model reset to original successfully")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to reset gesture model", e)
+            throw e
+        }
     }
 
     override fun onResume() {

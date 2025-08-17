@@ -198,6 +198,16 @@ class HandDetectionPlatformView(
         }
     }
 
+    // TrainingService에서 제스처 목록 새로고침 요청 시 Flutter에 알림
+    fun notifyGestureListRefresh() {
+        Log.d("HandDetectionPlatformView", "Notifying Flutter to refresh gesture list")
+        mainHandler.post {
+            // GestureSettingsPage의 메소드 채널을 통해 알림
+            val gestureSettingsChannel = MethodChannel(binaryMessenger, "com.pentagon.ghostouch/toggle")
+            gestureSettingsChannel.invokeMethod("refreshGestureList", null)
+        }
+    }
+
     private fun showPermissionRequiredView() {
         val linearLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL

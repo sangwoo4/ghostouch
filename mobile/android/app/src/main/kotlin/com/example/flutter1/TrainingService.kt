@@ -192,6 +192,7 @@ class TrainingService : Service() {
                     Log.d(TAG, "Model successfully downloaded and saved to ${modelFile.absolutePath}")
                     updateLabelMap(gestureName)
                     notifyServiceOfNewModel()
+                    notifyGestureListRefresh()
                     updateNotification("모델 학습 완료")
                     stopSelfAfterDelay()
                 } catch (e: IOException) {
@@ -259,6 +260,26 @@ class TrainingService : Service() {
             Log.d(TAG, "Notified GestureDetectionService of new model")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to notify service", e)
+        }
+    }
+
+    private fun notifyGestureListRefresh() {
+        try {
+            // MainActivity의 HandDetectionPlatformView를 통해 Flutter에 알림
+            MainActivity.handDetectionPlatformView?.let { platformView ->
+                platformView.notifyGestureListRefresh()
+                Log.d(TAG, "Notified Flutter to refresh gesture list")
+            } ?: run {
+                Log.w(TAG, "HandDetectionPlatformView not available for gesture list refresh notification")
+            }
+            
+            // GestureRegisterPage에도 알림 (브로드캐스트 방식)
+            val intent = Intent("com.pentagon.ghostouch.GESTURE_LIST_UPDATED")
+            sendBroadcast(intent)
+            Log.d(TAG, "Broadcast sent for gesture list update")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to notify gesture list refresh", e)
         }
     }
 
