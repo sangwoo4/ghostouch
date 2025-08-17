@@ -1,8 +1,8 @@
-// import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http;
 
 class GestureShootingPage extends StatefulWidget {
   final String gestureName;
@@ -73,6 +73,14 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
 
   Future<void> _handleMethodCall(MethodCall call) async {
     switch (call.method) {
+      // 수집 시작 함수
+      case 'collectionStarted':
+        setState(() {
+          instructionText = '📸 손을 카메라에 잘 보여주세요 🙌';
+          _progressPercent = 0.0;
+        });
+        break;
+
       // 상태바 업데이트 진행 함수
       case 'updateProgress':
         final int progress = call.arguments as int;
@@ -88,6 +96,8 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           _isCollecting = false;
           _progressPercent = 1.0; // 상태바 100%
         });
+        // 자동으로 서버 상태 확인 시작
+        _handleGestureCompletion();
         break;
 
       // 모델 학습중 함수
@@ -117,6 +127,8 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   }
 
   Future<void> _startOrRetakeRecording() async {
+    debugPrint("_startOrRetakeRecording called for gesture: ${widget.gestureName}");
+    
     setState(() {
       _isStarted = true;
       _isCollecting = true;
@@ -125,12 +137,18 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
     });
 
     try {
+      debugPrint("About to call handDetectionChannel.invokeMethod with gesture: ${widget.gestureName}");
       await handDetectionChannel.invokeMethod('startCollecting', {
         'gestureName': widget.gestureName,
       });
       debugPrint("Native call: Started collecting for ${widget.gestureName}");
     } on PlatformException catch (e) {
       debugPrint("Failed to call startCollecting: '${e.message}'.");
+      setState(() {
+        _isCollecting = false;
+      });
+    } catch (e) {
+      debugPrint("Unexpected error calling startCollecting: $e");
       setState(() {
         _isCollecting = false;
       });
@@ -175,40 +193,40 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           Uri.parse("$serverUrl/status/$taskId"),
         );
 
-  //       if (response.statusCode == 200) {
-  //         final data = jsonDecode(response.body);
-  //         final currentStep = data["progress"]?["current_step"] ?? "";
-  //         final status = data["status"] ?? "";
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final currentStep = data["progress"]?["current_step"] ?? "";
+          final status = data["status"] ?? "";
 
-  //         debugPrint("Server response: ${response.body}");
-  //         debugPrint("Fetched step: $currentStep, status: $status");
+          debugPrint("Server response: ${response.body}");
+          debugPrint("Fetched step: $currentStep, status: $status");
 
-  //         setState(() {
-  //           instructionText = currentStep.isNotEmpty
-  //               ? currentStep
-  //               : '📸 손을 카메라에 잘 보여주세요 🙌';
-  //         });
+          setState(() {
+            instructionText = currentStep.isNotEmpty
+                ? currentStep
+                : '📸 손을 카메라에 잘 보여주세요 🙌';
+          });
 
-  //         if (status.toString().toLowerCase() == "success") {
-  //           // 4. 모델 다운로드 완료 → 저장 버튼 활성화
-  //           setState(() {
-  //             _isCompleted = true;
-  //             _isCollecting = false;
-  //           });
-  //           completed = true;
-  //         } else {
-  //           await Future.delayed(const Duration(seconds: 2));
-  //         }
-  //       } else {
-  //         debugPrint("Failed to load status: ${response.statusCode}");
-  //         await Future.delayed(const Duration(seconds: 2));
-  //       }
-  //     } catch (e) {
-  //       debugPrint("Error fetching status: $e");
-  //       await Future.delayed(const Duration(seconds: 2));
-  //     }
-  //   }
-  // }
+          if (status.toString().toLowerCase() == "success") {
+            // 4. 모델 다운로드 완료 → 저장 버튼 활성화
+            setState(() {
+              _isCompleted = true;
+              _isCollecting = false;
+            });
+            completed = true;
+          } else {
+            await Future.delayed(const Duration(seconds: 2));
+          }
+        } else {
+          debugPrint("Failed to load status: ${response.statusCode}");
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      } catch (e) {
+        debugPrint("Error fetching status: $e");
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -315,7 +333,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                     width: 350,
                     height: 350,
                     color: Colors.black12,
-                    child: _isCollecting
+                    child: _isStarted
                         ? (Platform.isAndroid
                               ? const AndroidView(
                                   viewType: 'hand_detection_view',
@@ -325,7 +343,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                                   viewType: 'camera_view',
                                   creationParamsCodec: StandardMessageCodec(),
                                 ))
-                        : const SizedBox(), // _isCollecting = false면 카메라 OFF
+                        : const SizedBox(), // _isStarted = false면 카메라 OFF
                   ),
                 ),
               ),
@@ -340,7 +358,10 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                   ? SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _startOrRetakeRecording,
+                        onPressed: () {
+                          debugPrint("제스처 촬영 시작 버튼이 눌렸습니다!");
+                          _startOrRetakeRecording();
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo,
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -358,7 +379,10 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _startOrRetakeRecording,
+                            onPressed: () {
+                              debugPrint("다시촬영 버튼이 눌렸습니다!");
+                              _startOrRetakeRecording();
+                            },
                             child: const Text('다시촬영'),
                           ),
                         ),

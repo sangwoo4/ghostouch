@@ -53,20 +53,34 @@ class HandDetectionPlatformView(
     private lateinit var methodChannel: MethodChannel
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Data collection state
-    private var isCollecting: Boolean = false
-    private var collectedFrames: MutableList<List<Float>> = mutableListOf()
-    private var currentGestureName: String? = null
-    private var totalFrameAttempts: Int = 0
-    
     companion object {
         private const val MIN_CONFIDENCE_THRESHOLD = 0.5f // 신뢰도 임계값 (낮춤)
         private const val TARGET_FRAME_COUNT = 100 // 목표 프레임 수
+        
+        // Static 변수로 인스턴스 재생성에도 상태 유지
+        @JvmStatic
+        var isCollecting: Boolean = false
+        @JvmStatic
+        var collectedFrames: MutableList<List<Float>> = mutableListOf()
+        @JvmStatic
+        var currentGestureName: String? = null
+        @JvmStatic
+        var totalFrameAttempts: Int = 0
     }
 
     init {
         setupView()
         setupMethodChannel()
+        // MainActivity에 자신을 등록
+        MainActivity.handDetectionPlatformView = this
+        Log.d("HandDetectionPlatformView", "PlatformView registered with MainActivity")
+        
+        // 대기 중인 제스처가 있다면 즉시 처리
+        MainActivity.pendingGestureName?.let { gestureName ->
+            Log.d("HandDetectionPlatformView", "Processing pending gesture: $gestureName")
+            startCollecting(gestureName)
+            MainActivity.pendingGestureName = null // 처리 완료 후 제거
+        }
     }
 
     private fun setupView() {
@@ -111,6 +125,7 @@ class HandDetectionPlatformView(
 
     private fun startCollecting(gestureName: String) {
         Log.d("HandDetectionPlatformView", "Starting collection for gesture: $gestureName")
+        Log.d("HandDetectionPlatformView", "isCollecting changed from $isCollecting to true")
         isCollecting = true
         currentGestureName = gestureName
         collectedFrames.clear()
@@ -119,6 +134,13 @@ class HandDetectionPlatformView(
         mainHandler.post {
             methodChannel.invokeMethod("collectionStarted", null)
         }
+        Log.d("HandDetectionPlatformView", "Collection setup complete. isCollecting: $isCollecting")
+    }
+
+    // MainActivity에서 호출할 수 있는 public 메서드
+    fun startCollectingFromMainActivity(gestureName: String) {
+        Log.d("HandDetectionPlatformView", "startCollectingFromMainActivity called with: $gestureName")
+        startCollecting(gestureName)
     }
 
     private fun stopCollecting() {
@@ -308,13 +330,17 @@ class HandDetectionPlatformView(
             // Collect frames if collecting is enabled
             if (isCollecting) {
                 totalFrameAttempts++
+                Log.d("HandDetectionPlatformView", "Collection attempt #$totalFrameAttempts")
                 
                 val worldLandmarks = handLandmarkerResult.worldLandmarks().firstOrNull()
                 val handedness = handLandmarkerResult.handedness().firstOrNull()?.firstOrNull()
                 
+                Log.d("HandDetectionPlatformView", "WorldLandmarks size: ${worldLandmarks?.size ?: 0}, Required: 21")
+                
                 if (worldLandmarks != null && worldLandmarks.size == 21) {
                     // MediaPipe handedness confidence 확인
                     val confidence = handedness?.score() ?: 0.0f
+                    Log.d("HandDetectionPlatformView", "Handedness confidence: ${String.format("%.2f", confidence)}, Threshold: $MIN_CONFIDENCE_THRESHOLD")
                     
                     if (confidence >= MIN_CONFIDENCE_THRESHOLD) {
                         val flatLandmarks = worldLandmarks.map { listOf(it.x(), it.y(), it.z()) }.flatten()
@@ -346,6 +372,8 @@ class HandDetectionPlatformView(
                 } else {
                     Log.d("HandDetectionPlatformView", "Frame rejected: Hand not detected or incomplete landmarks (${worldLandmarks?.size ?: 0}/21)")
                 }
+            } else {
+                Log.d("HandDetectionPlatformView", "Not collecting (isCollecting: $isCollecting)")
             }
 
             val gesture = gestureClassifier?.classifyGesture(handLandmarkerResult)

@@ -18,6 +18,11 @@ import java.io.File
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
     private lateinit var trainingCoordinator: TrainingCoordinator
+    
+    companion object {
+        var handDetectionPlatformView: HandDetectionPlatformView? = null
+        var pendingGestureName: String? = null // 대기 중인 제스처 이름
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -143,6 +148,50 @@ class MainActivity: FlutterActivity() {
                     } else {
                         result.error("INVALID_ARGUMENTS", "제스처 이름 또는 프레임이 없습니다.", null)
                     }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Task ID 관련 MethodChannel 
+        val TASK_ID_CHANNEL = "com.pentagon.gesture/task-id"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TASK_ID_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getTaskId" -> {
+                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                    val taskId = prefs.getString("current_task_id", "default_task_id") ?: "default_task_id"
+                    result.success(taskId)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Hand Detection 관련 MethodChannel - MainActivity에서 직접 처리
+        val HAND_DETECTION_CHANNEL = "com.pentagon.ghostouch/hand_detection"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAND_DETECTION_CHANNEL).setMethodCallHandler { call, result ->
+            android.util.Log.d("MainActivity", "Hand detection method called: ${call.method}")
+            when (call.method) {
+                "startCollecting" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    android.util.Log.d("MainActivity", "startCollecting called with gesture: $gestureName")
+                    if (gestureName != null) {
+                        // PlatformView에 직접 호출 또는 대기열에 저장
+                        handDetectionPlatformView?.let { platformView ->
+                            android.util.Log.d("MainActivity", "Calling startCollecting on PlatformView")
+                            platformView.startCollectingFromMainActivity(gestureName)
+                            result.success(null)
+                        } ?: run {
+                            android.util.Log.d("MainActivity", "PlatformView not ready, saving gesture for later: $gestureName")
+                            pendingGestureName = gestureName
+                            result.success(null) // 일단 성공으로 응답
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                    }
+                }
+                "stopCollecting" -> {
+                    android.util.Log.d("MainActivity", "stopCollecting called")
+                    result.success(null)
                 }
                 else -> result.notImplemented()
             }
