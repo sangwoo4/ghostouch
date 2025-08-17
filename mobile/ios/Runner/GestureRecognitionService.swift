@@ -18,9 +18,7 @@ class GestureRecognitionService {
     private(set) var isRecording = false
     private(set) var hasCollectedSuccessfully = false
     private(set) var currentGesture: String?
-    
-    // 수집 완료 후, 학습 시작 전까지 이름과 랜드마크 데이터를 함께 보관
-    private var pendingTrainingData: (name: String, landmarks: [[Float]])?
+    private var gestureBeingTrained: String?
     
     private let customModelNameKey = "CustomModelName"
 
@@ -107,31 +105,24 @@ class GestureRecognitionService {
         self.isRecording = false
         self.currentGesture = nil
         self.landmarkBuffer.reset()
-        // self.pendingTrainingData = nil // 보관중인 데이터는 초기화하지 않음
         
         ProgressBarChannel.channel?.invokeMethod("updateProgress", arguments: 0)
     }
     
     func startCollecting(gestureName: String) {
+        // 학습이 이미 진행 중일 때는 다시촬영 요청을 무시
+        guard self.gestureBeingTrained == nil else {
+            print("⚠️ 학습이 이미 진행 중입니다. 새로운 데이터 수집 요청을 무시합니다.")
+            return
+        }
+        
         print("▶️ \"\(gestureName)\" 제스처 데이터 수집 시작 (요청 받음).")
         self.currentGesture = gestureName
         self.isRecording = true
         self.hasCollectedSuccessfully = false
         self.landmarkBuffer.reset()
-        self.pendingTrainingData = nil // 새로 수집 시작 시 이전 데이터 초기화
         
         ProgressBarChannel.channel?.invokeMethod("updateProgress", arguments: 0)
-    }
-    
-    func uploadCollectedData() {
-        guard let dataToUpload = self.pendingTrainingData else {
-            print("🚨 [오류] 저장된 제스처 이름 또는 랜드마크 데이터가 없어 학습을 시작할 수 없음.")
-            self.trainingDidFail(taskId: "N/A", errorInfo: "수집된 데이터가 없습니다.")
-            return
-        }
-        
-        print("✅ 저장된 데이터로 서버 학습 시작: \(dataToUpload.name)")
-        trainingManager.uploadAndTrain(gesture: dataToUpload.name, frames: dataToUpload.landmarks)
     }
     
     func resetCollectionStateIfNeeded() {
@@ -155,21 +146,20 @@ class GestureRecognitionService {
             ProgressBarChannel.channel?.invokeMethod("updateProgress", arguments: landmarkBuffer.items.count)
             
             if landmarkBuffer.items.count >= landmarkBuffer.capacity {
-                guard let gestureName = self.currentGesture else {
-                    print("🚨 [오류] 제스처 이름이 없어 데이터 저장을 할 수 없음.")
-                    stopRecording()
-                    return nil
-                }
-                
-                self.pendingTrainingData = (name: gestureName, landmarks: landmarkBuffer.items)
+                let batch = landmarkBuffer.items
                 landmarkBuffer.reset()
 
-                print("✅ 100개 데이터 수집 완료. 저장을 기다립니다.")
+                print("✅ 100개 데이터 수집 완료. 서버 학습 시작.")
                 isRecording = false
                 hasCollectedSuccessfully = true
-                currentGesture = nil
                 
-                ProgressBarChannel.channel?.invokeMethod("collectionComplete", arguments: nil)
+                if let gesture = self.currentGesture {
+                    gestureBeingTrained = gesture
+                    trainingManager.uploadAndTrain(gesture: gesture, frames: batch)
+                } else {
+                    print("🚨 [오류] 제스처 이름이 없어 학습을 시작할 수 없음.")
+                }
+                currentGesture = nil
             }
         }
         
@@ -195,14 +185,13 @@ extension GestureRecognitionService: TrainingManagerDelegate {
     func trainingDidSucceed(taskId: String, tfliteURL: String?, modelCode: String?) {
         print("🎉 [서버 응답] 학습 성공! 모델 코드: \(modelCode ?? "N/A")")
         
-        guard let trainedGestureName = self.pendingTrainingData?.name else {
+        guard let gestureName = self.gestureBeingTrained else {
             print("🚨 [오류] 학습 성공했으나 어떤 제스처인지 알 수 없음.")
-            self.pendingTrainingData = nil
             return
         }
 
-        LabelMapManager.shared.addGesture(name: trainedGestureName)
-        self.pendingTrainingData = nil
+        LabelMapManager.shared.addGesture(name: gestureName)
+        self.gestureBeingTrained = nil
         self.hasCollectedSuccessfully = false
         
         ProgressBarChannel.channel?.invokeMethod("modelDownloadComplete", arguments: nil)
@@ -211,7 +200,7 @@ extension GestureRecognitionService: TrainingManagerDelegate {
     func trainingDidFail(taskId: String, errorInfo: String?) {
         print("🚨 [서버 응답] 학습 실패. 원인: \(errorInfo ?? "알 수 없는 오류")")
         
-        self.pendingTrainingData = nil
+        self.gestureBeingTrained = nil
         self.hasCollectedSuccessfully = false
         
         let message = errorInfo ?? "알 수 없는 오류"
