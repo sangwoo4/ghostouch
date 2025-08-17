@@ -11,7 +11,7 @@ import Foundation
 @MainActor
 protocol TrainingManagerDelegate: AnyObject {
     func trainingDidStart(taskId: String)
-    func trainingDidProgress(taskId: String, step: String?)
+    func trainingDidProgress(taskId: String, progress: StatusResponse.ProgressPayload?)
     func trainingDidSucceed(taskId: String, tfliteURL: String?, modelCode: String?)
     func trainingDidFail(taskId: String, errorInfo: String?)
     func modelReady(savedURL: URL)
@@ -28,13 +28,16 @@ final class TrainingManager {
     init(api: TrainingAPI = TrainingAPI()) {self.api = api}
     
     // 100 프레임 이상일 때 호출
-    func uploadAndTrain(gesture: String, frames: [[Float]], modelCode: String = "base_v1") {
+    func uploadAndTrain(gesture: String, frames: [[Float]]) { // Removed default "base_v1"
         guard frames.count >= 100 else { return }
+
+        // Determine the modelCode to send
+        let currentModelCode = TrainingStore.shared.lastModelCode ?? "base_v1"
         
         Task { [weak self] in
             guard let self else { return }
             do {
-                let res = try await api.sendTrain(.init(model_code: modelCode, landmarks: frames, gesture: gesture))
+                let res = try await api.sendTrain(.init(model_code: currentModelCode, landmarks: frames, gesture: gesture))
                 self.currentTaskId = res.task_id
                 TrainingStore.shared.lastTaskId = res.task_id
                 self.delegate?.trainingDidStart(taskId: res.task_id)
@@ -61,7 +64,7 @@ final class TrainingManager {
                         switch st.status.uppercased() {
                         case "PENDING", "PROGRESS":
                             self.delegate?.trainingDidProgress(taskId: taskId,
-                                                               step: st.progress?.current_step)
+                                                               progress: st.progress)
 
                         case "SUCCESS":
                             let tfliteURL = st.result?.tflite_url
@@ -105,8 +108,8 @@ final class TrainingManager {
                     }
                 }
 
-                // 2초 대기 (정확한 폴링 간격)
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                // 1초 대기 (정확한 폴링 간격)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }
     }

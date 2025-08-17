@@ -79,10 +79,12 @@ class BottomCamera: UIView, CameraFeedServiceDelegate, HandLandmarkerServiceLive
     // MARK: - CameraFeedServiceDelegate
     func didOutput(sampleBuffer: CMSampleBuffer, orientation: UIImage.Orientation) {
         autoreleasepool {
+            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            let milliseconds = CMTimeGetSeconds(timestamp) * 1000
             handLandmarkerService?.detectAsync(
                 sampleBuffer: sampleBuffer,
                 orientation: orientation,
-                timeStamps: Int(Date().timeIntervalSince1970 * 1000)
+                timeStamps: Int(milliseconds)
             )
         }
     }

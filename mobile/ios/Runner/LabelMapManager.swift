@@ -123,4 +123,61 @@ class LabelMapManager {
             print("레이블 맵 인코딩 또는 저장 에러: \(error)")
         }
     }
+
+    // 레이블 맵 + 학습 + 모델코드 초기화
+    func clearLabelMap() {
+        guard let url = documentsFileURL else {
+            print("에러: Documents 디렉토리 URL을 가져올 수 없어 레이블 맵을 초기화할 수 없음.")
+            return
+        }
+
+        do {
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+                print("✅ Documents 디렉토리에서 레이블 맵 파일 삭제 성공.")
+            }
+            setupInitialFile() // 원본 basic_label_map.json을 다시 복사
+            print("✅ 레이블 맵이 초기 상태로 복원되었습니다.")
+            if let initialLabelMap = readLabelMap() {
+                print("초기화된 레이블 맵: \(initialLabelMap)")
+            }
+
+            // GestureRecognitionService에 레이블 맵을 업데이트하도록 알림
+            Task { @MainActor in // Ensure this block runs on the MainActor
+                // ADDED: Reset lastModelCode in TrainingStore
+                TrainingStore.shared.lastModelCode = "base_v1" // Reset model_code to base_v1
+
+                if let gestureRecognizer = GestureRecognitionService.shared.gestureRecognizer {
+                    if let labelURL = documentsFileURL { // 초기화 시키도록 업데이트
+                        let updateSuccess = gestureRecognizer.updateLabelMap(labelURL: labelURL)
+                        if updateSuccess {
+                            print("✅ GestureRecognizer의 레이블 맵 업데이트 성공.")
+                        } else {
+                            print("🚨 GestureRecognizer의 레이블 맵 업데이트 실패.")
+                        }
+                    } else {
+                        print("🚨 Documents 디렉토리의 레이블 맵 URL을 가져올 수 없어 GestureRecognizer를 업데이트할 수 없음.")
+                    }
+
+                    // tflite 모델도 기본으로 초기화
+                    if let basicModelURL = Bundle.main.url(forResource: "basic_gesture_model", withExtension: "tflite") {
+                        let modelUpdateSuccess = gestureRecognizer.updateModel(modelURL: basicModelURL)
+                        if modelUpdateSuccess {
+                            print("✅ GestureRecognizer의 모델이 기본 모델로 업데이트 성공.")
+                        } else {
+                            print("🚨 GestureRecognizer의 모델이 기본 모델로 업데이트 실패.")
+                        }
+                    }
+                    else {
+                        print("🚨 번들에서 basic_gesture_model.tflite를 찾을 수 없어 모델을 초기화할 수 없음.")
+                    }
+
+                } else {
+                    print("⚠️ GestureRecognizer 인스턴스를 찾을 수 없어 레이블 맵을 업데이트할 수 없음.")
+                }
+            }
+        } catch {
+            print("🚨 레이블 맵 초기화 실패: \(error)")
+        }
+    }
 }

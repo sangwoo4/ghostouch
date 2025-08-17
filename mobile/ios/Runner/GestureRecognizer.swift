@@ -68,6 +68,8 @@ class GestureRecognizer {
             interpreter = try Interpreter(modelPath: modelURL.path)
             try interpreter?.allocateTensors()
             print("모델 로드 성공")
+            print(modelURL)
+            print(labelURL)
         } catch {
             print("인터프리터 생성 실패: \(error)")
             return nil

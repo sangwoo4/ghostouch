@@ -22,6 +22,9 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   static const listChannel = MethodChannel(
     'com.pentagon.ghostouch/list-gesture',
   );
+  // static const registerNameChannel = MethodChannel(
+  //   'com.pentagon.ghostouch/register-name',
+  // );
 
   List<String> registeredGestures = ['가위 제스처', '주먹 제스처', '보 제스처', '한성대 제스처'];
 
@@ -97,12 +100,24 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () async {
+                            // try {
+                            //   // ✅ 제스처 이름 네이티브로 전달
+                            //   await registerNameChannel.invokeMethod(
+                            //     'register-name',
+                            //     {"name": _controller.text},
+                            //   );
+                            //   print("✅ 제스처 이름 전달 완료: ${_controller.text}");
+                            // } on PlatformException catch (e) {
+                            //   print("❌ register-name 호출 실패: ${e.message}");
+                            // }
+
                             Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    const GestureShootingPage(),
+                                builder: (context) => GestureShootingPage(
+                                  gestureName: _controller.text,
+                                ),
                               ),
                             );
 
@@ -113,8 +128,9 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                                 Navigator.push(
                                   parentContext,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        const GestureShootingPage(),
+                                    builder: (context) => GestureShootingPage(
+                                      gestureName: _controller.text,
+                                    ),
                                   ),
                                 );
                               }

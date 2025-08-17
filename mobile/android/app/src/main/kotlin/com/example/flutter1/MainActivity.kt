@@ -12,6 +12,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformViewRegistry
+import org.json.JSONObject
+import java.io.File
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
@@ -23,7 +25,7 @@ class MainActivity: FlutterActivity() {
         flutterEngine
             .platformViewsController
             .registry
-            .registerViewFactory("hand_detection_view", HandDetectionViewFactory(this))
+            .registerViewFactory("hand_detection_view", HandDetectionViewFactory(this, flutterEngine.dartExecutor.binaryMessenger))
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
             call, result ->
@@ -58,6 +60,84 @@ class MainActivity: FlutterActivity() {
                     openAppSettings()
                     result.success(null)
                 }
+                "setToggleState" -> {
+                    val state = call.argument<Boolean>("state")
+                    if (state != null) {
+                        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                        prefs.edit().putBoolean("toggle_state", state).apply()
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "State argument is missing", null)
+                    }
+                }
+                "getToggleState" -> {
+                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                    val state = prefs.getBoolean("toggle_state", false) // 기본값 false
+                    result.success(state)
+                }
+                "getAvailableGestures" -> {
+                    try {
+                        val gestureMap = getAvailableGestures()
+                        result.success(gestureMap)
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to get available gestures: ${e.message}", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // 제스처-액션 매핑을 위한 새로운 MethodChannel
+        val MAPPING_CHANNEL = "com.pentagon.ghostouch/mapping"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAPPING_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setGestureAction" -> {
+                    val gesture = call.argument<String>("gesture")
+                    val action = call.argument<String>("action")
+
+                    if (gesture != null && action != null) {
+                        val prefs = getSharedPreferences("gesture_mappings", MODE_PRIVATE)
+                        prefs.edit().putString("gesture_action_$gesture", action).apply()
+                        result.success("매핑 저장 성공: $gesture -> $action")
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "제스처 또는 액션 인수가 없습니다.", null)
+                    }
+                }
+                "getGestureAction" -> {
+                    val gesture = call.argument<String>("gesture")
+                    if (gesture != null) {
+                        val prefs = getSharedPreferences("gesture_mappings", MODE_PRIVATE)
+                        // 저장된 값이 없으면 "none"을 기본값으로 반환
+                        val action = prefs.getString("gesture_action_$gesture", "none")
+                        result.success(action)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "제스처 인수가 없습니다.", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // 학습 관련 MethodChannel
+        val TRAINING_CHANNEL = "com.pentagon.ghostouch/training"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TRAINING_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startTraining" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    val frames = call.argument<ArrayList<ArrayList<Double>>>("frames")
+
+                    if (gestureName != null && frames != null) {
+                        // 서비스에 학습 요청 전달
+                        val serviceIntent = Intent(this, GestureDetectionService::class.java)
+                        serviceIntent.action = "ACTION_START_TRAINING"
+                        serviceIntent.putExtra("gestureName", gestureName)
+                        serviceIntent.putExtra("frames", frames)
+                        startService(serviceIntent)
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGUMENTS", "제스처 이름 또는 프레임이 없습니다.", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -69,5 +149,53 @@ class MainActivity: FlutterActivity() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         startActivity(intent)
+    }
+
+    private fun getAvailableGestures(): Map<String, String> {
+        val gestureMap = mutableMapOf<String, String>()
+        
+        try {
+            // 먼저 업데이트된 레이블 맵 파일이 있는지 확인
+            val updatedLabelMapFile = File(filesDir, "updated_label_map.json")
+            val jsonString: String
+            
+            if (updatedLabelMapFile.exists()) {
+                jsonString = updatedLabelMapFile.readText()
+            } else {
+                // 기본 레이블 맵 파일 사용
+                jsonString = assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
+            }
+            
+            val jsonObject = JSONObject(jsonString)
+            val iterator = jsonObject.keys()
+            
+            while (iterator.hasNext()) {
+                val key = iterator.next()
+                val value = jsonObject.getInt(key)
+                gestureMap[key] = key // 영어 키를 그대로 사용
+            }
+            
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to load gesture map: ${e.message}")
+            // 오류 발생 시 기본 제스처들만 반환
+            gestureMap["scissors"] = "scissors"
+            gestureMap["rock"] = "rock"
+            gestureMap["paper"] = "paper"
+            gestureMap["hs"] = "hs"
+        }
+        
+        return gestureMap
+    }
+
+    override fun onResume() {
+        super.onResume()
+        GestureDetectionService.isAppInForeground = true
+        android.util.Log.d("MainActivity", "onResume: isAppInForeground set to TRUE")
+    }
+
+    override fun onPause() {
+        super.onPause()
+        GestureDetectionService.isAppInForeground = false
+        android.util.Log.d("MainActivity", "onPause: isAppInForeground set to FALSE")
     }
 }

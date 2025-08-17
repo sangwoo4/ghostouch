@@ -36,10 +36,41 @@ final class TrainingStore {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         return dir.appendingPathComponent(fileName)
     }
+
+    func labelMapFileURL(modelCode: String?) -> URL {
+        let fileName = modelCode.map{"custom_model_\($0).json"} ?? "custom_model.json"
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        return dir.appendingPathComponent(fileName)
+    }
+
     // 저장
     func saveModelData(_ data: Data, modelCode: String?) throws -> URL {
         let url = modelFileURL(modelCode: modelCode)
         try data.write(to: url, options: .atomic)
         return url
+    }
+
+
+
+    // 다운로드된 파일 삭제
+    func clearDownloadedFiles() {
+        let fileManager = FileManager.default
+        if let modelCode = lastModelCode {
+            let modelUrl = modelFileURL(modelCode: modelCode)
+            let labelUrl = labelMapFileURL(modelCode: modelCode)
+
+            do {
+                if fileManager.fileExists(atPath: modelUrl.path) {
+                    try fileManager.removeItem(at: modelUrl)
+                    print("✅ 모델 파일 삭제 성공: \(modelUrl.lastPathComponent)")
+                }
+                if fileManager.fileExists(atPath: labelUrl.path) {
+                    try fileManager.removeItem(at: labelUrl)
+                    print("✅ 레이블 맵 파일 삭제 성공: \(labelUrl.lastPathComponent)")
+                }
+            } catch {
+                print("🚨 파일 삭제 실패: \(error.localizedDescription)")
+            }
+        }
     }
 }

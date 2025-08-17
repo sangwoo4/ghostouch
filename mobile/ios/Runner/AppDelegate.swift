@@ -31,6 +31,31 @@ import UIKit
           ProgressBarChannel.register(with: progressReg)
       }
 
+      // reset-gesture 채널 등록
+      if let resetReg = registrar(forPlugin: "ResetGestureChannel") {
+          ResetGestureChannel.register(with: resetReg)
+      }
+
+      // GestureListChannel 등록
+      if let mappingReg = registrar(forPlugin: "GestureListChannelHandler") {
+          GestureListChannelHandler.register(with: mappingReg)
+      }
+
+      // GestureListRegisterChannel 등록
+      if let gestureListReg = registrar(forPlugin: "GestureListRegisterChannel") {
+          GestureListRegisterChannel.register(with: gestureListReg)
+      }
+
+      // CameraChannelHandler 등록
+      if let cameraHandlerReg = registrar(forPlugin: "CameraChannelHandler") {
+          CameraChannelHandler.register(with: cameraHandlerReg)
+      }
+
+      // TaskIdChannel 등록
+      if let taskIdReg = registrar(forPlugin: "TaskIdChannel") {
+          TaskIdChannel.register(with: taskIdReg)
+      }
+
       return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

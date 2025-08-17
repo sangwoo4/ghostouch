@@ -154,13 +154,14 @@ class CameraPreviewView: UIViewController, CameraFeedServiceDelegate, HandLandma
 
     // MARK: - CameraFeedServiceDelegate
     func didOutput(sampleBuffer: CMSampleBuffer, orientation: UIImage.Orientation) {
-        let currentTimeMs = Date().timeIntervalSince1970 * 1000
+        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        let milliseconds = CMTimeGetSeconds(timestamp) * 1000
         backgroundQueue.async { [weak self] in
             autoreleasepool { //메모리 누수 방지
                 self?.handLandmarkerService?.detectAsync(
                     sampleBuffer: sampleBuffer,
                     orientation: orientation,
-                    timeStamps: Int(currentTimeMs)
+                    timeStamps: Int(milliseconds)
                 )
             }
         }
