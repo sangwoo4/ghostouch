@@ -165,27 +165,48 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     );
   }
 
-  void _checkDuplicate() {
-    String input = _controller.text.trim();
+  Future<void> _checkDuplicate() async {
+    String input = _controller.text;
 
-    if (input.isEmpty) {
+    try {
+      // 네이티브에서 모든 검증 수행 (공백, 특수문자, 길이, 중복 등)
+      final Map<dynamic, dynamic> result = await listChannel.invokeMethod(
+        'check-duplicate',
+        {'gestureName': input},
+      );
+      
+      final bool isDuplicate = result['isDuplicate'] ?? false;
+      final String message = result['message'] ?? '';
+
       setState(() {
-        _isNameValid = false;
-        _isDuplicateChecked = false;
-        _errorMessage = '공백은 등록할 수 없습니다.';
+        _isNameValid = !isDuplicate;
+        _isDuplicateChecked = true;
+        _errorMessage = isDuplicate
+            ? message
+            : '$message [제스처 촬영]을 눌러 촬영을 시작해주세요';
       });
-      return;
+    } catch (e) {
+      debugPrint("⚠ 중복 검사 실패: $e");
+      // 폴백: 로컬에서 기본 검사
+      String trimmedInput = input.trim();
+      if (trimmedInput.isEmpty) {
+        setState(() {
+          _isNameValid = false;
+          _isDuplicateChecked = true;
+          _errorMessage = '공백은 등록할 수 없습니다.';
+        });
+        return;
+      }
+      
+      bool isDuplicate = registeredGestures.contains(trimmedInput);
+      setState(() {
+        _isNameValid = !isDuplicate;
+        _isDuplicateChecked = true;
+        _errorMessage = isDuplicate
+            ? '이미 등록된 이름입니다.'
+            : '등록할 수 있는 이름입니다. [제스처 촬영]을 눌러 촬영을 시작해주세요';
+      });
     }
-
-    bool isDuplicate = registeredGestures.contains(input);
-
-    setState(() {
-      _isNameValid = !isDuplicate;
-      _isDuplicateChecked = true;
-      _errorMessage = isDuplicate
-          ? '이미 등록된 이름입니다.'
-          : '등록할 수 있는 이름입니다. [제스처 촬영]을 눌러 촬영을 시작해주세요';
-    });
   }
 
   Future<void> _startCamera() async {

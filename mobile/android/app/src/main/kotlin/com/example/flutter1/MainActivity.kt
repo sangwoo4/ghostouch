@@ -243,6 +243,80 @@ class MainActivity: FlutterActivity() {
                         result.error("ERROR", "Failed to get gesture list: ${e.message}", null)
                     }
                 }
+                "check-duplicate" -> {
+                    try {
+                        val gestureName = call.argument<String>("gestureName")
+                        if (gestureName != null) {
+                            val trimmedName = gestureName.trim()
+                            
+                            // 1. 공백 체크
+                            if (trimmedName.isEmpty()) {
+                                result.success(mapOf(
+                                    "isDuplicate" to true,
+                                    "message" to "공백은 등록할 수 없습니다."
+                                ))
+                                return@setMethodCallHandler
+                            }
+                            
+                            // 2. 특수문자 및 길이 체크
+                            if (trimmedName.length > 20) {
+                                result.success(mapOf(
+                                    "isDuplicate" to true,
+                                    "message" to "제스처 이름은 20자 이하로 입력해주세요."
+                                ))
+                                return@setMethodCallHandler
+                            }
+                            
+                            // 3. 금지된 문자 체크 (선택사항)
+                            val forbiddenChars = listOf("/", "\\", ":", "*", "?", "\"", "<", ">", "|")
+                            if (forbiddenChars.any { trimmedName.contains(it) }) {
+                                result.success(mapOf(
+                                    "isDuplicate" to true,
+                                    "message" to "특수문자는 사용할 수 없습니다."
+                                ))
+                                return@setMethodCallHandler
+                            }
+                            
+                            // 4. 실제 중복 체크
+                            val gestureMap = getAvailableGestures()
+                            val koreanGestureList = gestureMap.keys.map { getKoreanGestureName(it) }
+                            
+                            // 영어 키도 확인 (서버로 전송될 때는 영어 키 사용)
+                            val englishGestureList = gestureMap.keys.toList()
+                            
+                            // "제스처" 부분을 제거한 순수 이름 리스트
+                            val pureGestureNames = koreanGestureList.map { it.replace(" 제스처", "").trim() }
+                            val inputWithoutGesture = trimmedName.replace(" 제스처", "").trim()
+                            
+                            // 디버깅 로그
+                            android.util.Log.d("MainActivity", "Available Korean gestures: $koreanGestureList")
+                            android.util.Log.d("MainActivity", "Available English gestures: $englishGestureList")
+                            android.util.Log.d("MainActivity", "Pure gesture names: $pureGestureNames")
+                            android.util.Log.d("MainActivity", "Checking duplicate for: '$trimmedName'")
+                            android.util.Log.d("MainActivity", "Input without '제스처': '$inputWithoutGesture'")
+                            
+                            // 중복 검사: 전체 이름, 영어 키, 순수 이름 모두 확인
+                            val isDuplicateKorean = koreanGestureList.contains(trimmedName)
+                            val isDuplicateEnglish = englishGestureList.contains(trimmedName)
+                            val isDuplicatePure = pureGestureNames.contains(inputWithoutGesture)
+                            val isDuplicate = isDuplicateKorean || isDuplicateEnglish || isDuplicatePure
+                            
+                            android.util.Log.d("MainActivity", "Is duplicate (Korean): $isDuplicateKorean")
+                            android.util.Log.d("MainActivity", "Is duplicate (English): $isDuplicateEnglish")
+                            android.util.Log.d("MainActivity", "Is duplicate (Pure): $isDuplicatePure")
+                            android.util.Log.d("MainActivity", "Is duplicate (Final): $isDuplicate")
+                            
+                            result.success(mapOf(
+                                "isDuplicate" to isDuplicate,
+                                "message" to if (isDuplicate) "이미 등록된 이름입니다." else "등록할 수 있는 이름입니다."
+                            ))
+                        } else {
+                            result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                        }
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to check duplicate: ${e.message}", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
