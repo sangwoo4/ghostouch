@@ -17,9 +17,12 @@ import java.io.File
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
+    private lateinit var trainingCoordinator: TrainingCoordinator
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        trainingCoordinator = TrainingCoordinator(this)
 
         // 네이티브 뷰 팩토리 등록
         flutterEngine
@@ -83,6 +86,14 @@ class MainActivity: FlutterActivity() {
                         result.error("ERROR", "Failed to get available gestures: ${e.message}", null)
                     }
                 }
+                "getServerUrl" -> {
+                    try {
+                        val serverUrl = TrainingCoordinator.getServerUrl(this)
+                        result.success(serverUrl)
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to get server URL: ${e.message}", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -127,12 +138,7 @@ class MainActivity: FlutterActivity() {
                     val frames = call.argument<ArrayList<ArrayList<Double>>>("frames")
 
                     if (gestureName != null && frames != null) {
-                        // 서비스에 학습 요청 전달
-                        val serviceIntent = Intent(this, GestureDetectionService::class.java)
-                        serviceIntent.action = "ACTION_START_TRAINING"
-                        serviceIntent.putExtra("gestureName", gestureName)
-                        serviceIntent.putExtra("frames", frames)
-                        startService(serviceIntent)
+                        trainingCoordinator.uploadAndTrain(gestureName, frames.map { it.map { d -> d.toFloat() } })
                         result.success(null)
                     } else {
                         result.error("INVALID_ARGUMENTS", "제스처 이름 또는 프레임이 없습니다.", null)

@@ -267,6 +267,28 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
             const SizedBox(height: 16),
 
             // 카메라 뷰 (원형)
+            // Expanded(
+            //   child: Center(
+            //     child: ClipOval(
+            //       child: Container(
+            //         width: 350,
+            //         height: 350,
+            //         color: Colors.black12,
+            //         child: Platform.isAndroid
+            //             ? const AndroidView(
+            //                 viewType: 'hand_detection_view',
+            //                 layoutDirection: TextDirection.ltr,
+            //               )
+            //             : const UiKitView(
+            //                 viewType: 'camera_view',
+            //                 creationParamsCodec: StandardMessageCodec(),
+            //               ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+
+            // 카메라 뷰 (원형)
             Expanded(
               child: Center(
                 child: ClipOval(
@@ -289,6 +311,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                 ),
               ),
             ),
+
             const SizedBox(height: 30),
 
             // 하단 버튼

@@ -318,7 +318,13 @@ class HandDetectionPlatformView(
                     
                     if (confidence >= MIN_CONFIDENCE_THRESHOLD) {
                         val flatLandmarks = worldLandmarks.map { listOf(it.x(), it.y(), it.z()) }.flatten()
-                        collectedFrames.add(flatLandmarks)
+                        val handednessValue = when (handedness?.categoryName()) {
+                            "Left" -> 0.0f // 왼손
+                            "Right" -> 1.0f // 오른손
+                            else -> -1.0f // 알 수 없는 경우 (오류 방지 또는 처리 필요)
+                        }
+                        val fullLandmarkVector = flatLandmarks.toMutableList().apply { add(handednessValue) }
+                        collectedFrames.add(fullLandmarkVector)
                         
                         Log.d("HandDetectionPlatformView", "Frame accepted: ${collectedFrames.size}/$TARGET_FRAME_COUNT (confidence: ${String.format("%.2f", confidence)})")
                         
@@ -331,10 +337,8 @@ class HandDetectionPlatformView(
                         // Auto-complete when target frames are collected
                         if (collectedFrames.size >= TARGET_FRAME_COUNT) {
                             Log.d("HandDetectionPlatformView", "Target frames ($TARGET_FRAME_COUNT) collected from $totalFrameAttempts attempts. Auto-completing collection.")
-                            isCollecting = false
-                            mainHandler.post {
-                                methodChannel.invokeMethod("collectionComplete", null)
-                            }
+                            // stopCollecting() 메소드 호출로 서버 업로드도 함께 처리
+                            stopCollecting()
                         }
                     } else {
                         Log.d("HandDetectionPlatformView", "Frame rejected: Low confidence (${String.format("%.2f", confidence)} < $MIN_CONFIDENCE_THRESHOLD)")
