@@ -95,9 +95,9 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
         setState(() {
           _isCollecting = false;
           _progressPercent = 1.0; // 상태바 100%
+          instructionText = '서버에 업로드 중...';
         });
-        // 자동으로 서버 상태 확인 시작
-        _handleGestureCompletion();
+        // task_id를 받을 때까지 대기 (taskIdReady에서 폴링 시작)
         break;
 
       // 모델 학습중 함수
@@ -119,6 +119,21 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           _isCollecting = false; // 카메라 OFF
           _isCompleted = true; // 저장하기 버튼 활성화
         });
+        break;
+
+      // Task ID가 준비되었을 때 폴링 시작
+      case 'taskIdReady':
+        final Map<String, dynamic> args = Map<String, dynamic>.from(
+          call.arguments,
+        );
+        final String receivedTaskId = args['taskId'] ?? '';
+        debugPrint('Task ID received: $receivedTaskId');
+        setState(() {
+          taskId = receivedTaskId;
+          instructionText = '모델 학습 중...';
+        });
+        // 이제 올바른 task_id로 폴링 시작
+        _handleGestureCompletion();
         break;
 
       default:
@@ -391,6 +406,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                           child: ElevatedButton(
                             onPressed: _isCompleted
                                 ? () {
+                                    debugPrint("저장하기 버튼이 눌렸습니다! 제스처: ${widget.gestureName}");
                                     Navigator.pushReplacementNamed(
                                       context,
                                       '/',

@@ -193,6 +193,39 @@ class MainActivity: FlutterActivity() {
                     android.util.Log.d("MainActivity", "stopCollecting called")
                     result.success(null)
                 }
+                "saveGesture" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    android.util.Log.d("MainActivity", "saveGesture called with gesture: $gestureName")
+                    if (gestureName != null) {
+                        try {
+                            // 1. 수집된 데이터 서버로 업로드 시작
+                            handDetectionPlatformView?.uploadCollectedData()
+                            
+                            // 2. 업데이트된 레이블 맵 파일 로드 (나중에 확인용)
+                            val updatedLabelMapFile = File(filesDir, "updated_label_map.json")
+                            if (updatedLabelMapFile.exists()) {
+                                android.util.Log.d("MainActivity", "Updated label map found, gesture '$gestureName' should already be included")
+                            } else {
+                                android.util.Log.w("MainActivity", "Updated label map not found, gesture might not be properly saved")
+                            }
+                            
+                            // 3. 모델 파일 확인
+                            val currentModelCode = TrainingCoordinator.currentModelCode
+                            val currentModelFileName = TrainingCoordinator.currentModelFileName
+                            android.util.Log.d("MainActivity", "Current model: $currentModelCode ($currentModelFileName)")
+                            
+                            // 4. 성공 응답
+                            result.success("Gesture '$gestureName' upload started successfully")
+                            android.util.Log.d("MainActivity", "Gesture '$gestureName' upload process started")
+                            
+                        } catch (e: Exception) {
+                            android.util.Log.e("MainActivity", "Failed to save gesture '$gestureName'", e)
+                            result.error("SAVE_FAILED", "Failed to save gesture: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

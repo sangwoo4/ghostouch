@@ -118,6 +118,21 @@ class HandDetectionPlatformView(
                     stopCollecting()
                     result.success(null)
                 }
+                "saveGesture" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    Log.d("HandDetectionPlatformView", "saveGesture called with gesture: $gestureName")
+                    if (gestureName != null) {
+                        try {
+                            uploadCollectedData()
+                            result.success("Gesture upload started successfully")
+                        } catch (e: Exception) {
+                            Log.e("HandDetectionPlatformView", "Failed to upload gesture data", e)
+                            result.error("UPLOAD_FAILED", "Failed to upload gesture: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -157,6 +172,29 @@ class HandDetectionPlatformView(
         // Optionally, send a signal to Flutter that collection has stopped
         mainHandler.post {
             methodChannel.invokeMethod("collectionComplete", null)
+        }
+    }
+
+    // 저장하기 버튼 클릭 시 호출될 새로운 메서드
+    fun uploadCollectedData() {
+        if (collectedFrames.isNotEmpty()) {
+            val gestureName = currentGestureName ?: "unknown"
+            Log.d("HandDetectionPlatformView", "Now uploading ${collectedFrames.size} frames for gesture: $gestureName")
+            trainingCoordinator?.uploadAndTrain(gestureName, collectedFrames)
+        } else {
+            Log.w("HandDetectionPlatformView", "No frames to upload")
+        }
+        
+        // 업로드 후 데이터 정리
+        collectedFrames.clear()
+        currentGestureName = null
+    }
+
+    // TrainingCoordinator에서 task_id를 받았을 때 Flutter에 알림
+    fun notifyTaskIdReady(taskId: String) {
+        Log.d("HandDetectionPlatformView", "Task ID ready: $taskId, notifying Flutter")
+        mainHandler.post {
+            methodChannel.invokeMethod("taskIdReady", mapOf("taskId" to taskId))
         }
     }
 
