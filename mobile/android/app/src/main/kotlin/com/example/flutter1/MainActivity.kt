@@ -335,6 +335,27 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // ControlAppPage용 MethodChannel
+        val CONTROL_APP_CHANNEL = "com.pentagon.ghostouch/control-app"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTROL_APP_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openApp" -> {
+                    val packageName = call.argument<String>("package")
+                    if (packageName != null) {
+                        try {
+                            openExternalApp(packageName)
+                            result.success("App launched successfully")
+                        } catch (e: Exception) {
+                            result.error("LAUNCH_FAILED", "Failed to launch app: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Package name is required", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun openAppSettings() {
@@ -437,6 +458,37 @@ class MainActivity: FlutterActivity() {
             throw e
         }
     }
+
+    private fun openExternalApp(packageIdentifier: String) {
+        try {
+            android.util.Log.d("MainActivity", "Opening service: $packageIdentifier")
+            
+            // 각 서비스의 웹사이트 URL로 브라우저에서 열기
+            val url = when (packageIdentifier) {
+                "youtube" -> "https://www.youtube.com"
+                "netflix" -> "https://www.netflix.com"
+                "coupang" -> "https://www.coupangplay.com"
+                "tving" -> "https://www.tving.com"
+                "disney" -> "https://www.disneyplus.com"
+                "tmap" -> "https://www.tmap.co.kr"
+                "kakaomap" -> "https://map.kakao.com"
+                else -> "https://www.google.com/search?q=$packageIdentifier"
+            }
+
+            android.util.Log.d("MainActivity", "Opening URL: $url")
+
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            
+            android.util.Log.d("MainActivity", "Successfully opened: $packageIdentifier in browser")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to open service: $packageIdentifier", e)
+            throw e
+        }
+    }
+
 
     override fun onResume() {
         super.onResume()
