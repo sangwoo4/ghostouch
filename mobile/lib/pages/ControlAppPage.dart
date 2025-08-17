@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class ControlAppPage extends StatefulWidget {
-  const ControlAppPage({super.key});
+  final bool isToggleEnabled; // 메인에서 전달해준 토글 상태
+
+  const ControlAppPage({super.key, required this.isToggleEnabled});
 
   @override
   State<ControlAppPage> createState() => _ControlAppPageState();
@@ -37,6 +39,17 @@ class _ControlAppPageState extends State<ControlAppPage> {
   };
 
   Future<void> _launchApp(String packageName) async {
+    if (!widget.isToggleEnabled) {
+      // 🚫 사용 안 함 상태 → 알림창만 띄우고 메소드 채널 호출 안함
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ 사용 안 함 상태에서는 기능을 사용할 수 없습니다.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return; // 메소드 채널 호출 차단
+    }
+
     try {
       await controlAppChannel.invokeMethod('openApp', {"package": packageName});
     } on PlatformException catch (e) {
