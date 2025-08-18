@@ -72,8 +72,20 @@ class ModelTrainer:
                       metrics=['accuracy'])
 
         # 콜백 설정: 조기 종료 및 학습률 동적 조정
-        early_stopping = EarlyStopping(monitor='val_loss', patience=5, min_delta=0.0001, restore_best_weights=True, verbose=1)
-        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=0.00001, verbose=1)
+        early_stopping = EarlyStopping(
+            monitor=self.train_config.ES_MONITOR,
+            patience=self.train_config.ES_PATIENCE,
+            min_delta=self.train_config.ES_MIN_DELTA,
+            restore_best_weights=True,
+            verbose=1
+        )
+        lr_scheduler = ReduceLROnPlateau(
+            monitor=self.train_config.LR_SCHEDULER_MONITOR,
+            factor=self.train_config.LR_SCHEDULER_FACTOR,
+            patience=self.train_config.LR_SCHEDULER_PATIENCE,
+            min_lr=self.train_config.LR_SCHEDULER_MIN_LR,
+            verbose=1
+        )
 
         # 클래스 불균형 처리를 위한 클래스 가중치 계산
         unique_classes: np.ndarray = pd.unique(y_train_labels).astype(int)
@@ -118,13 +130,14 @@ class ModelTrainer:
         assert X_train_for_tflite.ndim == 3 and X_train_for_tflite.shape[2] == 1
 
         # 표본 수 안전 가드
-        take_n = min(300, len(X_train_for_tflite))
+        take_n = min(self.train_config.TFLITE_REPRESENTATIVE_DATASET_SAMPLE_SIZE, len(X_train_for_tflite))
 
         def representative_data_gen():
             # 2) float32 캐스팅 + (1, L, 1) 배치.
+            buffer_size = min(len(X_train_for_tflite), self.train_config.TFLITE_SHUFFLE_BUFFER_SIZE)
             dataset = tf.data.Dataset.from_tensor_slices(
                 tf.cast(X_train_for_tflite, tf.float32)
-            ).shuffle(min(len(X_train_for_tflite), 10_000)
+            ).shuffle(buffer_size
             ).batch(1
             ).take(take_n
             ).prefetch(tf.data.AUTOTUNE)
@@ -169,7 +182,10 @@ class ModelTrainer:
         y_numeric_labels = np.array([self.label_map[label] for label in y_string_labels], dtype=int)
 
         X_train, X_test, y_train_numeric_labels, y_test_numeric_labels = train_test_split(
-            X, y_numeric_labels, test_size=0.2, random_state=42, stratify=y_numeric_labels
+            X, y_numeric_labels, 
+            test_size=self.train_config.TEST_SPLIT_SIZE, 
+            random_state=self.train_config.RANDOM_STATE, 
+            stratify=y_numeric_labels
         )
 
         y_train = to_categorical(y_train_numeric_labels, num_classes=len(self.label_map))
