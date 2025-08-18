@@ -192,6 +192,9 @@ class _GestureActionDropdownState extends State<GestureActionDropdown> {
     'action_open_calculator': '계산기 실행',
     'action_open_contacts': '연락처 실행',
     'action_open_settings': '설정 실행',
+    'action_volume_up': '볼륨 증가',
+    'action_volume_down': '볼륨 감소',
+    'action_volume_mute': '음소거/해제',
   };
 
   // SharedPreferences에서 초기값 로드

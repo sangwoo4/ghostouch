@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -84,7 +85,42 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
             .setContentText("백그라운드에서 제스처를 인식하고 있습니다.")
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
-        startForeground(NOTIFICATION_ID, notification)
+        
+        // 권한 상태에 따라 적절한 foreground service type 사용
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val hasCameraPermission = ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
+                
+                val hasForegroundCameraPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ContextCompat.checkSelfPermission(
+                        this, Manifest.permission.FOREGROUND_SERVICE_CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else true
+                
+                if (hasCameraPermission && hasForegroundCameraPermission) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA)
+                    } else {
+                        startForeground(NOTIFICATION_ID, notification)
+                    }
+                } else {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                    } else {
+                        startForeground(NOTIFICATION_ID, notification)
+                    }
+                }
+                Log.d(TAG, "Foreground service started with appropriate type")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start foreground service with specific type", e)
+                // 폴백: 기본 startForeground 사용
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
 
         when (intent?.action) {
             "ACTION_START_TRAINING" -> {
@@ -170,13 +206,13 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
     }
 
     override fun onResults(resultBundle: HandLandmarkerHelper.ResultBundle) {
+        // 백그라운드 타이머 관리
         if (isAppInForeground) {
             // 앱이 포그라운드로 돌아왔을 때 백그라운드 타이머 취소
             if (backgroundTimeoutRunnable != null) {
                 Log.d(TAG, "App returned to foreground, cancelling background timer")
                 cancelBackgroundTimer()
             }
-            return
         } else {
             // 앱이 백그라운드일 때 타이머 시작
             if (backgroundTimeoutMinutes != 0 && backgroundTimeoutRunnable == null) {
@@ -188,13 +224,18 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
         val gesture = gestureClassifier?.classifyGesture(resultBundle.results.firstOrNull() ?: return) ?: return
         if (gesture == "none") return
 
-        val gestureName = gesture.substringBefore(" (").trim()
-        val now = System.currentTimeMillis()
-        if (now - lastActionTimestamp > ACTION_COOLDOWN_MS) {
-            Log.d(TAG, "Action executed for gesture: $gestureName")
-            val actionExecutor = ActionExecutor(this)
-            actionExecutor.executeActionForGesture(gestureName)
-            lastActionTimestamp = now
+        // 백그라운드에 있을 때만 제스처 액션 실행
+        if (!isAppInForeground) {
+            val gestureName = gesture.substringBefore(" (").trim()
+            val now = System.currentTimeMillis()
+            if (now - lastActionTimestamp > ACTION_COOLDOWN_MS) {
+                Log.d(TAG, "Action executed for gesture: $gestureName (app in background)")
+                val actionExecutor = ActionExecutor(this)
+                actionExecutor.executeActionForGesture(gestureName)
+                lastActionTimestamp = now
+            }
+        } else {
+            Log.d(TAG, "Gesture detected but app is in foreground, skipping action execution")
         }
     }
 
