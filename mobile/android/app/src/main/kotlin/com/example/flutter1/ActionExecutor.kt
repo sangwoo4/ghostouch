@@ -7,10 +7,17 @@ import android.os.Build
 import android.util.Log
 import android.content.ComponentName
 import android.media.AudioManager
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraCharacteristics
+import android.provider.Settings
+import java.io.IOException
 
 class ActionExecutor(private val context: Context) {
 
     private val prefs = context.getSharedPreferences("gesture_mappings", Context.MODE_PRIVATE)
+    private var isFlashOn = false
+    private var cameraManager: CameraManager? = null
+    private var cameraId: String? = null
 
     fun executeActionForGesture(gesture: String) {
         // SharedPreferences에서 "gesture_action_rock" 같은 키로 저장된 값을 불러옴
@@ -32,6 +39,9 @@ class ActionExecutor(private val context: Context) {
             "action_volume_up" -> adjustVolume(AudioManager.ADJUST_RAISE)
             "action_volume_down" -> adjustVolume(AudioManager.ADJUST_LOWER)
             "action_volume_mute" -> toggleMute()
+            "action_flashlight_toggle" -> toggleFlashlight()
+            "action_brightness_up" -> adjustBrightness(true)
+            "action_brightness_down" -> adjustBrightness(false)
         }
         // TODO: 다른 액션들(예: 스크린캡쳐)에 대한 처리 로직 추가
     }
@@ -169,6 +179,77 @@ class ActionExecutor(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.e("ActionExecutor", "음소거 토글 중 오류 발생: ${e.message}", e)
+        }
+    }
+    
+    private fun toggleFlashlight() {
+        try {
+            if (cameraManager == null) {
+                cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                // 후면 카메라 찾기
+                cameraId = cameraManager?.cameraIdList?.find { id ->
+                    val characteristics = cameraManager?.getCameraCharacteristics(id)
+                    val facing = characteristics?.get(CameraCharacteristics.LENS_FACING)
+                    val hasFlash = characteristics?.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                    facing == CameraCharacteristics.LENS_FACING_BACK && hasFlash
+                }
+            }
+            
+            // SharedPreferences에서 현재 플래시 상태 확인
+            val flashPrefs = context.getSharedPreferences("flashlight_state", Context.MODE_PRIVATE)
+            val currentFlashState = flashPrefs.getBoolean("is_flash_on", false)
+            
+            cameraId?.let { id ->
+                val newFlashState = !currentFlashState
+                cameraManager?.setTorchMode(id, newFlashState)
+                
+                // 새로운 상태를 SharedPreferences에 저장
+                flashPrefs.edit().putBoolean("is_flash_on", newFlashState).apply()
+                
+                Log.d("ActionExecutor", "플래시 ${if (newFlashState) "켜짐" else "꺼짐"}")
+            } ?: run {
+                Log.e("ActionExecutor", "플래시를 지원하는 카메라를 찾을 수 없습니다")
+            }
+        } catch (e: Exception) {
+            Log.e("ActionExecutor", "플래시 토글 중 오류 발생: ${e.message}", e)
+        }
+    }
+    
+    
+    private fun adjustBrightness(increase: Boolean) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (Settings.System.canWrite(context)) {
+                    val currentBrightness = Settings.System.getInt(
+                        context.contentResolver,
+                        Settings.System.SCREEN_BRIGHTNESS,
+                        127
+                    )
+                    
+                    val maxBrightness = 255
+                    val step = 25
+                    val newBrightness = if (increase) {
+                        (currentBrightness + step).coerceAtMost(maxBrightness)
+                    } else {
+                        (currentBrightness - step).coerceAtLeast(1)
+                    }
+                    
+                    Settings.System.putInt(
+                        context.contentResolver,
+                        Settings.System.SCREEN_BRIGHTNESS,
+                        newBrightness
+                    )
+                    
+                    val action = if (increase) "증가" else "감소"
+                    Log.d("ActionExecutor", "화면 밝기 $action: $newBrightness/$maxBrightness")
+                } else {
+                    Log.e("ActionExecutor", "시스템 설정 쓰기 권한이 없습니다")
+                }
+            } else {
+                Log.e("ActionExecutor", "Android 6.0 이상에서만 지원됩니다")
+            }
+        } catch (e: Exception) {
+            Log.e("ActionExecutor", "화면 밝기 조절 중 오류 발생: ${e.message}", e)
         }
     }
 }

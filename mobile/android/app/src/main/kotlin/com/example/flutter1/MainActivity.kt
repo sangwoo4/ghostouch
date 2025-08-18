@@ -77,11 +77,17 @@ class MainActivity: FlutterActivity() {
                     result.success(null)
                 }
                 "checkCameraPermission" -> {
-                    val hasPermission = ContextCompat.checkSelfPermission(
+                    val hasCameraPermission = ContextCompat.checkSelfPermission(
                         this,
                         Manifest.permission.CAMERA
                     ) == PackageManager.PERMISSION_GRANTED
-                    result.success(hasPermission)
+                    
+                    val hasWriteSettingsPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        Settings.System.canWrite(this)
+                    } else true
+                    
+                    // 두 권한이 모두 있어야 true 반환
+                    result.success(hasCameraPermission && hasWriteSettingsPermission)
                 }
                 "functionToggle" -> {
                     println("✅ functionToggle 호출됨 (안드로이드)")

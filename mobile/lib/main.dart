@@ -143,7 +143,8 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   child: Text(
                     '1단계: 🚀 "이동하기" 버튼을 눌러주세요\n'
                     '2단계: 📋 목록에서 \'Ghostouch\' 선택\n'
-                    '3단계: 🔛 스위치를 \'사용 중\'으로 켜고 확인',
+                    '3단계: 🔛 스위치를 \'사용 중\'으로 켜고 확인\n'
+                    '4단계: 📝 \'시스템 설정 수정\' 권한도 허용해주세요',
                     style: TextStyle(
                       fontSize: 12,
                       height: 1.5,

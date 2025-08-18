@@ -195,6 +195,9 @@ class _GestureActionDropdownState extends State<GestureActionDropdown> {
     'action_volume_up': '볼륨 증가',
     'action_volume_down': '볼륨 감소',
     'action_volume_mute': '음소거/해제',
+    'action_flashlight_toggle': '플래시 켜기/끄기',
+    'action_brightness_up': '화면 밝기 증가',
+    'action_brightness_down': '화면 밝기 감소',
   };
 
   // SharedPreferences에서 초기값 로드
