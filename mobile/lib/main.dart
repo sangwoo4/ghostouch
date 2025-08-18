@@ -37,7 +37,25 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _setupToggleChannelHandler(); // 토글 상태 변경 알림 핸들러 설정
     _loadInitialToggleState(); // 앱 시작 시 저장된 토글 상태 불러오기
+  }
+  
+  // 토글 상태 변경 알림을 받는 핸들러 설정
+  void _setupToggleChannelHandler() {
+    toggleChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onToggleStateChanged') {
+        final bool newState = call.arguments as bool;
+        print("🔔 안드로이드로부터 토글 상태 변경 알림: $newState");
+        
+        if (mounted) {
+          setState(() {
+            isGestureEnabled = newState;
+          });
+          print("🔄 UI 토글 상태 즉시 업데이트됨: $newState");
+        }
+      }
+    });
   }
 
   @override
@@ -48,11 +66,10 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 앱이 재개될 때마다 권한을 다시 확인하는 로직은 유지하되,
-    // 토글 상태를 강제로 켜지는 않도록 주석 처리 또는 로직 수정이 필요할 수 있음
-    // if (state == AppLifecycleState.resumed) {
-    //   _checkCameraPermission();
-    // }
+    if (state == AppLifecycleState.resumed) {
+      // 앱이 포그라운드로 돌아올 때 토글 상태 다시 로드
+      _loadInitialToggleState();
+    }
   }
 
   // 앱 시작 시, 저장된 토글 상태를 불러와 UI에 반영
@@ -60,14 +77,20 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
     bool savedState = false;
     try {
       savedState = await toggleChannel.invokeMethod('getToggleState');
+      print("📱 토글 상태 로드됨: $savedState");
     } on PlatformException catch (e) {
       print("❌ 토글 상태 불러오기 실패: ${e.message}");
     }
-    setState(() {
-      isGestureEnabled = savedState;
-    });
-    // 불러온 상태에 따라 서비스 상태 동기화
-    await functionToggle(savedState);
+    
+    if (mounted) {
+      setState(() {
+        isGestureEnabled = savedState;
+      });
+      print("🔄 UI 토글 상태 업데이트됨: $savedState");
+      
+      // 불러온 상태에 따라 서비스 상태 동기화
+      await functionToggle(savedState);
+    }
   }
 
   // 카메라 권한만 확인하는 함수 (토글 상태를 변경하지 않음)
@@ -484,13 +507,15 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   });
 
                   try {
+                    int minutes = backgroundTimeoutOptions[value]!;
+                    
                     await backgroundChannel.invokeMethod(
                       'setBackgroundTimeout',
-                      {'minutes': backgroundTimeoutOptions[value]},
+                      {'minutes': minutes},
                     );
-                    print(
-                      '✅ 백그라운드 꺼짐 시간 설정: $value (${backgroundTimeoutOptions[value]}분)',
-                    );
+                    
+                    String timeText = value == '설정 안 함' ? '설정 안 함' : '${backgroundTimeoutOptions[value]}분';
+                    print('✅ 백그라운드 꺼짐 시간 설정: $value ($timeText)');
                   } on PlatformException catch (e) {
                     print("❌ backgroundChannel 호출 실패: ${e.message}");
                   }
