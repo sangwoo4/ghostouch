@@ -53,20 +53,34 @@ class HandDetectionPlatformView(
     private lateinit var methodChannel: MethodChannel
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // Data collection state
-    private var isCollecting: Boolean = false
-    private var collectedFrames: MutableList<List<Float>> = mutableListOf()
-    private var currentGestureName: String? = null
-    private var totalFrameAttempts: Int = 0
-    
     companion object {
         private const val MIN_CONFIDENCE_THRESHOLD = 0.5f // 신뢰도 임계값 (낮춤)
         private const val TARGET_FRAME_COUNT = 100 // 목표 프레임 수
+        
+        // Static 변수로 인스턴스 재생성에도 상태 유지
+        @JvmStatic
+        var isCollecting: Boolean = false
+        @JvmStatic
+        var collectedFrames: MutableList<List<Float>> = mutableListOf()
+        @JvmStatic
+        var currentGestureName: String? = null
+        @JvmStatic
+        var totalFrameAttempts: Int = 0
     }
 
     init {
         setupView()
         setupMethodChannel()
+        // MainActivity에 자신을 등록
+        MainActivity.handDetectionPlatformView = this
+        Log.d("HandDetectionPlatformView", "PlatformView registered with MainActivity")
+        
+        // 대기 중인 제스처가 있다면 즉시 처리
+        MainActivity.pendingGestureName?.let { gestureName ->
+            Log.d("HandDetectionPlatformView", "Processing pending gesture: $gestureName")
+            startCollecting(gestureName)
+            MainActivity.pendingGestureName = null // 처리 완료 후 제거
+        }
     }
 
     private fun setupView() {
@@ -104,6 +118,21 @@ class HandDetectionPlatformView(
                     stopCollecting()
                     result.success(null)
                 }
+                "saveGesture" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    Log.d("HandDetectionPlatformView", "saveGesture called with gesture: $gestureName")
+                    if (gestureName != null) {
+                        try {
+                            uploadCollectedData()
+                            result.success("Gesture upload started successfully")
+                        } catch (e: Exception) {
+                            Log.e("HandDetectionPlatformView", "Failed to upload gesture data", e)
+                            result.error("UPLOAD_FAILED", "Failed to upload gesture: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -111,6 +140,7 @@ class HandDetectionPlatformView(
 
     private fun startCollecting(gestureName: String) {
         Log.d("HandDetectionPlatformView", "Starting collection for gesture: $gestureName")
+        Log.d("HandDetectionPlatformView", "isCollecting changed from $isCollecting to true")
         isCollecting = true
         currentGestureName = gestureName
         collectedFrames.clear()
@@ -119,6 +149,13 @@ class HandDetectionPlatformView(
         mainHandler.post {
             methodChannel.invokeMethod("collectionStarted", null)
         }
+        Log.d("HandDetectionPlatformView", "Collection setup complete. isCollecting: $isCollecting")
+    }
+
+    // MainActivity에서 호출할 수 있는 public 메서드
+    fun startCollectingFromMainActivity(gestureName: String) {
+        Log.d("HandDetectionPlatformView", "startCollectingFromMainActivity called with: $gestureName")
+        startCollecting(gestureName)
     }
 
     private fun stopCollecting() {
@@ -135,6 +172,39 @@ class HandDetectionPlatformView(
         // Optionally, send a signal to Flutter that collection has stopped
         mainHandler.post {
             methodChannel.invokeMethod("collectionComplete", null)
+        }
+    }
+
+    // 저장하기 버튼 클릭 시 호출될 새로운 메서드
+    fun uploadCollectedData() {
+        if (collectedFrames.isNotEmpty()) {
+            val gestureName = currentGestureName ?: "unknown"
+            Log.d("HandDetectionPlatformView", "Now uploading ${collectedFrames.size} frames for gesture: $gestureName")
+            trainingCoordinator?.uploadAndTrain(gestureName, collectedFrames)
+        } else {
+            Log.w("HandDetectionPlatformView", "No frames to upload")
+        }
+        
+        // 업로드 후 데이터 정리
+        collectedFrames.clear()
+        currentGestureName = null
+    }
+
+    // TrainingCoordinator에서 task_id를 받았을 때 Flutter에 알림
+    fun notifyTaskIdReady(taskId: String) {
+        Log.d("HandDetectionPlatformView", "Task ID ready: $taskId, notifying Flutter")
+        mainHandler.post {
+            methodChannel.invokeMethod("taskIdReady", mapOf("taskId" to taskId))
+        }
+    }
+
+    // TrainingService에서 제스처 목록 새로고침 요청 시 Flutter에 알림
+    fun notifyGestureListRefresh() {
+        Log.d("HandDetectionPlatformView", "Notifying Flutter to refresh gesture list")
+        mainHandler.post {
+            // GestureSettingsPage의 메소드 채널을 통해 알림
+            val gestureSettingsChannel = MethodChannel(binaryMessenger, "com.pentagon.ghostouch/toggle")
+            gestureSettingsChannel.invokeMethod("refreshGestureList", null)
         }
     }
 
@@ -308,13 +378,17 @@ class HandDetectionPlatformView(
             // Collect frames if collecting is enabled
             if (isCollecting) {
                 totalFrameAttempts++
+                Log.d("HandDetectionPlatformView", "Collection attempt #$totalFrameAttempts")
                 
                 val worldLandmarks = handLandmarkerResult.worldLandmarks().firstOrNull()
                 val handedness = handLandmarkerResult.handedness().firstOrNull()?.firstOrNull()
                 
+                Log.d("HandDetectionPlatformView", "WorldLandmarks size: ${worldLandmarks?.size ?: 0}, Required: 21")
+                
                 if (worldLandmarks != null && worldLandmarks.size == 21) {
                     // MediaPipe handedness confidence 확인
                     val confidence = handedness?.score() ?: 0.0f
+                    Log.d("HandDetectionPlatformView", "Handedness confidence: ${String.format("%.2f", confidence)}, Threshold: $MIN_CONFIDENCE_THRESHOLD")
                     
                     if (confidence >= MIN_CONFIDENCE_THRESHOLD) {
                         val flatLandmarks = worldLandmarks.map { listOf(it.x(), it.y(), it.z()) }.flatten()
@@ -346,6 +420,8 @@ class HandDetectionPlatformView(
                 } else {
                     Log.d("HandDetectionPlatformView", "Frame rejected: Hand not detected or incomplete landmarks (${worldLandmarks?.size ?: 0}/21)")
                 }
+            } else {
+                Log.d("HandDetectionPlatformView", "Not collecting (isCollecting: $isCollecting)")
             }
 
             val gesture = gestureClassifier?.classifyGesture(handLandmarkerResult)

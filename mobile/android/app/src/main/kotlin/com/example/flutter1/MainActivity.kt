@@ -18,6 +18,11 @@ import java.io.File
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
     private lateinit var trainingCoordinator: TrainingCoordinator
+    
+    companion object {
+        var handDetectionPlatformView: HandDetectionPlatformView? = null
+        var pendingGestureName: String? = null // 대기 중인 제스처 이름
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -147,6 +152,210 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // Task ID 관련 MethodChannel 
+        val TASK_ID_CHANNEL = "com.pentagon.gesture/task-id"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TASK_ID_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getTaskId" -> {
+                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                    val taskId = prefs.getString("current_task_id", "default_task_id") ?: "default_task_id"
+                    result.success(taskId)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Hand Detection 관련 MethodChannel - MainActivity에서 직접 처리
+        val HAND_DETECTION_CHANNEL = "com.pentagon.ghostouch/hand_detection"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAND_DETECTION_CHANNEL).setMethodCallHandler { call, result ->
+            android.util.Log.d("MainActivity", "Hand detection method called: ${call.method}")
+            when (call.method) {
+                "startCollecting" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    android.util.Log.d("MainActivity", "startCollecting called with gesture: $gestureName")
+                    if (gestureName != null) {
+                        // PlatformView에 직접 호출 또는 대기열에 저장
+                        handDetectionPlatformView?.let { platformView ->
+                            android.util.Log.d("MainActivity", "Calling startCollecting on PlatformView")
+                            platformView.startCollectingFromMainActivity(gestureName)
+                            result.success(null)
+                        } ?: run {
+                            android.util.Log.d("MainActivity", "PlatformView not ready, saving gesture for later: $gestureName")
+                            pendingGestureName = gestureName
+                            result.success(null) // 일단 성공으로 응답
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                    }
+                }
+                "stopCollecting" -> {
+                    android.util.Log.d("MainActivity", "stopCollecting called")
+                    result.success(null)
+                }
+                "saveGesture" -> {
+                    val gestureName = call.argument<String>("gestureName")
+                    android.util.Log.d("MainActivity", "saveGesture called with gesture: $gestureName")
+                    if (gestureName != null) {
+                        try {
+                            // 1. 수집된 데이터 서버로 업로드 시작
+                            handDetectionPlatformView?.uploadCollectedData()
+                            
+                            // 2. 업데이트된 레이블 맵 파일 로드 (나중에 확인용)
+                            val updatedLabelMapFile = File(filesDir, "updated_label_map.json")
+                            if (updatedLabelMapFile.exists()) {
+                                android.util.Log.d("MainActivity", "Updated label map found, gesture '$gestureName' should already be included")
+                            } else {
+                                android.util.Log.w("MainActivity", "Updated label map not found, gesture might not be properly saved")
+                            }
+                            
+                            // 3. 모델 파일 확인
+                            val currentModelCode = TrainingCoordinator.currentModelCode
+                            val currentModelFileName = TrainingCoordinator.currentModelFileName
+                            android.util.Log.d("MainActivity", "Current model: $currentModelCode ($currentModelFileName)")
+                            
+                            // 4. 성공 응답
+                            result.success("Gesture '$gestureName' upload started successfully")
+                            android.util.Log.d("MainActivity", "Gesture '$gestureName' upload process started")
+                            
+                        } catch (e: Exception) {
+                            android.util.Log.e("MainActivity", "Failed to save gesture '$gestureName'", e)
+                            result.error("SAVE_FAILED", "Failed to save gesture: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // GestureRegisterPage용 MethodChannel들
+        val LIST_GESTURE_CHANNEL = "com.pentagon.ghostouch/list-gesture"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LIST_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "list-gesture" -> {
+                    try {
+                        val gestureMap = getAvailableGestures()
+                        val gestureList = gestureMap.keys.map { getKoreanGestureName(it) }
+                        result.success(gestureList)
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to get gesture list: ${e.message}", null)
+                    }
+                }
+                "check-duplicate" -> {
+                    try {
+                        val gestureName = call.argument<String>("gestureName")
+                        if (gestureName != null) {
+                            val trimmedName = gestureName.trim()
+                            
+                            // 1. 공백 체크
+                            if (trimmedName.isEmpty()) {
+                                result.success(mapOf(
+                                    "isDuplicate" to true,
+                                    "message" to "공백은 등록할 수 없습니다."
+                                ))
+                                return@setMethodCallHandler
+                            }
+                            
+                            // 2. 특수문자 및 길이 체크
+                            if (trimmedName.length > 20) {
+                                result.success(mapOf(
+                                    "isDuplicate" to true,
+                                    "message" to "제스처 이름은 20자 이하로 입력해주세요."
+                                ))
+                                return@setMethodCallHandler
+                            }
+                            
+                            // 3. 금지된 문자 체크 (선택사항)
+                            val forbiddenChars = listOf("/", "\\", ":", "*", "?", "\"", "<", ">", "|")
+                            if (forbiddenChars.any { trimmedName.contains(it) }) {
+                                result.success(mapOf(
+                                    "isDuplicate" to true,
+                                    "message" to "특수문자는 사용할 수 없습니다."
+                                ))
+                                return@setMethodCallHandler
+                            }
+                            
+                            // 4. 실제 중복 체크
+                            val gestureMap = getAvailableGestures()
+                            val koreanGestureList = gestureMap.keys.map { getKoreanGestureName(it) }
+                            
+                            // 영어 키도 확인 (서버로 전송될 때는 영어 키 사용)
+                            val englishGestureList = gestureMap.keys.toList()
+                            
+                            // "제스처" 부분을 제거한 순수 이름 리스트
+                            val pureGestureNames = koreanGestureList.map { it.replace(" 제스처", "").trim() }
+                            val inputWithoutGesture = trimmedName.replace(" 제스처", "").trim()
+                            
+                            // 디버깅 로그
+                            android.util.Log.d("MainActivity", "Available Korean gestures: $koreanGestureList")
+                            android.util.Log.d("MainActivity", "Available English gestures: $englishGestureList")
+                            android.util.Log.d("MainActivity", "Pure gesture names: $pureGestureNames")
+                            android.util.Log.d("MainActivity", "Checking duplicate for: '$trimmedName'")
+                            android.util.Log.d("MainActivity", "Input without '제스처': '$inputWithoutGesture'")
+                            
+                            // 중복 검사: 전체 이름, 영어 키, 순수 이름 모두 확인
+                            val isDuplicateKorean = koreanGestureList.contains(trimmedName)
+                            val isDuplicateEnglish = englishGestureList.contains(trimmedName)
+                            val isDuplicatePure = pureGestureNames.contains(inputWithoutGesture)
+                            val isDuplicate = isDuplicateKorean || isDuplicateEnglish || isDuplicatePure
+                            
+                            android.util.Log.d("MainActivity", "Is duplicate (Korean): $isDuplicateKorean")
+                            android.util.Log.d("MainActivity", "Is duplicate (English): $isDuplicateEnglish")
+                            android.util.Log.d("MainActivity", "Is duplicate (Pure): $isDuplicatePure")
+                            android.util.Log.d("MainActivity", "Is duplicate (Final): $isDuplicate")
+                            
+                            result.success(mapOf(
+                                "isDuplicate" to isDuplicate,
+                                "message" to if (isDuplicate) "이미 등록된 이름입니다." else "등록할 수 있는 이름입니다."
+                            ))
+                        } else {
+                            result.error("INVALID_ARGUMENT", "Gesture name is required", null)
+                        }
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to check duplicate: ${e.message}", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        val RESET_GESTURE_CHANNEL = "com.pentagon.ghostouch/reset-gesture"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESET_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "reset" -> {
+                    try {
+                        resetToOriginalModel()
+                        result.success("제스처가 초기화되었습니다.")
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Failed to reset gestures: ${e.message}", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // ControlAppPage용 MethodChannel
+        val CONTROL_APP_CHANNEL = "com.pentagon.ghostouch/control-app"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTROL_APP_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "openApp" -> {
+                    val packageName = call.argument<String>("package")
+                    if (packageName != null) {
+                        try {
+                            openExternalApp(packageName)
+                            result.success("App launched successfully")
+                        } catch (e: Exception) {
+                            result.error("LAUNCH_FAILED", "Failed to launch app: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Package name is required", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun openAppSettings() {
@@ -192,6 +401,94 @@ class MainActivity: FlutterActivity() {
         
         return gestureMap
     }
+
+    private fun getKoreanGestureName(englishKey: String): String {
+        // 기본 제스처들의 한글 매핑
+        val defaultMapping = mapOf(
+            "scissors" to "가위 제스처",
+            "rock" to "주먹 제스처", 
+            "paper" to "보 제스처",
+            "hs" to "한성대 제스처"
+        )
+        
+        // 기본 매핑에 있으면 해당 한글명 반환, 없으면 사용자 정의 제스처로 표시
+        return defaultMapping[englishKey] ?: "$englishKey 제스처"
+    }
+
+    private fun resetToOriginalModel() {
+        try {
+            // 1. 기본 모델 파일로 복원
+            val originalModelFile = File(filesDir, "basic_gesture_model.tflite")
+            if (!originalModelFile.exists()) {
+                // assets에서 기본 모델 복사
+                assets.open("basic_gesture_model.tflite").use { inputStream ->
+                    originalModelFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                android.util.Log.d("MainActivity", "Original model restored from assets")
+            }
+
+            // 2. 기본 레이블 맵으로 복원
+            val labelMapFile = File(filesDir, "updated_label_map.json")
+            if (labelMapFile.exists()) {
+                labelMapFile.delete()
+            }
+            android.util.Log.d("MainActivity", "Updated label map deleted, will use basic_label_map.json")
+
+            // 3. 모델 정보 초기화
+            TrainingCoordinator.currentModelCode = "base_v1"
+            TrainingCoordinator.currentModelFileName = "basic_gesture_model.tflite"
+            
+            val prefs = getSharedPreferences(TrainingCoordinator.PREFS_NAME, MODE_PRIVATE)
+            prefs.edit()
+                .putString(TrainingCoordinator.MODEL_CODE_PREFS_KEY, "base_v1")
+                .putString(TrainingCoordinator.MODEL_FILENAME_PREFS_KEY, "basic_gesture_model.tflite")
+                .apply()
+
+            // 4. 제스처 서비스에 모델 리로드 알림
+            val intent = Intent(this, GestureDetectionService::class.java)
+            intent.action = "ACTION_RELOAD_MODEL"
+            startService(intent)
+
+            android.util.Log.d("MainActivity", "Gesture model reset to original successfully")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to reset gesture model", e)
+            throw e
+        }
+    }
+
+    private fun openExternalApp(packageIdentifier: String) {
+        try {
+            android.util.Log.d("MainActivity", "Opening service: $packageIdentifier")
+            
+            // 각 서비스의 웹사이트 URL로 브라우저에서 열기
+            val url = when (packageIdentifier) {
+                "youtube" -> "https://www.youtube.com"
+                "netflix" -> "https://www.netflix.com"
+                "coupang" -> "https://www.coupangplay.com"
+                "tving" -> "https://www.tving.com"
+                "disney" -> "https://www.disneyplus.com"
+                "tmap" -> "https://www.tmap.co.kr"
+                "kakaomap" -> "https://map.kakao.com"
+                else -> "https://www.google.com/search?q=$packageIdentifier"
+            }
+
+            android.util.Log.d("MainActivity", "Opening URL: $url")
+
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            
+            android.util.Log.d("MainActivity", "Successfully opened: $packageIdentifier in browser")
+            
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to open service: $packageIdentifier", e)
+            throw e
+        }
+    }
+
 
     override fun onResume() {
         super.onResume()

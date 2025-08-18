@@ -10,12 +10,16 @@ class TestPage : UIView {
     // MARK: - UI Components
     private let root = UIView()
     private let top = UIView()
-    private let bottomCamera = BottomCamera()
+    private var bottomCamera: BottomCamera? // 옵셔널로 변경
     private let landmarkCamera = CameraForLandmark()
     private let gestureLabel = UILabel()
     private let gestureActionLabel = UILabel()
+    private var disabledLabel: UILabel! // 카메라 비활성화 라벨
     
     private var webView: WKWebView!
+    
+    // MARK: - Properties
+    private let isCameraEnabled: Bool
     
     // MARK: - Buttons
     private var openYoutubeBtn: UIButton = {
@@ -66,7 +70,8 @@ class TestPage : UIView {
     private let requiredHoldDuration: TimeInterval = 3.0
 
     
-    override init(frame: CGRect) {
+    init(frame: CGRect, isCameraEnabled: Bool) {
+        self.isCameraEnabled = isCameraEnabled
         super.init(frame: frame)
         setup()
     }
@@ -75,7 +80,11 @@ class TestPage : UIView {
     }
     
     private func setup() {
-        bottomCamera.delegate = self
+        if isCameraEnabled {
+            bottomCamera = BottomCamera()
+            bottomCamera?.delegate = self
+        }
+        
         webView = WKWebView()
         
         gestureLabel.text = " "
@@ -100,12 +109,21 @@ class TestPage : UIView {
                 item.addItem(backButton).position(.absolute).top(20).left(20).width(70).height(40)
             }
             
-            // bottom 40% container - 올바른 중첩 구조로 수정
+            // bottom 40% container
             flex.addItem().height(40%).alignItems(.center).define { bottomFlex in
-                // 카메라 뷰들을 담을 가로 컨테이너
-                bottomFlex.addItem().direction(.row).justifyContent(.center).alignItems(.center).define { rowFlex in
-                    rowFlex.addItem(bottomCamera).width(100).height(150).marginRight(10)
-                    rowFlex.addItem(landmarkCamera).width(100).height(150).marginLeft(10)
+                if let cameraView = bottomCamera {
+                    // 카메라 뷰들을 담을 가로 컨테이너
+                    bottomFlex.addItem().direction(.row).justifyContent(.center).alignItems(.center).define { rowFlex in
+                        rowFlex.addItem(cameraView).width(100).height(150).marginRight(10)
+                        rowFlex.addItem(landmarkCamera).width(100).height(150).marginLeft(10)
+                    }
+                } else {
+                    disabledLabel = UILabel()
+                    disabledLabel.text = "카메라 비활성화"
+                    disabledLabel.textColor = .black
+                    disabledLabel.textAlignment = .center
+                    disabledLabel.font = .systemFont(ofSize: 18)
+                    bottomFlex.addItem(disabledLabel).height(150) // 높이를 카메라와 유사하게 설정
                 }
                 // 라벨들을 카메라 컨테이너 아래에 추가
                 bottomFlex.addItem(gestureLabel).width(90%).marginTop(10)
@@ -214,10 +232,11 @@ class TestPage : UIView {
     // MARK: - View Lifecycle
     override func didMoveToWindow() {
         super.didMoveToWindow()
+        guard isCameraEnabled else { return }
         if self.window != nil {
-            bottomCamera.startSession()
+            bottomCamera?.startSession()
         } else {
-            bottomCamera.stopSession()
+            bottomCamera?.stopSession()
             goBackToInitialView()
         }
     }

@@ -2,5 +2,5 @@
     "paper": 0,
     "rock": 1,
     "scissors": 2,
-    "thumb" : 3
+    
 }

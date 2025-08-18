@@ -2,6 +2,15 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+    <key>ServerIP</key><string>192.168.25.54</string>
+    <key>ServerPort</key><string>8000</string>
+    
 	<key>NSCameraUsageDescription</key>
 	<string>카메라 권한이 필요합니다.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

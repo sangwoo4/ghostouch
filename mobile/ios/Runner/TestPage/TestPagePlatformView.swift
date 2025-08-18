@@ -18,7 +18,8 @@ final class TestPagePlatformView: NSObject, FlutterPlatformView {
         arguments args: Any?,
         messenger: FlutterBinaryMessenger
     ) {
-        self.nativeView = TestPage(frame: frame)
+        let isCameraEnabled = OpenSetting.isGestureServiceEnabled
+        self.nativeView = TestPage(frame: frame, isCameraEnabled: isCameraEnabled)
         super.init()
     }
     

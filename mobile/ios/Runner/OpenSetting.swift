@@ -8,12 +8,15 @@
 import Foundation
 import UIKit
 import Flutter
-import AVFoundation // 카메라 권한 확인을 위해
+import AVFoundation
 
 // MARK:  플러터와 연동되는 클래스
 class OpenSetting : NSObject {
+    // 앱 전체에서 제스처 서비스 활성화 상태를 공유하기 위한 정적 변수
+    static var isGestureServiceEnabled = false
+
     static func register(with registar: FlutterPluginRegistrar) {
-        //플러터와 통신할 채널이름 설정
+        // 플러터와 통신할 채널 이름 설정
         let channel = FlutterMethodChannel(
             name: "com.pentagon.ghostouch/toggle",
             binaryMessenger: registar.messenger())
@@ -26,19 +29,19 @@ class OpenSetting : NSObject {
 
 //MARK: 메서드 호출 확장
 extension OpenSetting: FlutterPlugin {
-    // 플러터에서 토글 누르면 이 함수 실행
+    // 플러터로부터의 메서드 호출을 처리
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         
         switch call.method {
             
         case "checkCameraPermission":
-            // 진짜 카메라 권한 상태를 확인해서 반환
+            // 실제 카메라 권한 상태를 확인하여 반환
             print("Swift: checkCameraPermission 호출됨 -> 실제 권한 확인")
             let status = AVCaptureDevice.authorizationStatus(for: .video)
             result(status == .authorized)
 
         case "openSettings":
-            // 'openSettings'가 호출될 때만 설정 화면을 open
+            // 'openSettings'가 호출될 때만 설정 화면 open.
             print("Swift: openSettings 호출됨 -> 앱 설정 열기")
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 if UIApplication.shared.canOpenURL(url) {
@@ -52,15 +55,22 @@ extension OpenSetting: FlutterPlugin {
             }
 
         case "startGestureService":
-            // 더 이상 설정 화면을 열지 않음
-            print("Swift: startGestureService 호출됨")
-            // 실제 서비스 시작 코드가 필요하면 추가
+            print("Swift: startGestureService 호출됨 -> 상태: ON")
+            OpenSetting.isGestureServiceEnabled = true
             result(true)
 
         case "stopGestureService":
-            print("Swift: stopGestureService 호출됨")
+            print("Swift: stopGestureService 호출됨 -> 상태: OFF")
+            OpenSetting.isGestureServiceEnabled = false
             result(true)
             
+        case "getAvailableGestures":
+            if let labelMap = LabelMapManager.shared.readLabelMap() {
+                let gesturesMap = labelMap.mapValues { _ in true }
+                result(gesturesMap)
+            } else {
+                result(FlutterError(code: "UNAVAILABLE", message: "Failed to get available gestures.", details: nil))
+            }
         default:
             result(FlutterMethodNotImplemented)
         }

@@ -114,6 +114,17 @@ class TrainingCoordinator(private val context: Context) {
                     val taskId = jsonResponse.optString("task_id", null)
                     if (taskId != null) {
                         Log.d(TAG, "Training task started successfully. Task ID: $taskId. Delegating to TrainingService.")
+                        
+                        // SharedPreferences에 실제 task_id 저장
+                        val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+                        prefs.edit().putString("current_task_id", taskId).apply()
+                        Log.d(TAG, "Saved task_id to SharedPreferences: $taskId")
+                        
+                        // Flutter에 task_id 전달하여 폴링 시작하도록 알림
+                        MainActivity.handDetectionPlatformView?.let { platformView ->
+                            platformView.notifyTaskIdReady(taskId)
+                        }
+                        
                         val serviceIntent = Intent(context, TrainingService::class.java).apply {
                             putExtra("task_id", taskId)
                             putExtra("gesture_name", gestureName)

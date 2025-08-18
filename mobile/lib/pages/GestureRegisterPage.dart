@@ -34,6 +34,15 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     _loadGestureList();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 페이지가 다시 보일 때마다 제스처 목록 새로고침
+    if (mounted) {
+      _loadGestureList();
+    }
+  }
+
   Future<void> _loadGestureList() async {
     try {
       final List<dynamic> gestures = await listChannel.invokeMethod(
@@ -100,17 +109,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () async {
-                            // try {
-                            //   // ✅ 제스처 이름 네이티브로 전달
-                            //   await registerNameChannel.invokeMethod(
-                            //     'register-name',
-                            //     {"name": _controller.text},
-                            //   );
-                            //   print("✅ 제스처 이름 전달 완료: ${_controller.text}");
-                            // } on PlatformException catch (e) {
-                            //   print("❌ register-name 호출 실패: ${e.message}");
-                            // }
-
                             Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
                             Navigator.push(
                               context,
@@ -156,27 +154,48 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     );
   }
 
-  void _checkDuplicate() {
-    String input = _controller.text.trim();
+  Future<void> _checkDuplicate() async {
+    String input = _controller.text;
 
-    if (input.isEmpty) {
+    try {
+      // 네이티브에서 모든 검증 수행 (공백, 특수문자, 길이, 중복 등)
+      final Map<dynamic, dynamic> result = await listChannel.invokeMethod(
+        'check-duplicate',
+        {'gestureName': input},
+      );
+
+      final bool isDuplicate = result['isDuplicate'] ?? false;
+      final String message = result['message'] ?? '';
+
       setState(() {
-        _isNameValid = false;
-        _isDuplicateChecked = false;
-        _errorMessage = '공백은 등록할 수 없습니다.';
+        _isNameValid = !isDuplicate;
+        _isDuplicateChecked = true;
+        _errorMessage = isDuplicate
+            ? message
+            : '$message [제스처 촬영]을 눌러 촬영을 시작해주세요';
       });
-      return;
+    } catch (e) {
+      debugPrint("⚠ 중복 검사 실패: $e");
+      // 폴백: 로컬에서 기본 검사
+      String trimmedInput = input.trim();
+      if (trimmedInput.isEmpty) {
+        setState(() {
+          _isNameValid = false;
+          _isDuplicateChecked = true;
+          _errorMessage = '공백은 등록할 수 없습니다.';
+        });
+        return;
+      }
+
+      bool isDuplicate = registeredGestures.contains(trimmedInput);
+      setState(() {
+        _isNameValid = !isDuplicate;
+        _isDuplicateChecked = true;
+        _errorMessage = isDuplicate
+            ? '이미 등록된 이름입니다.'
+            : '등록할 수 있는 이름입니다. [제스처 촬영]을 눌러 촬영을 시작해주세요';
+      });
     }
-
-    bool isDuplicate = registeredGestures.contains(input);
-
-    setState(() {
-      _isNameValid = !isDuplicate;
-      _isDuplicateChecked = true;
-      _errorMessage = isDuplicate
-          ? '이미 등록된 이름입니다.'
-          : '등록할 수 있는 이름입니다. [제스처 촬영]을 눌러 촬영을 시작해주세요';
-    });
   }
 
   Future<void> _startCamera() async {
@@ -192,15 +211,21 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     try {
       await resetChannel.invokeMethod('reset');
       print('🔄 제스처 초기화 완료');
+      // 제스처 목록 새로고침
+      await _loadGestureList();
       // 필요 시 사용자에게 알림 표시
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      }
     } on PlatformException catch (e) {
       print('❌ 제스처 초기화 실패: ${e.message}');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('초기화 실패: ${e.message}')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('초기화 실패: ${e.message}')));
+      }
     }
   }
 
