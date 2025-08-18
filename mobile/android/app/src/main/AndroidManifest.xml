@@ -57,7 +57,7 @@
         <!-- 서버 설정 -->
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_IP"
-            android:value="192.168.219.185" />
+            android:value="10.180.234.189" />
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_PORT"
             android:value="8000" />

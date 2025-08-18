@@ -109,17 +109,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () async {
-                            // try {
-                            //   // ✅ 제스처 이름 네이티브로 전달
-                            //   await registerNameChannel.invokeMethod(
-                            //     'register-name',
-                            //     {"name": _controller.text},
-                            //   );
-                            //   print("✅ 제스처 이름 전달 완료: ${_controller.text}");
-                            // } on PlatformException catch (e) {
-                            //   print("❌ register-name 호출 실패: ${e.message}");
-                            // }
-
                             Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
                             Navigator.push(
                               context,
@@ -174,7 +163,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
         'check-duplicate',
         {'gestureName': input},
       );
-      
       final bool isDuplicate = result['isDuplicate'] ?? false;
       final String message = result['message'] ?? '';
 
@@ -197,7 +185,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
         });
         return;
       }
-      
       bool isDuplicate = registeredGestures.contains(trimmedInput);
       setState(() {
         _isNameValid = !isDuplicate;

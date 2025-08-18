@@ -18,6 +18,8 @@ import UIKit
 import AVFoundation
 
 // MARK: CameraFeedServiceDelegate Declaration
+
+@MainActor
 protocol CameraFeedServiceDelegate: AnyObject {
 
   /**
@@ -333,14 +335,17 @@ class CameraFeedService: NSObject {
       } else if reason == .videoDeviceNotAvailableWithMultipleForegroundApps {
         canResumeManually = false
       }
-
-      self.delegate?.sessionWasInterrupted(canResumeManually: canResumeManually)
-
+      
+      DispatchQueue.main.async {
+          self.delegate?.sessionWasInterrupted(canResumeManually: canResumeManually)
+      }
     }
   }
 
   @objc func sessionInterruptionEnded(notification: Notification) {
-    self.delegate?.sessionInterruptionEnded()
+    DispatchQueue.main.async {
+        self.delegate?.sessionInterruptionEnded()
+    }
   }
 
   @objc func sessionRuntimeErrorOccured(notification: Notification) {
@@ -351,7 +356,9 @@ class CameraFeedService: NSObject {
     print("Capture session runtime error: \(error)")
 
     guard error.code == .mediaServicesWereReset else {
-      self.delegate?.didEncounterSessionRuntimeError()
+      DispatchQueue.main.async {
+          self.delegate?.didEncounterSessionRuntimeError()
+      }
       return
     }
 
@@ -379,7 +386,9 @@ extension CameraFeedService: AVCaptureVideoDataOutputSampleBufferDelegate {
       if (imageBufferSize == nil) {
         imageBufferSize = CGSize(width: CVPixelBufferGetHeight(imageBuffer), height: CVPixelBufferGetWidth(imageBuffer))
       }
-    delegate?.didOutput(sampleBuffer: sampleBuffer, orientation: UIImage.Orientation.from(deviceOrientation: UIDevice.current.orientation))
+      DispatchQueue.main.async {
+          self.delegate?.didOutput(sampleBuffer: sampleBuffer, orientation: UIImage.Orientation.from(deviceOrientation: UIDevice.current.orientation))
+      }
   }
 }
 

@@ -11,6 +11,7 @@ protocol BottomCameraDelegate: AnyObject {
     func bottomCameraDidNotDetectHand(_ camera: BottomCamera)
 }
 
+@MainActor
 class BottomCamera: UIView, CameraFeedServiceDelegate, HandLandmarkerServiceLiveStreamDelegate {
 
     weak var delegate: BottomCameraDelegate?
@@ -21,11 +22,10 @@ class BottomCamera: UIView, CameraFeedServiceDelegate, HandLandmarkerServiceLive
     private var overlayView: OverlayView!
 
     private var cameraFeedService: CameraFeedService?
-    // 서비스 프로퍼티는 그대로 유지
     private var handLandmarkerService: HandLandmarkerService?
-    private var gestureRecognizer: GestureRecognizer?
     
-    private let backgroundQueue = DispatchQueue(label: "com.google.mediapipe.camera.backgroundQueue")
+    // GestureRecognitionService 싱글톤 인스턴스를 사용합니다.
+    private let service = GestureRecognitionService.shared
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -68,31 +68,23 @@ class BottomCamera: UIView, CameraFeedServiceDelegate, HandLandmarkerServiceLive
         }
     }
 
-    // setupServices 메서드를 수정하여 공유 인스턴스를 사용하도록 변경
     private func setupServices() {
         cameraFeedService = CameraFeedService(previewView: previewView)
         cameraFeedService?.delegate = self
 
-        // 더 이상 직접 생성하지 않음
-        // handLandmarkerService = HandLandmarkerService.liveStreamHandLandmarkerService(...)
-        // gestureRecognizer = GestureRecognizer(...)
-        
-        // 공유 인스턴스를 가져옴
-        self.handLandmarkerService = GestureRecognitionService.shared.handLandmarkerService
-        self.gestureRecognizer = GestureRecognitionService.shared.gestureRecognizer
-        
-        // liveStreamDelegate를 self로 설정하여, 랜드마크 감지 결과를 이 클래스(BottomCamera)에서 받을 수 있도록 함
+        self.handLandmarkerService = service.handLandmarkerService
         self.handLandmarkerService?.liveStreamDelegate = self
     }
 
     // MARK: - CameraFeedServiceDelegate
     func didOutput(sampleBuffer: CMSampleBuffer, orientation: UIImage.Orientation) {
-        let currentTimeMs = Date().timeIntervalSince1970 * 1000
-        backgroundQueue.async { [weak self] in
-            self?.handLandmarkerService?.detectAsync(
+        autoreleasepool {
+            let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            let milliseconds = CMTimeGetSeconds(timestamp) * 1000
+            handLandmarkerService?.detectAsync(
                 sampleBuffer: sampleBuffer,
                 orientation: orientation,
-                timeStamps: Int(currentTimeMs)
+                timeStamps: Int(milliseconds)
             )
         }
     }
@@ -109,29 +101,28 @@ class BottomCamera: UIView, CameraFeedServiceDelegate, HandLandmarkerServiceLive
     ) {
         DispatchQueue.main.async {
             if let error = error {
-                print("Hand landmarker service error: \(error.localizedDescription)")
+                print("🚨 [오류] 랜드마크 감지 실패: \(error.localizedDescription)")
                 self.delegate?.bottomCamera(self, didRecognizeGesture: "Error")
                 return
             }
 
-            guard let result = result, let handLandmarkerResult = result.handLandmarkerResults.first, let landmarks = handLandmarkerResult?.landmarks, !landmarks.isEmpty else {
+            // Safely get the first valid HandLandmarkerResult
+            guard let handLandmarkerResult = result?.handLandmarkerResults.first, let unwrappedHandLandmarkerResult = handLandmarkerResult else {
+                // 중앙 서비스의 리셋 메서드 호출
+                self.service.resetCollectionStateIfNeeded()
+                
                 self.delegate?.bottomCamera(self, didRecognizeGesture: " ")
                 self.delegate?.bottomCameraDidNotDetectHand(self)
                 return
             }
-
-            // 자신의 overlayView에 그리는 코드는 주석 처리된 상태 유지
-            let imageSize = self.cameraFeedService?.videoResolution ?? .zero
-
-            if let gesture = self.gestureRecognizer?.classifyGesture(handLandmarkerResult: handLandmarkerResult!) { //기존 handLandmarkerResult: handLandmarkerResult!
-                self.delegate?.bottomCamera(self, didRecognizeGesture: gesture)
-            } else {
-                self.delegate?.bottomCamera(self, didRecognizeGesture: " ")
-            }
             
-            if let result = handLandmarkerResult {
-                self.delegate?.bottomCamera(self, didFinishDetection: result, imageSize: imageSize)
-            }
+            // 중앙 서비스의 인식/수집 메서드 호출
+            let recognizedGesture = self.service.recognizeAndCollect(result: unwrappedHandLandmarkerResult)
+            
+            // 델리게이트로 UI 업데이트
+            let imageSize = self.cameraFeedService?.videoResolution ?? .zero
+            self.delegate?.bottomCamera(self, didRecognizeGesture: recognizedGesture ?? " ")
+            self.delegate?.bottomCamera(self, didFinishDetection: unwrappedHandLandmarkerResult, imageSize: imageSize)
         }
     }
 }
