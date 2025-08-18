@@ -7,6 +7,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
+from gesture.src.config.analysis_config import AnalysisConfig
 from gesture.src.config.file_config import FileConfig
 from gesture.src.config.train_config import TrainConfig
 from gesture.src.data.data_combiner import DataCombiner
@@ -16,6 +17,7 @@ from gesture.src.label.label_processor import LabelProcessor
 from gesture.src.model.model_architect import BasicCNNBuilder, UpdateModelBuilder
 from gesture.src.train.model_train import ModelTrainer
 from gesture.src.utils.duplicate_checker import DuplicateChecker
+from gesture.src.utils.evaluation import ModelEvaluator
 
 # 로깅 설정: 스크립트 실행 전반에 걸쳐 정보를 제공
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -66,6 +68,7 @@ def main():
     args = parser.parse_args()
     file_config = FileConfig()
     train_config = TrainConfig()
+    analysis_config = AnalysisConfig()
 
     if args.mode == 'train':
         # --- 기본 모델 학습 모드 ---
@@ -95,6 +98,17 @@ def main():
         model_trainer.train()
         logging.info("----- [train] 모드 완료: 기본 모델 생성이 완료되었습니다.")
 
+        # 모델 학습 후 평가 실행
+        logging.info("----- [train] 모드 평가 시작")
+        evaluator = ModelEvaluator(
+            model_path=file_config.KERAS_MODEL_PATHS['basic'],
+            data_path=file_config.BASIC_DATA_PATH,
+            label_map_path=file_config.LABEL_MAP_PATHS['basic'],
+            results_dir=analysis_config.BASIC_MODEL_EVALUATION_DIR
+        )
+        evaluator.run()
+        logging.info("----- [train] 모드 평가 완료")
+
     elif args.mode == 'update':
         # --- 모델 업데이트(증분 학습) 모드 ---
         logging.info("----- [update] 모드 시작: 새로운 데이터로 모델을 업데이트합니다.")
@@ -123,16 +137,16 @@ def main():
         basic_label_map: Dict[str, int] = {label: i for i, label in enumerate(unique_labels_from_npy_basic)}
         logging.info(f"----- 기존 라벨 맵 로드 완료 (NPY 데이터 기반): {file_config.LABEL_MAP_PATHS['basic']}")
 
-        logging.debug(f"[DEBUG] Update mode - basic_label_map (from NPY): {basic_label_map}")
-        logging.debug(f"[DEBUG] Update mode - incremental_label_map (from NPY): {incremental_label_map}")
+        logging.debug(f"----- [DEBUG] Update mode - basic_label_map (from NPY): {basic_label_map}")
+        logging.debug(f"----- [DEBUG] Update mode - incremental_label_map (from NPY): {incremental_label_map}")
 
         # 2. 통합 라벨 맵 생성 (메모리상의 딕셔너리 사용)
         combined_label_map: Dict[str, int] = LabelProcessor.combine_label_maps(
-            basic_label_map, # 인메모리 basic_label_map 전달
-            incremental_label_map, # 인메모리 incremental_label_map 전달
+            basic_label_map,
+            incremental_label_map,
             file_config.LABEL_MAP_PATHS['combine']
         )
-        logging.debug(f"[DEBUG] Update mode - combined_label_map: {combined_label_map}")
+        logging.debug(f"----- [DEBUG] Update mode - combined_label_map: {combined_label_map}")
 
         data_combiner = DataCombiner(file_config)
         checker = DuplicateChecker()
@@ -146,14 +160,14 @@ def main():
         for inc_label, inc_vectors in inc_grouped.items():
             for basic_label, basic_vectors in basic_grouped.items():
                 report: Dict[str, Any] = checker.check(inc_vectors, basic_vectors)
-                logging.debug(f"[DEBUG] Report from check: {report}")
+                logging.debug(f"----- [DEBUG] Report from check: {report}")
                 logging.info(f"----- [검사] Inc '{inc_label}' vs Basic '{basic_label}': {report['duplicate_count']}/{report['total_count']} ({report['duplicate_rate']:.2f}%) 중복")
                 if report['duplicate_rate'] > args.dup_threshold:
                     logging.error(f"----- 중복 허용 임계값 초과! ({report['duplicate_rate']:.2f}% > {args.dup_threshold}%)")
                     is_duplicate_found = True
 
         if is_duplicate_found:
-            logging.error("중복 검사 실패. 데이터셋 간의 중복이 허용치를 초과하여 프로세스를 중단합니다.")
+            logging.error("----- 중복 검사 실패. 데이터셋 간의 중복이 허용치를 초과하여 프로세스를 중단합니다.")
             sys.exit(1)
         else:
             logging.info("----- 중복 검사 통과. 데이터 통합 및 모델 학습을 계속합니다.")
@@ -164,11 +178,22 @@ def main():
         model_trainer = ModelTrainer(model_builder, file_config, train_config,
                                      model_save_path=file_config.KERAS_MODEL_PATHS['combine'],
                                      tflite_save_path=file_config.TFLITE_MODEL_PATHS['combine'],
-                                     label_map=combined_label_map, # 파일 경로 대신 딕셔너리 전달
+                                     label_map=combined_label_map,
                                      data_path=file_config.COMBINE_DATA_PATH,
                                      is_incremental_learning=True)
         model_trainer.train()
         logging.info("----- [update] 모드 완료: 통합 모델 생성이 완료되었습니다.")
+
+        # 모델 업데이트 후 평가 실행
+        logging.info("----- [update] 모드 평가 시작")
+        evaluator = ModelEvaluator(
+            model_path=file_config.KERAS_MODEL_PATHS['combine'],
+            data_path=file_config.COMBINE_DATA_PATH,
+            label_map_path=file_config.LABEL_MAP_PATHS['combine'],
+            results_dir=analysis_config.COMBINE_MODEL_EVALUATION_DIR
+        )
+        evaluator.run()
+        logging.info("----- [update] 모드 평가 완료")
 
 if __name__ == '__main__':
     main()
