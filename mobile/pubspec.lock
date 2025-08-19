@@ -33,6 +33,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.2"
+  clock_loader:
+    dependency: "direct main"
+    description:
+      name: clock_loader
+      sha256: "9bbbae4bd55c5a989b0952a4f1ed4ff814251b48209ceb964d6b876eeca757c8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.3"
   collection:
     dependency: transitive
     description:

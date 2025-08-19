@@ -11,17 +11,21 @@ class TestPage : UIView {
     // MARK: - UI Components
     private let root = UIView()
     private let top = UIView()
+
     private var bottomCamera: BottomCamera?
     private let landmarkCamera = CameraForLandmark()
     private let gestureLabel = UILabel()
     private let gestureActionLabel = UILabel()
     private var disabledLabel: UILabel!
+
     
     private var webView: WKWebView!
     
     // MARK: - Properties
     private let isCameraEnabled: Bool
     private let deviceControlService = DeviceControlService()
+    private var actionableGestures: [String] = []
+
     
     // MARK: - Buttons
     private var openYoutubeBtn: UIButton = {
@@ -114,6 +118,9 @@ class TestPage : UIView {
             // bottom 40% container
             flex.addItem().height(40%).alignItems(.center).define { bottomFlex in
                 if let cameraView = bottomCamera {
+
+                    // 카메라 뷰들을 담을 가로 컨테이너
+
                     bottomFlex.addItem().direction(.row).justifyContent(.center).alignItems(.center).define { rowFlex in
                         rowFlex.addItem(cameraView).width(100).height(150).marginRight(10)
                         rowFlex.addItem(landmarkCamera).width(100).height(150).marginLeft(10)
@@ -124,13 +131,16 @@ class TestPage : UIView {
                     disabledLabel.textColor = .black
                     disabledLabel.textAlignment = .center
                     disabledLabel.font = .systemFont(ofSize: 18)
+
                     bottomFlex.addItem(disabledLabel).height(150)
+
                 }
                 bottomFlex.addItem(gestureLabel).width(90%).marginTop(10)
                 bottomFlex.addItem(gestureActionLabel).width(90%).marginTop(5)
             }
         }
         
+        updateActionableGestures()
         goBackToInitialView()
         
         openYoutubeBtn.addTarget(self, action: #selector(openYouTube), for: .touchUpInside)
@@ -175,15 +185,30 @@ class TestPage : UIView {
         resetGestureAction()
     }
     
-    // MARK: - Gesture Timer Logic
+    // MARK: - Gesture Logic
+    private func updateActionableGestures() {
+        // 등록된 제스처 가져오기
+        guard let allGestures = LabelMapManager.shared.readLabelMap()?.keys else {
+            self.actionableGestures = []
+            return
+        }
+
+        //
+        self.actionableGestures = allGestures.filter { gestureName in
+            guard let action = GestureActionPersistence.shared.getAction(forGesture: gestureName) else {
+                return false
+            }
+            return action != "none"
+        }
+        print("Updated actionable gestures: \(self.actionableGestures)")
+    }
+
     private func handleGestureChange(to newGesture: String) {
-        let actionableGestures = ["paper", "rock", "scissors", "fist", "open_palm", "thumbs_up", "thumbs_down"]
-        
         if newGesture != currentHeldGesture {
             resetGestureAction()
             currentHeldGesture = newGesture
             
-            if actionableGestures.contains(newGesture) {
+            if self.actionableGestures.contains(newGesture) {
                 gestureStartTime = Date()
                 gestureHoldTimer = Timer.scheduledTimer(timeInterval: 0.05, target: self, selector: #selector(updateHoldTimer), userInfo: nil, repeats: true)
             }
@@ -208,15 +233,18 @@ class TestPage : UIView {
     private func performGestureAction(for gesture: String) {
         print("\(gesture) action 발생")
         
-        switch gesture {
-        case "scissors":
-            openInsta()
-            
-        case "rock", "paper", "fist", "thumbs_down":
-            deviceControlService.handleGesture(gesture)
-            
-        default:
-            break
+        // UserDefaults에서 제스처에 매핑된 액션을 가져옵니다.
+        if let actionName = GestureActionPersistence.shared.getAction(forGesture: gesture), actionName != "none" {
+            // DeviceControlService의 handleAction을 호출합니다.
+            deviceControlService.handleAction(actionName)
+        } else {
+            // 웹사이트 이동과 같은 TestPage의 자체 액션을 처리합니다.
+            switch gesture {
+            case "scissors":
+                openInsta()
+            default:
+                break
+            }
         }
     }
 
@@ -237,6 +265,7 @@ class TestPage : UIView {
         super.didMoveToWindow()
         guard isCameraEnabled else { return }
         if self.window != nil {
+            updateActionableGestures()
             bottomCamera?.startSession()
         } else {
             bottomCamera?.stopSession()

@@ -125,11 +125,15 @@ class TrainingService : Service() {
                         "SUCCESS" -> {
                             val result = jsonResponse.optJSONObject("result")
                             val modelUrl = result?.optString("tflite_url")
-                            if (!modelUrl.isNullOrEmpty()) {
-                                downloadAndSaveModel(modelUrl, gestureName)
+                            val newModelCode = result?.optString("model_code")
+                            
+                            if (!modelUrl.isNullOrEmpty() && !newModelCode.isNullOrEmpty()) {
+                                val newModelFileName = modelUrl.substring(modelUrl.lastIndexOf('/') + 1)
+                                updateModelInfo(newModelCode, newModelFileName)
+                                downloadAndSaveModel(modelUrl, newModelFileName, gestureName)
                             } else {
-                                Log.e(TAG, "SUCCESS but no model URL!")
-                                updateNotification("모델 학습 실패: 모델 URL 없음")
+                                Log.e(TAG, "SUCCESS but modelUrl or newModelCode is missing!")
+                                updateNotification("모델 학습 실패: 서버 응답 오류")
                                 stopSelfAfterDelay()
                             }
                         }
@@ -162,7 +166,7 @@ class TrainingService : Service() {
         }
     }
 
-    private fun downloadAndSaveModel(url: String, gestureName: String) {
+    private fun downloadAndSaveModel(url: String, modelFileName: String, gestureName: String) {
         val request = Request.Builder().url(url).build()
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -178,7 +182,7 @@ class TrainingService : Service() {
                     stopSelfAfterDelay()
                     return
                 }
-                val modelFile = File(filesDir, TrainingCoordinator.CUSTOM_MODEL_NAME)
+                val modelFile = File(filesDir, modelFileName)
                 try {
                     response.body?.byteStream()?.use { inputStream ->
                         FileOutputStream(modelFile).use { outputStream ->
@@ -188,6 +192,7 @@ class TrainingService : Service() {
                     Log.d(TAG, "Model successfully downloaded and saved to ${modelFile.absolutePath}")
                     updateLabelMap(gestureName)
                     notifyServiceOfNewModel()
+                    notifyGestureListRefresh()
                     updateNotification("모델 학습 완료")
                     stopSelfAfterDelay()
                 } catch (e: IOException) {
@@ -199,27 +204,53 @@ class TrainingService : Service() {
         })
     }
 
-    private fun updateLabelMap(gestureName: String) {
-        try {
-            val labelMapFile = File(filesDir, TrainingCoordinator.LABEL_MAP_FILE_NAME)
-            val jsonObject = if (labelMapFile.exists()) {
-                JSONObject(labelMapFile.readText())
-            } else {
-                val jsonString = assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
-                JSONObject(jsonString)
-            }
+    private fun updateLabelMap(newGestureName: String) {
+    try {
+        val labelMapFile = File(filesDir, TrainingCoordinator.LABEL_MAP_FILE_NAME)
 
-            if (jsonObject.has(gestureName)) return
-
-            val maxIndex = jsonObject.keys().asSequence().map { jsonObject.getInt(it) }.maxOrNull() ?: -1
-            jsonObject.put(gestureName, maxIndex + 1)
-
-            labelMapFile.writeText(jsonObject.toString(4))
-            Log.d(TAG, "Label map updated successfully.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update label map", e)
+        // 1) 현재 라벨맵 불러오기 (gesture -> index)
+        val currentMap: MutableMap<String, Int> = if (labelMapFile.exists()) {
+            val jsonObj = JSONObject(labelMapFile.readText())
+            buildMap {
+                val it = jsonObj.keys()
+                while (it.hasNext()) {
+                    val k = it.next()
+                    put(k, jsonObj.getInt(k))
+                }
+            }.toMutableMap()
+        } else {
+            val jsonString = assets.open("basic_label_map.json").bufferedReader().use { it.readText() }
+            val jsonObj = JSONObject(jsonString)
+            buildMap {
+                val it = jsonObj.keys()
+                while (it.hasNext()) {
+                    val k = it.next()
+                    put(k, jsonObj.getInt(k))
+                }
+            }.toMutableMap()
         }
+
+        // 2) 이미 존재하면 아무 것도 하지 않음 (서버 인덱스 보존)
+        if (currentMap.containsKey(newGestureName)) {
+            Log.d(TAG, "Label map unchanged. '$newGestureName' already exists with index=${currentMap[newGestureName]}")
+        } else {
+            // 3) 새 라벨은 현재 최대 인덱스 + 1 로만 추가 (정렬 금지, 재번호 금지)
+            val nextIndex = (currentMap.values.maxOrNull() ?: -1) + 1
+            currentMap[newGestureName] = nextIndex
+            Log.d(TAG, "Added new label '$newGestureName' with index=$nextIndex")
+        }
+
+        // 4) 그대로 저장 (키 순서 강제/정렬 X)
+        val out = JSONObject()
+        // JSONObject는 내부적으로 순서를 보장하지 않지만, 인덱스는 값으로 보존되므로 문제 없음
+        currentMap.forEach { (k, v) -> out.put(k, v) }
+        labelMapFile.writeText(out.toString(4))
+
+        Log.d(TAG, "Label map persisted without reindexing: $out")
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to update label map", e)
     }
+}
 
     private fun notifyServiceOfNewModel() {
         try {
@@ -230,6 +261,40 @@ class TrainingService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to notify service", e)
         }
+    }
+
+    private fun notifyGestureListRefresh() {
+        try {
+            // MainActivity의 HandDetectionPlatformView를 통해 Flutter에 알림
+            MainActivity.handDetectionPlatformView?.let { platformView ->
+                platformView.notifyGestureListRefresh()
+                Log.d(TAG, "Notified Flutter to refresh gesture list")
+            } ?: run {
+                Log.w(TAG, "HandDetectionPlatformView not available for gesture list refresh notification")
+            }
+            
+            // GestureRegisterPage에도 알림 (브로드캐스트 방식)
+            val intent = Intent("com.pentagon.ghostouch.GESTURE_LIST_UPDATED")
+            sendBroadcast(intent)
+            Log.d(TAG, "Broadcast sent for gesture list update")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to notify gesture list refresh", e)
+        }
+    }
+
+    private fun updateModelInfo(newModelCode: String, newModelFileName: String) {
+        // Update the static variables for immediate use
+        TrainingCoordinator.currentModelCode = newModelCode
+        TrainingCoordinator.currentModelFileName = newModelFileName
+
+        // Also save to SharedPreferences to persist across process death
+        val prefs = getSharedPreferences(TrainingCoordinator.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putString(TrainingCoordinator.MODEL_CODE_PREFS_KEY, newModelCode)
+            .putString(TrainingCoordinator.MODEL_FILENAME_PREFS_KEY, newModelFileName)
+            .commit()
+        Log.d(TAG, "Updated model info in-memory and on-disk. Code: $newModelCode, FileName: $newModelFileName")
     }
 
     private fun createNotification(text: String): Notification {
@@ -260,8 +325,6 @@ class TrainingService : Service() {
     }
 
     private fun stopSelfAfterDelay() {
-        // Stop foreground and remove notification, then stop the service
-        // A small delay can prevent abrupt removal
         pollingExecutor.schedule({ 
             stopForeground(true)
             stopSelf()

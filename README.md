@@ -36,11 +36,11 @@
 | ------------------------------- | ---------------------------------------- | --------- | --- | ------- |
 | 메인화면 Ghostouch 사용 토글    | `com.pentagon.ghostouch/toggle`          | ✅        | ✅  | ✅      |
 | 제스처 촬영 버튼(카메라 실행)   | `com.pentagon.ghostouch/camera`          | ✅        | ✅  | ✅      |
-| 등록된 제스처 목록 보기         | `com.pentagon.ghostouch/list-gesture`    | ✅        |     |         |
-| 제스처 초기화                   | `com.pentagon.ghostouch/reset-gesture`   | ✅        |     |         |
-| 제스처 동작 설정                | `com.pentagon.ghostouch/funtion-gesture` |           |     |         |
+| 등록된 제스처 목록 보기         | `com.pentagon.ghostouch/list-gesture`    | ✅        | ✅  | ✅      |
+| 제스처 초기화                   | `com.pentagon.ghostouch/reset-gesture`   | ✅        | ✅  | ✅      |
+| 제스처 동작 설정                | `com.pentagon.ghostouch/funtion-gesture` | ✅        | ✅  | ✅      |
 | 포그라운드 자동 꺼짐 기능 설정  | `com.pentagon.ghostouch/foreground`      |           |     |         |
 | 안드로이드 백그라운드 시간 설정 | `com.pentagon.ghostouch/background`      | ✅        |     |         |
-| 외부 앱 사이트 들어가기         | `com.pentagon.ghostouch/control-app`     | ✅        |     |         |
-| 사용자 제스처 수집 상태바       | `com.pentagon.gesture/task-id`           | ✅        |     |         |
-| 제스처 수집 손 랜드마크 추출    | `com.pentagon.ghostouch/hand_detection`  | ✅        |     | ✅      |
+| 외부 앱 사이트 들어가기         | `com.pentagon.ghostouch/control-app`     | ✅        | ✅  | ✅      |
+| 사용자 제스처 수집 상태바       | `com.pentagon.gesture/task-id`           | ✅        | ✅  | ✅      |
+| 제스처 수집 손 랜드마크 추출    | `com.pentagon.ghostouch/hand_detection`  | ✅        | ✅  | ✅      |

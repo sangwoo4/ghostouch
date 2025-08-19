@@ -22,9 +22,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   static const listChannel = MethodChannel(
     'com.pentagon.ghostouch/list-gesture',
   );
-  // static const registerNameChannel = MethodChannel(
-  //   'com.pentagon.ghostouch/register-name',
-  // );
 
   List<String> registeredGestures = ['가위 제스처', '주먹 제스처', '보 제스처', '한성대 제스처'];
 
@@ -32,6 +29,15 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   void initState() {
     super.initState();
     _loadGestureList();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 페이지가 다시 보일 때마다 제스처 목록 새로고침
+    if (mounted) {
+      _loadGestureList();
+    }
   }
 
   Future<void> _loadGestureList() async {
@@ -100,17 +106,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () async {
-                            // try {
-                            //   // ✅ 제스처 이름 네이티브로 전달
-                            //   await registerNameChannel.invokeMethod(
-                            //     'register-name',
-                            //     {"name": _controller.text},
-                            //   );
-                            //   print("✅ 제스처 이름 전달 완료: ${_controller.text}");
-                            // } on PlatformException catch (e) {
-                            //   print("❌ register-name 호출 실패: ${e.message}");
-                            // }
-
                             Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
                             Navigator.push(
                               context,
@@ -156,27 +151,149 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     );
   }
 
-  void _checkDuplicate() {
-    String input = _controller.text.trim();
+  // 경고 다이얼로그 표시
+  // 경고 다이얼로그 표시
+  Future<bool?> _showResetDialog(BuildContext parentContext) {
+    return showDialog<bool>(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const Icon(Icons.warning, size: 40, color: Colors.redAccent),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    "⚠️ 정말로 초기화하시겠습니까?\n\n"
+                    "❌ 기본을 제외한 모든 제스처들이 삭제됩니다.\n\n"
+                    "🚫 초기화 시 복구할 수 없습니다! 🔥",
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: Color(0xFF333333),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop(false);
+                          },
+                          child: const Text('취소'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            // 다이얼로그 닫기
+                            Navigator.of(dialogContext).pop(true);
 
-    if (input.isEmpty) {
+                            try {
+                              await resetChannel.invokeMethod('reset');
+                              if (parentContext.mounted) {
+                                // 스낵바 표시
+                                ScaffoldMessenger.of(
+                                  parentContext,
+                                ).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('✅ 제스처가 초기화되었습니다.'),
+                                  ),
+                                );
+                                // 메인화면(/)으로 이동
+                                Navigator.of(
+                                  parentContext,
+                                ).pushNamedAndRemoveUntil(
+                                  '/',
+                                  (route) => false,
+                                );
+                              }
+                            } catch (e) {
+                              if (parentContext.mounted) {
+                                ScaffoldMessenger.of(
+                                  parentContext,
+                                ).showSnackBar(
+                                  SnackBar(content: Text('초기화 실패: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('초기화'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _checkDuplicate() async {
+    String input = _controller.text;
+
+    try {
+      // 네이티브에서 모든 검증 수행 (공백, 특수문자, 길이, 중복 등)
+      final Map<dynamic, dynamic> result = await listChannel.invokeMethod(
+        'check-duplicate',
+        {'gestureName': input},
+      );
+
+      final bool isDuplicate = result['isDuplicate'] ?? false;
+      final String message = result['message'] ?? '';
+
       setState(() {
-        _isNameValid = false;
-        _isDuplicateChecked = false;
-        _errorMessage = '공백은 등록할 수 없습니다.';
+        _isNameValid = !isDuplicate;
+        _isDuplicateChecked = true;
+        _errorMessage = isDuplicate
+            ? message
+            : '$message [제스처 촬영]을 눌러 촬영을 시작해주세요';
       });
-      return;
+    } catch (e) {
+      debugPrint("⚠ 중복 검사 실패: $e");
+      // 폴백: 로컬에서 기본 검사
+      String trimmedInput = input.trim();
+      if (trimmedInput.isEmpty) {
+        setState(() {
+          _isNameValid = false;
+          _isDuplicateChecked = true;
+          _errorMessage = '공백은 등록할 수 없습니다.';
+        });
+        return;
+      }
+
+      bool isDuplicate = registeredGestures.contains(trimmedInput);
+      setState(() {
+        _isNameValid = !isDuplicate;
+        _isDuplicateChecked = true;
+        _errorMessage = isDuplicate
+            ? '이미 등록된 이름입니다.'
+            : '등록할 수 있는 이름입니다. [제스처 촬영]을 눌러 촬영을 시작해주세요';
+      });
     }
-
-    bool isDuplicate = registeredGestures.contains(input);
-
-    setState(() {
-      _isNameValid = !isDuplicate;
-      _isDuplicateChecked = true;
-      _errorMessage = isDuplicate
-          ? '이미 등록된 이름입니다.'
-          : '등록할 수 있는 이름입니다. [제스처 촬영]을 눌러 촬영을 시작해주세요';
-    });
   }
 
   Future<void> _startCamera() async {
@@ -192,15 +309,21 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     try {
       await resetChannel.invokeMethod('reset');
       print('🔄 제스처 초기화 완료');
+      // 제스처 목록 새로고침
+      await _loadGestureList();
       // 필요 시 사용자에게 알림 표시
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      }
     } on PlatformException catch (e) {
       print('❌ 제스처 초기화 실패: ${e.message}');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('초기화 실패: ${e.message}')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('초기화 실패: ${e.message}')));
+      }
     }
   }
 
@@ -396,7 +519,12 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _resetGesture,
+                        onPressed: () async {
+                          final shouldReset = await _showResetDialog(context);
+                          if (shouldReset == true) {
+                            _resetGesture();
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red[400],
                           foregroundColor: Colors.white,

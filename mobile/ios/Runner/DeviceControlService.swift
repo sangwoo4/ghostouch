@@ -11,19 +11,19 @@ class DeviceControlService {
         setupVolumeView()
     }
 
-    public func handleGesture(_ gestureName: String) {
-        switch gestureName {
-        case "paper":
-            print("제스처 인식: paper. 볼륨을 높입니다.")
+    public func handleAction(_ actionName: String) {
+        switch actionName {
+        case "action_volume_up":
+            print("액션 실행: 볼륨 증가")
             increaseVolume()
-        case "rock":
-            print("제스처 인식: rock. 밝기를 높입니다.")
-            increaseBrightness()
-        case "thumbs_down":
-            print("제스처 인식: thumbs_down. 볼륨을 낮춥니다.")
+        case "action_volume_down":
+            print("액션 실행: 볼륨 감소")
             decreaseVolume()
-        case "fist":
-            print("제스처 인식: fist. 밝기를 낮춥니다.")
+        case "action_brightness_up":
+            print("액션 실행: 화면 밝기 증가")
+            increaseBrightness()
+        case "action_brightness_down":
+            print("액션 실행: 화면 밝기 감소")
             decreaseBrightness()
         default:
             break
