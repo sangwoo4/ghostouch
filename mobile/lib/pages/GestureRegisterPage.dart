@@ -22,9 +22,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   static const listChannel = MethodChannel(
     'com.pentagon.ghostouch/list-gesture',
   );
-  // static const registerNameChannel = MethodChannel(
-  //   'com.pentagon.ghostouch/register-name',
-  // );
 
   List<String> registeredGestures = ['가위 제스처', '주먹 제스처', '보 제스처', '한성대 제스처'];
 
@@ -140,6 +137,107 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                             '촬영하기',
                             style: TextStyle(fontSize: 12),
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 경고 다이얼로그 표시
+  // 경고 다이얼로그 표시
+  Future<bool?> _showResetDialog(BuildContext parentContext) {
+    return showDialog<bool>(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: SizedBox(
+            width: 300,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const Icon(Icons.warning, size: 40, color: Colors.redAccent),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    "⚠️ 정말로 초기화하시겠습니까?\n\n"
+                    "❌ 기본을 제외한 모든 제스처들이 삭제됩니다.\n\n"
+                    "🚫 초기화 시 복구할 수 없습니다! 🔥",
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: Color(0xFF333333),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.of(dialogContext).pop(false);
+                          },
+                          child: const Text('취소'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            // 다이얼로그 닫기
+                            Navigator.of(dialogContext).pop(true);
+
+                            try {
+                              await resetChannel.invokeMethod('reset');
+                              if (parentContext.mounted) {
+                                // 스낵바 표시
+                                ScaffoldMessenger.of(
+                                  parentContext,
+                                ).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('✅ 제스처가 초기화되었습니다.'),
+                                  ),
+                                );
+                                // 메인화면(/)으로 이동
+                                Navigator.of(
+                                  parentContext,
+                                ).pushNamedAndRemoveUntil(
+                                  '/',
+                                  (route) => false,
+                                );
+                              }
+                            } catch (e) {
+                              if (parentContext.mounted) {
+                                ScaffoldMessenger.of(
+                                  parentContext,
+                                ).showSnackBar(
+                                  SnackBar(content: Text('초기화 실패: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('초기화'),
                         ),
                       ),
                     ],
@@ -419,7 +517,12 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _resetGesture,
+                        onPressed: () async {
+                          final shouldReset = await _showResetDialog(context);
+                          if (shouldReset == true) {
+                            _resetGesture();
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red[400],
                           foregroundColor: Colors.white,
