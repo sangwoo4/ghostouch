@@ -424,7 +424,12 @@ class HandDetectionPlatformView(
                 Log.d("HandDetectionPlatformView", "Not collecting (isCollecting: $isCollecting)")
             }
 
-            val gesture = gestureClassifier?.classifyGesture(handLandmarkerResult)
+            // 학습 중이 아닐 때만 제스처 분류 수행
+            val gesture = if (isCollecting) {
+                "none" // 학습 중일 때는 제스처명 표시 안함
+            } else {
+                gestureClassifier?.classifyGesture(handLandmarkerResult) ?: "none"
+            }
 
             overlayView?.post {
                 overlayView?.setResults(
@@ -432,7 +437,7 @@ class HandDetectionPlatformView(
                     resultBundle.inputImageHeight,
                     resultBundle.inputImageWidth,
                     RunningMode.LIVE_STREAM,
-                    gesture ?: "none",
+                    gesture,
                     isFrontCamera = true, // Assuming front camera is always used here
                     rotationDegrees = resultBundle.rotationDegrees,
                     handednesses = handLandmarkerResult.handednesses()

@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <application
         android:label="flutter1"
@@ -40,7 +42,7 @@
             android:name=".GestureDetectionService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="camera" />
+            android:foregroundServiceType="camera|dataSync" />
 
         <service
             android:name=".TrainingService"
@@ -57,7 +59,7 @@
         <!-- 서버 설정 -->
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_IP"
-            android:value="192.168.219.50" />
+            android:value="192.168.1.68" />
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_PORT"
             android:value="8000" />

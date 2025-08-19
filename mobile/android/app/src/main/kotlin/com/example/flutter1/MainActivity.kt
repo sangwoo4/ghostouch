@@ -1,7 +1,10 @@
 package com.pentagon.ghostouch
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -18,6 +21,25 @@ import java.io.File
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
     private lateinit var trainingCoordinator: TrainingCoordinator
+    private lateinit var toggleChannel: MethodChannel
+    
+    // 토글 상태 변경 브로드캐스트 리시버
+    private val toggleStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.pentagon.ghostouch.TOGGLE_STATE_CHANGED") {
+                val newState = intent.getBooleanExtra("state", false)
+                android.util.Log.d("MainActivity", "Received toggle state broadcast: $newState")
+                
+                // Flutter에 즉시 알림
+                try {
+                    toggleChannel.invokeMethod("onToggleStateChanged", newState)
+                    android.util.Log.d("MainActivity", "Notified Flutter about toggle state change: $newState")
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Failed to notify Flutter", e)
+                }
+            }
+        }
+    }
     
     companion object {
         var handDetectionPlatformView: HandDetectionPlatformView? = null
@@ -35,7 +57,9 @@ class MainActivity: FlutterActivity() {
             .registry
             .registerViewFactory("hand_detection_view", HandDetectionViewFactory(this, flutterEngine.dartExecutor.binaryMessenger))
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler {
+        // 토글 채널 초기화
+        toggleChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        toggleChannel.setMethodCallHandler {
             call, result ->
             when (call.method) {
                 "startGestureService" -> {
@@ -53,11 +77,17 @@ class MainActivity: FlutterActivity() {
                     result.success(null)
                 }
                 "checkCameraPermission" -> {
-                    val hasPermission = ContextCompat.checkSelfPermission(
+                    val hasCameraPermission = ContextCompat.checkSelfPermission(
                         this,
                         Manifest.permission.CAMERA
                     ) == PackageManager.PERMISSION_GRANTED
-                    result.success(hasPermission)
+                    
+                    val hasWriteSettingsPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        Settings.System.canWrite(this)
+                    } else true
+                    
+                    // 두 권한이 모두 있어야 true 반환
+                    result.success(hasCameraPermission && hasWriteSettingsPermission)
                 }
                 "functionToggle" -> {
                     println("✅ functionToggle 호출됨 (안드로이드)")
@@ -356,6 +386,50 @@ class MainActivity: FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // 백그라운드 자동 꺼짐 기능용 MethodChannel
+        val BACKGROUND_CHANNEL = "com.pentagon.ghostouch/background"
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKGROUND_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setBackgroundTimeout" -> {
+                    val minutes = call.argument<Int>("minutes")
+                    if (minutes != null) {
+                        try {
+                            // -1은 10초 테스트 모드를 의미
+                            val actualMinutes = minutes
+                            
+                            // SharedPreferences에 설정 저장
+                            val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                            prefs.edit().putInt("background_timeout_minutes", actualMinutes).apply()
+                            
+                            // GestureDetectionService에 설정 전달
+                            val intent = Intent(this, GestureDetectionService::class.java)
+                            intent.action = "ACTION_SET_BACKGROUND_TIMEOUT"
+                            intent.putExtra("timeout_minutes", actualMinutes)
+                            startService(intent)
+                            
+                            android.util.Log.d("MainActivity", "Background timeout set to $actualMinutes minutes")
+                            result.success("Background timeout set successfully")
+                        } catch (e: Exception) {
+                            android.util.Log.e("MainActivity", "Failed to set background timeout", e)
+                            result.error("SET_TIMEOUT_FAILED", "Failed to set timeout: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Minutes argument is required", null)
+                    }
+                }
+                "getBackgroundTimeout" -> {
+                    try {
+                        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
+                        val minutes = prefs.getInt("background_timeout_minutes", 0) // 기본값 0 (설정 안 함)
+                        result.success(minutes)
+                    } catch (e: Exception) {
+                        result.error("GET_TIMEOUT_FAILED", "Failed to get timeout: ${e.message}", null)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun openAppSettings() {
@@ -490,6 +564,51 @@ class MainActivity: FlutterActivity() {
     }
 
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // 브로드캐스트 리시버 등록 (API 33+ 대응)
+        val filter = IntentFilter("com.pentagon.ghostouch.TOGGLE_STATE_CHANGED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(toggleStateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(toggleStateReceiver, filter)
+        }
+        android.util.Log.d("MainActivity", "Broadcast receiver registered")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(toggleStateReceiver)
+            android.util.Log.d("MainActivity", "Broadcast receiver unregistered")
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to unregister receiver", e)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        GestureDetectionService.isAppInForeground = true
+        android.util.Log.d("MainActivity", "onStart: isAppInForeground set to TRUE")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        GestureDetectionService.isAppInForeground = false
+        android.util.Log.d("MainActivity", "onStop: isAppInForeground set to FALSE - background timer should start")
+        
+        // 서비스에 직접 백그라운드 상태 알림
+        try {
+            val intent = Intent(this, GestureDetectionService::class.java)
+            intent.action = "ACTION_APP_WENT_BACKGROUND"
+            startService(intent)
+            android.util.Log.d("MainActivity", "Sent background notification to service")
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to notify service about background state", e)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         GestureDetectionService.isAppInForeground = true
@@ -498,7 +617,6 @@ class MainActivity: FlutterActivity() {
 
     override fun onPause() {
         super.onPause()
-        GestureDetectionService.isAppInForeground = false
-        android.util.Log.d("MainActivity", "onPause: isAppInForeground set to FALSE")
+        android.util.Log.d("MainActivity", "onPause called (but using onStop for background detection)")
     }
 }

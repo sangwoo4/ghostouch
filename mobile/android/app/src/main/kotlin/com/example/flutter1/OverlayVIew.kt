@@ -129,49 +129,53 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
             }
         }
 
-        // Draw gesture result at bottom center with background
-        val displayText = gestureResult ?: "No Gesture"
-        val textWidth = gesturePaint.measureText(displayText)
-        val centerX = width / 2f - textWidth / 2f
-        val textY = height - 200f
+        // Draw gesture result at bottom center with background (학습 모드가 아닐 때만)
+        gestureResult?.let { result ->
+            if (result != "none") {
+                val displayText = result
+                val textWidth = gesturePaint.measureText(displayText)
+                val centerX = width / 2f - textWidth / 2f
+                val textY = height - 200f
 
-        // 반투명 배경 그리기
-        val backgroundPaint = Paint().apply {
-            color = Color.WHITE
-            alpha = 220
-            style = Paint.Style.FILL
+                // 반투명 배경 그리기
+                val backgroundPaint = Paint().apply {
+                    color = Color.WHITE
+                    alpha = 220
+                    style = Paint.Style.FILL
+                }
+
+                canvas.drawRect(
+                    centerX - 30f,
+                    textY - 90f,
+                    centerX + textWidth + 30f,
+                    textY + 30f,
+                    backgroundPaint
+                )
+
+                // 검은색 테두리 그리기
+                val borderPaint = Paint().apply {
+                    color = Color.BLACK
+                    style = Paint.Style.STROKE
+                    strokeWidth = 3f
+                }
+
+                canvas.drawRect(
+                    centerX - 30f,
+                    textY - 90f,
+                    centerX + textWidth + 30f,
+                    textY + 30f,
+                    borderPaint
+                )
+
+                // 검은색 텍스트 그리기
+                canvas.drawText(
+                    displayText,
+                    centerX,
+                    textY,
+                    gesturePaint
+                )
+            }
         }
-
-        canvas.drawRect(
-            centerX - 30f,
-            textY - 90f,
-            centerX + textWidth + 30f,
-            textY + 30f,
-            backgroundPaint
-        )
-
-        // 검은색 테두리 그리기
-        val borderPaint = Paint().apply {
-            color = Color.BLACK
-            style = Paint.Style.STROKE
-            strokeWidth = 3f
-        }
-
-        canvas.drawRect(
-            centerX - 30f,
-            textY - 90f,
-            centerX + textWidth + 30f,
-            textY + 30f,
-            borderPaint
-        )
-
-        // 검은색 텍스트 그리기
-        canvas.drawText(
-            displayText,
-            centerX,
-            textY,
-            gesturePaint
-        )
     }
 
     fun setResults(
