@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:clock_loader/clock_loader.dart';
 
 class GestureShootingPage extends StatefulWidget {
   final String gestureName;
@@ -17,6 +18,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   double _progressPercent = 0.0;
   bool _isStarted = false;
   bool _isCollecting = false;
+  bool _isDownloading = false;
   bool _isCompleted = false;
   String? taskId;
   String? serverUrl;
@@ -94,6 +96,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
       case 'collectionComplete':
         setState(() {
           _isCollecting = false;
+          _isDownloading = true; // 로딩 애니메이션 ON
           _progressPercent = 1.0; // 상태바 100%
           instructionText = '서버에 업로드 중...';
         });
@@ -108,6 +111,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
         setState(() {
           instructionText = progress?['current_step'] ?? '모델 학습 중...';
           _isCollecting = false; // 카메라 OFF
+          _isDownloading = true; // 로딩 애니메이션 ON
         });
         break;
 
@@ -117,6 +121,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           instructionText = '모델 학습 완료!';
           _isCollecting = false; // 카메라 OFF
           _isCompleted = true; // 저장하기 버튼 활성화
+          _isDownloading = false; // 로딩 애니메이션 OFF
         });
         break;
 
@@ -201,7 +206,9 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           debugPrint("Fetched step: $currentStep, status: $status");
 
           setState(() {
-            instructionText = currentStep.isNotEmpty ? currentStep : ' ';
+            instructionText = currentStep.isNotEmpty
+                ? currentStep
+                : '모델 다운로드중..';
           });
 
           if (status.toString().toLowerCase() == "success") {
@@ -301,25 +308,64 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
             const SizedBox(height: 16),
 
             // 카메라 뷰 (원형)
+            // Expanded(
+            //   child: Center(
+            //     child: ClipOval(
+            //       child: Container(
+            //         width: 350,
+            //         height: 350,
+            //         color: Colors.black12,
+            //         child: _isCollecting
+            //             ? (Platform.isAndroid
+            //                   ? const AndroidView(
+            //                       viewType: 'hand_detection_view',
+            //                       layoutDirection: TextDirection.ltr,
+            //                     )
+            //                   : const UiKitView(
+            //                       viewType: 'camera_view',
+            //                       creationParamsCodec: StandardMessageCodec(),
+            //                     ))
+            //             : const SizedBox(), // _isCollecting = false면 카메라 OFF
+            //       ),
+            //     ),
+            //   ),
+            // ),
             Expanded(
               child: Center(
-                child: ClipOval(
-                  child: Container(
-                    width: 350,
-                    height: 350,
-                    color: Colors.black12,
-                    child: _isCollecting
-                        ? (Platform.isAndroid
-                              ? const AndroidView(
-                                  viewType: 'hand_detection_view',
-                                  layoutDirection: TextDirection.ltr,
-                                )
-                              : const UiKitView(
-                                  viewType: 'camera_view',
-                                  creationParamsCodec: StandardMessageCodec(),
-                                ))
-                        : const SizedBox(), // _isCollecting = false면 카메라 OFF
-                  ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // 카메라 영역
+                    ClipOval(
+                      child: Container(
+                        width: 350,
+                        height: 350,
+                        color: Colors.black12,
+                        child: _isCollecting
+                            ? (Platform.isAndroid
+                                  ? const AndroidView(
+                                      viewType: 'hand_detection_view',
+                                      layoutDirection: TextDirection.ltr,
+                                    )
+                                  : const UiKitView(
+                                      viewType: 'camera_view',
+                                      creationParamsCodec:
+                                          StandardMessageCodec(),
+                                    ))
+                            : const SizedBox(),
+                      ),
+                    ),
+
+                    // 모델 학습 중일 때 원형 로딩 오버레이
+                    if (_isDownloading)
+                      ClockLoader(
+                        clockLoaderModel: ClockLoaderModel(
+                          shapeOfParticles: ShapeOfParticlesEnum.circle,
+                          mainHandleColor: Colors.white,
+                          particlesColor: Colors.white,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
