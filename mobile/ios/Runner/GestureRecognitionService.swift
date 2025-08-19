@@ -1,6 +1,12 @@
 import Foundation
 import MediaPipeTasksVision
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let didRecognizeGesture = Notification.Name("didRecognizeGesture")
+}
+
+
 // 제스처 인식 관련 서비스를 앱 전체에서 공유하는 싱글톤 클래스
 @MainActor
 class GestureRecognitionService {

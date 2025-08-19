@@ -13,6 +13,7 @@
 		1B03817C2E51C73D00270D76 /* GestureListRegisterChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B03817A2E51C73D00270D76 /* GestureListRegisterChannel.swift */; };
 		1B03817D2E51C73D00270D76 /* CameraChannelHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0381792E51C73D00270D76 /* CameraChannelHandler.swift */; };
 		1B03817E2E51C73D00270D76 /* TaskIdChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B03817B2E51C73D00270D76 /* TaskIdChannel.swift */; };
+		1B0381942E54356F00270D76 /* DeviceControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0381932E54356F00270D76 /* DeviceControlService.swift */; };
 		1B14AE402E449D07001055A0 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE3F2E449D07001055A0 /* CameraPreviewView.swift */; };
 		1B14AE422E449D1F001055A0 /* CameraPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE412E449D1F001055A0 /* CameraPlatformView.swift */; };
 		1B14AE452E44AF52001055A0 /* basic_label_map.json in Resources */ = {isa = PBXBuildFile; fileRef = 1B14AE442E44AF52001055A0 /* basic_label_map.json */; };
@@ -75,6 +76,7 @@
 		1B0381792E51C73D00270D76 /* CameraChannelHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraChannelHandler.swift; sourceTree = "<group>"; };
 		1B03817A2E51C73D00270D76 /* GestureListRegisterChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureListRegisterChannel.swift; sourceTree = "<group>"; };
 		1B03817B2E51C73D00270D76 /* TaskIdChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskIdChannel.swift; sourceTree = "<group>"; };
+		1B0381932E54356F00270D76 /* DeviceControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceControlService.swift; sourceTree = "<group>"; };
 		1B14AE3F2E449D07001055A0 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		1B14AE412E449D1F001055A0 /* CameraPlatformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPlatformView.swift; sourceTree = "<group>"; };
 		1B14AE432E44AF52001055A0 /* basic_gesture_model.tflite */ = {isa = PBXFileReference; lastKnownFileType = file; path = basic_gesture_model.tflite; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				1B0381932E54356F00270D76 /* DeviceControlService.swift */,
 				1BEDAD492E4DB1340096B33F /* Server */,
 				1BEDAD3B2E4C8E970096B33F /* TestPage */,
 				1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */,
@@ -535,6 +538,7 @@
 				1B03817D2E51C73D00270D76 /* CameraChannelHandler.swift in Sources */,
 				1B03817E2E51C73D00270D76 /* TaskIdChannel.swift in Sources */,
 				1B0381782E51B75100270D76 /* GestureListChannelHandler.swift in Sources */,
+				1B0381942E54356F00270D76 /* DeviceControlService.swift in Sources */,
 				1B14AE542E44AF80001055A0 /* InferenceConfigurationManager.swift in Sources */,
 				1BEDAD3C2E4C8E970096B33F /* TestPage.swift in Sources */,
 				1BEDAD3D2E4C8E970096B33F /* BottomCamera.swift in Sources */,
