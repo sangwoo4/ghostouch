@@ -65,8 +65,7 @@ class ModelTrainer:
         X_test = X_test.reshape(-1, *input_shape)
 
         model = self.model_builder.build(input_shape, num_classes)
-        learning_rate = self.train_config.INCREMENTAL_LEARNING_RATE if self.is_incremental_learning else self.train_config.LEARNING_RATE
-        
+        learning_rate = self.train_config.LEARNING_RATE
         model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])

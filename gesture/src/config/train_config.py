@@ -7,7 +7,6 @@ class TrainConfig:
     EPOCHS = 1000
     BATCH_SIZE = 16
     LEARNING_RATE = 0.001
-    INCREMENTAL_LEARNING_RATE = 0.001
     
     # 2. 데이터 분할 설정
     TEST_SPLIT_SIZE = 0.2
