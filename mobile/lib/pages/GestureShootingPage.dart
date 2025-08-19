@@ -20,7 +20,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
   bool _isCompleted = false;
   String? taskId;
   String? serverUrl;
-  String instructionText = '📸 손을 카메라에 잘 보여주세요 🙌';
+  String instructionText = ' ';
 
   static const toggleChannel = MethodChannel('com.pentagon.ghostouch/toggle');
   static const taskIdChannel = MethodChannel('com.pentagon.gesture/task-id');
@@ -201,9 +201,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           debugPrint("Fetched step: $currentStep, status: $status");
 
           setState(() {
-            instructionText = currentStep.isNotEmpty
-                ? currentStep
-                : '📸 손을 카메라에 잘 보여주세요 🙌';
+            instructionText = currentStep.isNotEmpty ? currentStep : ' ';
           });
 
           if (status.toString().toLowerCase() == "success") {
