@@ -9,7 +9,6 @@
   - [3. Model Training & Evaluation (`main.py`)](#3-model-training--evaluation-mainpy)
   - [4. Real-time Gesture Recognition (`live_test.py`)](#4-real-time-gesture-recognition-live-testpy)
 - [💻 System Requirements & Dependencies](#-system-requirements--dependencies)
-- [⚙️ How It Works](#-how-it-works)
 - [🛠️ Key Technologies Used](#-key-technologies-used)
 <!-- TOC End -->
 
@@ -138,34 +137,7 @@ This project has been tested in a Python 3.10+ environment. Please refer to the 
 *   **MediaPipe**: 0.x
 *   **OpenCV**: 4.x
 
----
 
-## ⚙️ How It Works
-
-1.  **Data Processing (`data_preprocessor.py`)**:
-    -   Reads images from image folders and extracts hand landmarks in parallel using **multiprocessing**.
-    -   Normalizes the extracted landmarks for translation, scale, and rotation to ensure consistent features.
-    -   Dynamically generates a label map based on the folder structure and saves the processed data to a CSV file.
-
-2.  **Data Management (`data_combiner.py` & `data_converter.py`)**:
-    -   Converts the CSV file into NumPy arrays (`.npy`) suitable for model training.
-    -   For incremental learning, it merges existing and new data, and combines label maps without conflicts.
-
-3.  **Model Training (`model_train.py`)**:
-    -   Loads the `.npy` datasets to train a CNN model.
-    -   For **incremental learning**, it loads an existing model and fine-tunes it on the new data, applying `class_weight` to automatically handle data imbalance.
-    -   Saves the trained Keras model (`.keras`) and a TFLite model (`.tflite`).
-
-4.  **Model Evaluation (`evaluation.py`)**:
-    -   This step is automatically executed at the end of the training pipeline in `main.py`.
-    -   The `ModelEvaluator` class loads the saved model and test data.
-    -   It generates various quantitative and visual metrics, such as a **performance report (.txt)**, **confusion matrix (.png)**, and **ROC/PR curves (.png)**, and saves them to the `gesture/analysis/results/` folder.
-
-5.  **Real-time Testing (`live_test.py`)**:
-    -   Loads the lightweight `.tflite` model and uses OpenCV to apply it to the live webcam feed.
-    -   Extracts and normalizes landmarks from each frame in real-time, predicts the gesture, and displays the result.
-
----
 
 ## 🛠️ Key Technologies Used
 
