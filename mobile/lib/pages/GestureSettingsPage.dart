@@ -89,14 +89,21 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: MediaQuery.removePadding(
-        context: context,
-        removeTop: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (!didPop) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // 상단 헤더
             Container(
               width: double.infinity,
@@ -158,6 +165,7 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
                     ),
             ),
           ],
+        ),
         ),
       ),
     );
