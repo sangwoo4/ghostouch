@@ -1,0 +1,11 @@
+__pycache__/
+.idea/
+.venv/
+*.pyc
+*.log
+*.sqlite3
+.DS_Store
+models
+*.json
+.env
+.dockerignore
