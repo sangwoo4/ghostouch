@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.actions
 
 import android.app.PendingIntent
 import android.content.Context

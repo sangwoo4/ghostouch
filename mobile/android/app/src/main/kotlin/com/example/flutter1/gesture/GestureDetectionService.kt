@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.gesture
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -27,6 +27,8 @@ import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import com.pentagon.ghostouch.actions.ActionExecutor
+import com.pentagon.ghostouch.R
 
 class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListener, LifecycleOwner {
 

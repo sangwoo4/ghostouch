@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.ui
 
 import android.content.Context
 import io.flutter.embedding.android.FlutterActivity

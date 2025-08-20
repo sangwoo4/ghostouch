@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.gesture
 
 import android.content.Context
 import android.util.Log

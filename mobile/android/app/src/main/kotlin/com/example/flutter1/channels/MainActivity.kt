@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.channels
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -17,6 +17,11 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformViewRegistry
 import org.json.JSONObject
 import java.io.File
+import com.pentagon.ghostouch.gesture.TrainingCoordinator
+import com.pentagon.ghostouch.gesture.GestureDetectionService
+import com.pentagon.ghostouch.ui.HandDetectionViewFactory
+import com.pentagon.ghostouch.ui.HandDetectionPlatformView
+import com.pentagon.ghostouch.ui.PermissionsFragment
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"

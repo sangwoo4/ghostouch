@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.gesture
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -12,6 +12,8 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import okhttp3.*
+import com.pentagon.ghostouch.channels.MainActivity
+import com.pentagon.ghostouch.R
 import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
 import java.io.File
