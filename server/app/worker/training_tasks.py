@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True)
 def training_task(self, model_code, landmarks, gesture):
+        start_time = time.time()
         new_model_code = generate_model_id()
         hparams_configs = HparamsConfig()
         path_configs = PathConfig(model_code, new_model_code)
@@ -75,6 +76,8 @@ def training_task(self, model_code, landmarks, gesture):
         }
         tflite_url = asyncio.run(_upload_tflite_and_background(paths))
 
+        total_time = time.time() - start_time
+        logger.info(f"[TOTAL TIME] 전체 파이프라인 소요 시간: {total_time:.2f}s")
         return {
             "tflite_url": tflite_url,
             "model_code": new_model_code

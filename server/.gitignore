@@ -5,8 +5,7 @@ __pycache__/
 *.log
 *.sqlite3
 .DS_Store
-#Incremental_model.ipynb
 models
-model-upload-server-firebase-adminsdk-fbsvc-1bd4b36995.json
+*.json
 .env
 .dockerignore
