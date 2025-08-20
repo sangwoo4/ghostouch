@@ -27,6 +27,7 @@
 		1B14AE572E44AF91001055A0 /* GestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */; };
 		1B8175442E3341CD00792FD3 /* OpenSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B8175432E3341CD00792FD3 /* OpenSetting.swift */; };
 		1B87B4712E55CF270039E194 /* ForControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B87B4702E55CF270039E194 /* ForControlApp.swift */; };
+		1B87B4952E5614B00039E194 /* WebViewPlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B87B4942E5614B00039E194 /* WebViewPlatformView.swift */; };
 		1BEDAD3C2E4C8E970096B33F /* TestPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD392E4C8E970096B33F /* TestPage.swift */; };
 		1BEDAD3D2E4C8E970096B33F /* BottomCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD362E4C8E970096B33F /* BottomCamera.swift */; };
 		1BEDAD3E2E4C8E970096B33F /* TestPagePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */; };
@@ -91,6 +92,7 @@
 		1B14AE562E44AF91001055A0 /* GestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizer.swift; sourceTree = "<group>"; };
 		1B8175432E3341CD00792FD3 /* OpenSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSetting.swift; sourceTree = "<group>"; };
 		1B87B4702E55CF270039E194 /* ForControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForControlApp.swift; sourceTree = "<group>"; };
+		1B87B4942E5614B00039E194 /* WebViewPlatformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewPlatformView.swift; sourceTree = "<group>"; };
 		1BEDAD362E4C8E970096B33F /* BottomCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomCamera.swift; sourceTree = "<group>"; };
 		1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraForLandmark.swift; sourceTree = "<group>"; };
 		1BEDAD382E4C8E970096B33F /* GestureRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognitionService.swift; sourceTree = "<group>"; };
@@ -126,8 +128,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1BEDAD492E4DB1340096B33F /* Server */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Server;
 			sourceTree = "<group>";
 		};
@@ -275,6 +275,7 @@
 				1BEDAD642E505F870096B33F /* ProgressBarChannel.swift */,
 				1BEDAD7A2E50B2D70096B33F /* ResetGestureChannel.swift */,
 				1B87B4702E55CF270039E194 /* ForControlApp.swift */,
+				1B87B4942E5614B00039E194 /* WebViewPlatformView.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -470,9 +471,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -487,9 +492,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -533,6 +542,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B87B4952E5614B00039E194 /* WebViewPlatformView.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1BEDAD612E4F0D6E0096B33F /* LabelMapManager.swift in Sources */,
 				1B03817C2E51C73D00270D76 /* GestureListRegisterChannel.swift in Sources */,

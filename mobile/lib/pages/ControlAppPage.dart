@@ -14,6 +14,18 @@ class ControlAppPage extends StatefulWidget {
 }
 
 class _ControlAppPageState extends State<ControlAppPage> {
+  bool _showWebView = false;
+  String _currentUrl = "";
+  MethodChannel? _webViewChannel;
+
+  final Map<String, String> ottUrls = {
+    "youtube": "https://m.youtube.com",
+    "netflix": "https://www.netflix.com/kr/",
+    "tving": "https://m.tving.com/",
+    "disney": "https://www.disneyplus.com/ko-kr",
+    // "coupang": "https://www.coupangplay.com/", // m.coupangplayㄴㄴ
+  };
+
   // iOS 전용: 전면 카메라 실행
   Future<void> _openFrontCamera() async {
     try {
@@ -25,7 +37,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
     }
   }
 
-  Future<void> _launchApp(String packageName) async {
+  Future<void> _launchApp(String categoryName, String packageName) async {
     if (!widget.isToggleEnabled) {
       // 🚫 사용 안 함 상태 → 알림창만 띄우고 메소드 채널 호출 안함
       ScaffoldMessenger.of(context).showSnackBar(
@@ -37,17 +49,38 @@ class _ControlAppPageState extends State<ControlAppPage> {
       return; // 메소드 채널 호출 차단
     }
 
-    try {
-      await NativeChannelService.controlAppChannel.invokeMethod('openApp', {
-        "package": packageName,
-      });
-      // iOS 전용 카메라 자동 실행
-      if (Platform.isIOS) {
-        await _openFrontCamera();
+    if (Platform.isIOS) {
+      if (categoryName == "OTT") {
+        setState(() {
+          _currentUrl = ottUrls[packageName] ?? "";
+          _showWebView = true;
+        });
+      } else {
+        try {
+          await NativeChannelService.controlAppChannel.invokeMethod('openApp', {
+            "package": packageName,
+          });
+          await _openFrontCamera();
+        } on PlatformException catch (e) {
+          debugPrint("iOS 앱 실행 오류: ${e.message}");
+        }
       }
-    } on PlatformException catch (e) {
-      debugPrint("앱 실행 오류: ${e.message}");
+    } else if (Platform.isAndroid) {
+      try {
+        await NativeChannelService.controlAppChannel.invokeMethod('openApp', {
+          "package": packageName,
+        });
+      } on PlatformException catch (e) {
+        debugPrint("Android 앱 실행 오류: ${e.message}");
+      }
     }
+  }
+
+  void _hideWebView() {
+    setState(() {
+      _showWebView = false;
+      _currentUrl = "";
+    });
   }
 
   Widget _buildCategory(String categoryName, List<Map<String, String>> apps) {
@@ -77,7 +110,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
             childAspectRatio: 1.0,
             children: apps.map((app) {
               return GestureDetector(
-                onTap: () => _launchApp(app["package"]!),
+                onTap: () => _launchApp(categoryName, app["package"]!),
                 child: Column(
                   children: [
                     Container(
@@ -134,7 +167,13 @@ class _ControlAppPageState extends State<ControlAppPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      if (_showWebView) {
+                        _hideWebView();
+                      } else {
+                        Navigator.pop(context);
+                      }
+                    },
                   ),
                   const SizedBox(height: 10),
                   const Text(
@@ -155,34 +194,66 @@ class _ControlAppPageState extends State<ControlAppPage> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: appCategories.entries
-                      .map((entry) => _buildCategory(entry.key, entry.value))
-                      .toList(),
-                ),
-              ),
-            ),
-            // iOS 전용 하단 중앙 전면카메라 영역
-            if (Platform.isIOS && widget.isToggleEnabled)
-              Center(
-                child: SizedBox(
-                  width: 90,
-                  height: 120,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: const UiKitView(
-                      viewType: 'com.pentagon.ghostouch/control_camera_view',
-                      layoutDirection: TextDirection.ltr,
-                      creationParamsCodec: StandardMessageCodec(),
+              child: _showWebView
+                  ? Column(
+                      children: [
+                        Expanded(
+                          flex: 3, // WebView takes 3/4 of the available space
+                          child: Platform.isIOS
+                              ? UiKitView(
+                                  viewType:
+                                      'com.ghostouch.webview/webview_view',
+                                  layoutDirection: TextDirection.ltr,
+                                  creationParams: <String, dynamic>{
+                                    'url': _currentUrl,
+                                  },
+                                  creationParamsCodec:
+                                      const StandardMessageCodec(),
+                                  onPlatformViewCreated: (int id) {
+                                    _webViewChannel = MethodChannel(
+                                      'com.ghostouch.webview/webview_view_$id',
+                                    );
+                                  },
+                                )
+                              : const Text(
+                                  'WebView not supported on Android yet',
+                                ), // Placeholder for Android
+                        ),
+                        if (Platform.isIOS && widget.isToggleEnabled)
+                          Expanded(
+                            flex:
+                                1, // Camera view takes 1/4 of the available space
+                            child: Center(
+                              child: SizedBox(
+                                width: 90,
+                                height: 120,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: const UiKitView(
+                                    viewType:
+                                        'com.pentagon.ghostouch/control_camera_view',
+                                    layoutDirection: TextDirection.ltr,
+                                    creationParamsCodec: StandardMessageCodec(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    )
+                  : SingleChildScrollView(
+                      child: Column(
+                        children: appCategories.entries
+                            .map(
+                              (entry) => _buildCategory(entry.key, entry.value),
+                            )
+                            .toList(),
+                      ),
                     ),
-                  ),
-                ),
-              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
-

@@ -22,7 +22,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
     private var gestureHoldTimer: Timer?
     private var currentHeldGesture: String?
     private var gestureStartTime: Date?
-    private let requiredHoldDuration: TimeInterval = 1.0 // As requested
+    private let requiredHoldDuration: TimeInterval = 1.0
     private var actionableGestures: [String] = []
 
     // MARK: - Initializers
@@ -61,6 +61,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
     private func setupUI() {
         previewView = UIView(frame: self.bounds)
         previewView.backgroundColor = .clear
+        previewView.isHidden = true
         addSubview(previewView)
 
         overlayView = OverlayView(frame: self.bounds)

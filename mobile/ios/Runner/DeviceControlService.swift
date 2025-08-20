@@ -101,10 +101,18 @@ class DeviceControlService {
 
     private func setupVolumeView() {
         let volumeView = MPVolumeView(frame: .zero)
-        guard let window = UIApplication.shared.windows.filter({$0.isKeyWindow}).first else { return }
-        volumeView.center = CGPoint(x: -1000, y: -1000)
-        window.addSubview(volumeView)
-        self.volumeView = volumeView
+        
+        // 활성 창 장면과 해당 키 창 찾기
+        if let windowScene = UIApplication.shared.connectedScenes
+            .filter({ $0.activationState == .foregroundActive })
+            .first as? UIWindowScene,
+           let window = windowScene.windows.filter({ $0.isKeyWindow }).first {
+            volumeView.center = CGPoint(x: -1000, y: -1000)
+            window.addSubview(volumeView)
+            self.volumeView = volumeView
+        } else {
+            print("Error: MPVolumeView를 찾을 수 없음")
+        }
     }
 
     private func setVolume(to value: Float) {
@@ -116,7 +124,7 @@ class DeviceControlService {
     }
 
     private func increaseVolume() {
-        // << [수정] 슬라이더에서 직접 값을 읽어와서 버그 해결 + 순환 로직 추가
+        // << [수정] 슬라이더에서 직접 값 읽어와서 버그 해결 + 순환 로직 추가
         guard let slider = volumeView?.subviews.first(where: { $0 is UISlider }) as? UISlider else { return }
         var newVolume = slider.value + 0.1
         if newVolume > 1.0 {
@@ -126,7 +134,7 @@ class DeviceControlService {
     }
 
     private func decreaseVolume() {
-        // << [수정] 슬라이더에서 직접 값을 읽어와서 버그 해결 + 순환 로직 추가
+        // << [수정] 슬라이더에서 직접 값 읽어와서 버그 해결 + 순환 로직 추가
         guard let slider = volumeView?.subviews.first(where: { $0 is UISlider }) as? UISlider else { return }
         var newVolume = slider.value - 0.1
         if newVolume < 0.0 {

@@ -31,6 +31,11 @@ extension Notification.Name {
           TestPagePlatformViewFactory.register(with: testReg)
       }
 
+      // WebView Platform 등록
+      if let webviewReg = registrar(forPlugin: "webview-view-plugin") {
+          WebViewPlatformViewFactory.register(with: webviewReg)
+      }
+
       // ControlAppPage Camera Platform 등록
       if let controlCameraReg = registrar(forPlugin: "control-camera-view-plugin") {
           ControlCameraPlatformViewFactory.register(with: controlCameraReg)
