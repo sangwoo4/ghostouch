@@ -196,35 +196,104 @@ class _GestureActionDropdownState extends State<GestureActionDropdown> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _showActionDialog() async {
     final options = getActionOptions();
 
-    return DropdownButton<String>(
-      value: selectedAction,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      style: const TextStyle(fontSize: 14, color: Colors.black),
-      borderRadius: BorderRadius.circular(12),
-      underline: const SizedBox(),
-      items: options.entries.map((entry) {
-        return DropdownMenuItem<String>(
-          value: entry.value, // 화면에 표시될 이름
-          child: Text(entry.value),
+    final String? selectedKey = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return Center(
+          child: Material(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.white,
+            child: Container(
+              width: 200,
+              height: 400,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: ListView(
+                shrinkWrap: true,
+                children: options.entries.map((entry) {
+                  final isSelected = selectedAction == entry.value;
+                  return Container(
+                    color: isSelected
+                        ? const Color(0xFF0E1539)
+                        : Colors.transparent,
+                    child: ListTile(
+                      title: Text(
+                        entry.value,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isSelected ? Colors.white : Colors.black,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      onTap: () {
+                        Navigator.pop(context, entry.key); // 선택된 key 반환
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         );
-      }).toList(),
-      onChanged: (String? newValue) {
-        if (newValue != null) {
-          setState(() {
-            selectedAction = newValue;
-            // 선택된 표시 이름으로 실제 액션 키 찾기
-            String actionKey = options.keys.firstWhere(
-              (k) => options[k] == newValue,
-              orElse: () => 'none',
-            );
-            _setGestureAction(actionKey);
-          });
-        }
       },
     );
+
+    if (selectedKey != null) {
+      setState(() {
+        selectedAction = options[selectedKey]!;
+      });
+      _setGestureAction(selectedKey);
+    }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: _showActionDialog,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+      ),
+      child: Text(
+        selectedAction,
+        style: const TextStyle(fontSize: 14, color: Colors.black),
+      ),
+    );
+  }
+
+  //   @override
+  //   Widget build(BuildContext context) {
+  //     final options = getActionOptions();
+
+  //     return DropdownButton<String>(
+  //       value: selectedAction,
+  //       padding: const EdgeInsets.symmetric(horizontal: 10),
+  //       style: const TextStyle(fontSize: 14, color: Colors.black),
+  //       borderRadius: BorderRadius.circular(12),
+  //       underline: const SizedBox(),
+  //       items: options.entries.map((entry) {
+  //         return DropdownMenuItem<String>(
+  //           value: entry.value, // 화면에 표시될 이름
+  //           child: Text(entry.value),
+  //         );
+  //       }).toList(),
+  //       onChanged: (String? newValue) {
+  //         if (newValue != null) {
+  //           setState(() {
+  //             selectedAction = newValue;
+  //             // 선택된 표시 이름으로 실제 액션 키 찾기
+  //             String actionKey = options.keys.firstWhere(
+  //               (k) => options[k] == newValue,
+  //               orElse: () => 'none',
+  //             );
+  //             _setGestureAction(actionKey);
+  //           });
+  //         }
+  //       },
+  //     );
+  //   }
 }

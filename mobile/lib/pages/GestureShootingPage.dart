@@ -389,15 +389,11 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                                     debugPrint(
                                       "저장하기 버튼이 눌렸습니다! 제스처: ${widget.gestureName}",
                                     );
-                                    // Navigator.pushReplacementNamed(
-                                    //   context,
-                                    //   '/',
-                                    // );
                                     Navigator.pushAndRemoveUntil(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => const MainPage(),
-                                      ), // 홈 위젯
+                                      ),
                                       (route) => false, // 모든 이전 라우트 제거
                                     );
                                   }
