@@ -1,1 +1,15 @@
-.DS_Store
+# Virtual Environment
+GestureClassifier/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE specific files
+.idea/
+.vscode/
+
+# Data files
+gesture/data/image_data/
+gesture/data/new_image_data/
+gesture/data/new_image2_data/
