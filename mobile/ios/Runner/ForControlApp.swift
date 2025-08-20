@@ -199,7 +199,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
 
 // 2. The PlatformView that wraps the ControlCameraView
 @MainActor
-class ControlCameraPlatformView: NSObject, FlutterPlatformView {
+class ControlCameraPlatformView: NSObject, @preconcurrency FlutterPlatformView {
     private let nativeView: ControlCameraView
 
     init(frame: CGRect, viewIdentifier: Int64, arguments: Any?, messenger: FlutterBinaryMessenger) {
@@ -215,7 +215,7 @@ class ControlCameraPlatformView: NSObject, FlutterPlatformView {
 
 // 3. The Factory that creates the PlatformView
 @MainActor
-class ControlCameraPlatformViewFactory: NSObject, FlutterPlatformViewFactory {
+class ControlCameraPlatformViewFactory: NSObject, @preconcurrency FlutterPlatformViewFactory {
     private let messenger: FlutterBinaryMessenger
     
     init(messenger: FlutterBinaryMessenger) {
@@ -229,7 +229,7 @@ class ControlCameraPlatformViewFactory: NSObject, FlutterPlatformViewFactory {
             withId: "com.pentagon.ghostouch/control_camera_view")
     }
     
-    func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
+    nonisolated func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
         return FlutterStandardMessageCodec.sharedInstance()
     }
     
