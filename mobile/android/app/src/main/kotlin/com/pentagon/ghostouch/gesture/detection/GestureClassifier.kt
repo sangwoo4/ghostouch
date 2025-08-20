@@ -1,8 +1,9 @@
-package com.pentagon.ghostouch.gesture
+package com.pentagon.ghostouch.gesture.detection
 
 import android.content.Context
 import android.util.Log
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
 import org.json.JSONObject
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream

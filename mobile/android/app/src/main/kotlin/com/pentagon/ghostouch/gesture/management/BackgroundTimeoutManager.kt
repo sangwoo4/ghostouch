@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch.gesture
+package com.pentagon.ghostouch.gesture.management
 
 import android.content.Context
 import android.content.Intent

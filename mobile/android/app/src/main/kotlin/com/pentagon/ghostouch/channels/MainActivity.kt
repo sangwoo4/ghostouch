@@ -17,11 +17,11 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformViewRegistry
 import org.json.JSONObject
 import java.io.File
-import com.pentagon.ghostouch.gesture.TrainingCoordinator
-import com.pentagon.ghostouch.gesture.GestureDetectionService
-import com.pentagon.ghostouch.ui.HandDetectionViewFactory
-import com.pentagon.ghostouch.ui.HandDetectionPlatformView
-import com.pentagon.ghostouch.ui.PermissionsFragment
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
+import com.pentagon.ghostouch.gesture.detection.GestureDetectionService
+import com.pentagon.ghostouch.ui.camera.HandDetectionViewFactory
+import com.pentagon.ghostouch.ui.camera.HandDetectionPlatformView
+import com.pentagon.ghostouch.ui.permissions.PermissionsFragment
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
@@ -105,7 +105,8 @@ class MainActivity: FlutterActivity() {
 
         // Hand Detection 관련 MethodChannel - MainActivity에서 직접 처리
         val HAND_DETECTION_CHANNEL = "com.pentagon.ghostouch/hand_detection"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAND_DETECTION_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAND_DETECTION_CHANNEL).setMethodCallHandler {
+            call, result ->
             android.util.Log.d("MainActivity", "Hand detection method called: ${call.method}")
             when (call.method) {
                 "startCollecting" -> {
@@ -169,7 +170,8 @@ class MainActivity: FlutterActivity() {
 
         // GestureRegisterPage용 MethodChannel들
         val LIST_GESTURE_CHANNEL = "com.pentagon.ghostouch/list-gesture"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LIST_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LIST_GESTURE_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "list-gesture" -> {
                     try {
@@ -259,7 +261,8 @@ class MainActivity: FlutterActivity() {
         }
 
         val RESET_GESTURE_CHANNEL = "com.pentagon.ghostouch/reset-gesture"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESET_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESET_GESTURE_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "reset" -> {
                     try {
@@ -275,7 +278,8 @@ class MainActivity: FlutterActivity() {
 
         // ControlAppPage용 MethodChannel
         val CONTROL_APP_CHANNEL = "com.pentagon.ghostouch/control-app"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTROL_APP_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTROL_APP_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "openApp" -> {
                     val packageName = call.argument<String>("package")
@@ -296,7 +300,8 @@ class MainActivity: FlutterActivity() {
 
         // 백그라운드 자동 꺼짐 기능용 MethodChannel
         val BACKGROUND_CHANNEL = "com.pentagon.ghostouch/background"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKGROUND_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKGROUND_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "setBackgroundTimeout" -> {
                     val minutes = call.argument<Int>("minutes")

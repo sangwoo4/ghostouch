@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch.ui
+package com.pentagon.ghostouch.ui.camera
 
 import android.content.Context
 import android.graphics.Canvas

@@ -9,8 +9,8 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.pentagon.ghostouch.gesture.GestureDetectionService
-import com.pentagon.ghostouch.gesture.TrainingCoordinator
+import com.pentagon.ghostouch.gesture.detection.GestureDetectionService
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 

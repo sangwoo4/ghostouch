@@ -39,13 +39,13 @@
         </activity>
 
         <service
-            android:name=".gesture.GestureDetectionService"
+            android:name=".gesture.detection.GestureDetectionService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="camera|dataSync" />
 
         <service
-            android:name=".gesture.TrainingService"
+            android:name=".gesture.training.TrainingService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

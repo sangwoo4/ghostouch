@@ -2,8 +2,8 @@ package com.pentagon.ghostouch.channels
 
 import android.content.Context
 import android.util.Log
-import com.pentagon.ghostouch.gesture.TrainingCoordinator
-import com.pentagon.ghostouch.ui.HandDetectionPlatformView
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
+import com.pentagon.ghostouch.ui.camera.HandDetectionPlatformView
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.File

@@ -1,6 +1,6 @@
 package com.pentagon.ghostouch.channels
 
-import com.pentagon.ghostouch.gesture.TrainingCoordinator
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 

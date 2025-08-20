@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch.gesture
+package com.pentagon.ghostouch.gesture.training
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import okhttp3.*
 import com.pentagon.ghostouch.channels.MainActivity
 import com.pentagon.ghostouch.R
+import com.pentagon.ghostouch.gesture.detection.GestureDetectionService
 import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
 import java.io.File
