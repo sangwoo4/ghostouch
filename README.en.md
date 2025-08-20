@@ -1,5 +1,11 @@
 # 👋 Gesture Recognition Project: Incremental Learning and Automated Evaluation Pipeline
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/e7cc4aa3-f6eb-4f0a-8725-a51a73e4415f" width="650" alt="Gesture recognition demo" />
+</p>
+
+---
+
 <!-- TOC Start -->
 - [✨ Key Features](#-key-features)
 - [📂 Project Structure](#-project-structure)
@@ -119,12 +125,12 @@ Run `live_test.py` to check the performance of the trained model in real-time vi
 
 *   **Test with Basic Model**:
     ```bash
-    python gesture/src/utils/live_test.py --model_type basic
+    python -m gesture.src.utils.live_test --model_type basic
     ```
 
 *   **Test with Combined Model**:
     ```bash
-    python gesture/src/utils/live_test.py --model_type combine
+    python -m gesture.src.utils.live_test --model_type combine
     ```
 Press the ESC key to exit the program.
 

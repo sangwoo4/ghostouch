@@ -249,7 +249,16 @@ def main():
 
         # 화면에 예측 결과 표시
         text = f"{predicted_label} ({confidence:.2f})"
-        cv2.putText(image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+        
+        # 텍스트 크기를 계산하여 화면 중앙 상단에 위치시키기
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.85
+        thickness = 2
+        text_size, _ = cv2.getTextSize(text, font, font_scale, thickness)
+        text_x = (image.shape[1] - text_size[0]) // 2
+        text_y = 30 # Y 좌표는 기존과 동일하게 유지
+
+        cv2.putText(image, text, (text_x, text_y), font, font_scale, (0, 255, 0), thickness, cv2.LINE_AA)
         cv2.imshow('Live Gesture Recognition', image)
 
         if cv2.waitKey(5) & 0xFF == 27:  # ESC 키로 종료

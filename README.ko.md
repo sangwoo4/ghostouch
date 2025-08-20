@@ -1,4 +1,11 @@
 # 👋 제스처 인식 프로젝트: 증분 학습 파이프라인
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/e7cc4aa3-f6eb-4f0a-8725-a51a73e4415f" width="650" alt="Gesture recognition demo" />
+</p>
+
+**자세한 모델 성능 및 분석 결과는 [README_analysis.md](./README_analysis.md) 파일 참고**
+
+---
 
 <!-- TOC Start -->
 - [✨ 주요 기능](#-주요-기능)
@@ -127,12 +134,12 @@ MediaPipe Gesture Recognizer에 대한 자세한 정보는 [여기](https://ai.g
 
 *   **Basic 모델로 테스트**:
     ```bash
-    python gesture/src/utils/live_test.py --model_type basic
+    python -m gesture.src.utils.live_test --model_type basic
     ```
 
 *   **통합 모델로 테스트**:
     ```bash
-    python gesture/src/utils/live_test.py --model_type combine
+    python -m gesture.src.utils.live_test --model_type combine
     ```
 ESC 키를 누르면 프로그램이 종료됩니다.
 
@@ -144,8 +151,6 @@ ESC 키를 누르면 프로그램이 종료됩니다.
 *   **TensorFlow**: 2.x
 *   **MediaPipe**: 0.x
 *   **OpenCV**: 4.x
-
-
 
 ## 🛠️ 주요 기술 스택
 
