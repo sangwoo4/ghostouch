@@ -35,10 +35,20 @@ extension OpenSetting: FlutterPlugin {
         switch call.method {
             
         case "checkCameraPermission":
-            // 실제 카메라 권한 상태를 확인하여 반환
-            print("Swift: checkCameraPermission 호출됨 -> 실제 권한 확인")
+            print("Swift: checkCameraPermission 호출됨")
             let status = AVCaptureDevice.authorizationStatus(for: .video)
-            result(status == .authorized)
+            
+            if status == .notDetermined {
+                print("Swift: 권한 상태 .notDetermined -> 권한 요청")
+                AVCaptureDevice.requestAccess(for: .video) { granted in
+                    DispatchQueue.main.async {
+                        result(granted)
+                    }
+                }
+            } else {
+                print("Swift: 권한 상태 확인 -> \(status == .authorized)")
+                result(status == .authorized)
+            }
 
         case "openSettings":
             // 'openSettings'가 호출될 때만 설정 화면 open.
