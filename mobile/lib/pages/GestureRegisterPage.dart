@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ghostouch/widgets/dialogs.dart';
 import 'GestureShootingPage.dart';
+import 'package:ghostouch/services/native_channel_service.dart';
 
 class GestureRegisterPage extends StatefulWidget {
   const GestureRegisterPage({super.key});
@@ -14,14 +16,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
   bool _isDuplicateChecked = false;
   bool _isNameValid = false;
   String _errorMessage = '';
-
-  static const cameraChannel = MethodChannel('com.pentagon.ghostouch/camera');
-  static const resetChannel = MethodChannel(
-    'com.pentagon.ghostouch/reset-gesture',
-  );
-  static const listChannel = MethodChannel(
-    'com.pentagon.ghostouch/list-gesture',
-  );
 
   List<String> registeredGestures = ['가위 제스처', '주먹 제스처', '보 제스처', '한성대 제스처'];
 
@@ -42,9 +36,8 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
 
   Future<void> _loadGestureList() async {
     try {
-      final List<dynamic> gestures = await listChannel.invokeMethod(
-        'list-gesture',
-      );
+      final List<dynamic> gestures = await NativeChannelService.listChannel
+          .invokeMethod('list-gesture');
       setState(() {
         registeredGestures = gestures.cast<String>();
       });
@@ -53,214 +46,15 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
     }
   }
 
-  // 다이얼로그 표시 함수
-  Future<bool?> _showCameraDialog(BuildContext parentContext) {
-    return showDialog<bool>(
-      context: parentContext,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: SizedBox(
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                const Icon(Icons.camera, size: 40, color: Colors.orange),
-                const SizedBox(height: 12),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    '💡 빛 반사가 없는 곳에서 진행해주세요.\n'
-                    '✋ 프레임 가운데 손이 위치하도록 해주세요.\n'
-                    '📸 촬영 중 움직이면 정확도가 떨어질 수 있습니다.\n'
-                    '📶 네트워크를 연결했는지 확인해주세요.\n',
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.5,
-                      color: Color(0xFF333333),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop(false);
-                          },
-                          child: const Text(
-                            '취소',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            Navigator.of(context).pop(); // 먼저 다이얼로그를 닫고
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => GestureShootingPage(
-                                  gestureName: _controller.text,
-                                ),
-                              ),
-                            );
-
-                            try {
-                              await cameraChannel.invokeMethod('openSettings');
-
-                              if (parentContext.mounted) {
-                                Navigator.push(
-                                  parentContext,
-                                  MaterialPageRoute(
-                                    builder: (context) => GestureShootingPage(
-                                      gestureName: _controller.text,
-                                    ),
-                                  ),
-                                );
-                              }
-                            } on PlatformException catch (e) {
-                              print("❌ openSettings 호출 실패: ${e.message}");
-                            }
-                          },
-                          child: const Text(
-                            '촬영하기',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // 경고 다이얼로그 표시
-  // 경고 다이얼로그 표시
-  Future<bool?> _showResetDialog(BuildContext parentContext) {
-    return showDialog<bool>(
-      context: parentContext,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: SizedBox(
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                const Icon(Icons.warning, size: 40, color: Colors.redAccent),
-                const SizedBox(height: 12),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    "⚠️ 정말로 초기화하시겠습니까?\n\n"
-                    "❌ 기본을 제외한 모든 제스처들이 삭제됩니다.\n\n"
-                    "🚫 초기화 시 복구할 수 없습니다! 🔥",
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.5,
-                      color: Color(0xFF333333),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.of(dialogContext).pop(false);
-                          },
-                          child: const Text('취소'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () async {
-                            // 다이얼로그 닫기
-                            Navigator.of(dialogContext).pop(true);
-
-                            try {
-                              await resetChannel.invokeMethod('reset');
-                              if (parentContext.mounted) {
-                                // 스낵바 표시
-                                ScaffoldMessenger.of(
-                                  parentContext,
-                                ).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('✅ 제스처가 초기화되었습니다.'),
-                                  ),
-                                );
-                                // 메인화면(/)으로 이동
-                                Navigator.of(
-                                  parentContext,
-                                ).pushNamedAndRemoveUntil(
-                                  '/',
-                                  (route) => false,
-                                );
-                              }
-                            } catch (e) {
-                              if (parentContext.mounted) {
-                                ScaffoldMessenger.of(
-                                  parentContext,
-                                ).showSnackBar(
-                                  SnackBar(content: Text('초기화 실패: $e')),
-                                );
-                              }
-                            }
-                          },
-                          child: const Text('초기화'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _checkDuplicate() async {
     String input = _controller.text;
 
     try {
       // 네이티브에서 모든 검증 수행 (공백, 특수문자, 길이, 중복 등)
-      final Map<dynamic, dynamic> result = await listChannel.invokeMethod(
-        'check-duplicate',
-        {'gestureName': input},
-      );
+      final Map<dynamic, dynamic> result = await NativeChannelService
+          .listChannel
+          .invokeMethod('check-duplicate', {'gestureName': input});
+
       final bool isDuplicate = result['isDuplicate'] ?? false;
       final String message = result['message'] ?? '';
 
@@ -283,6 +77,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
         });
         return;
       }
+
       bool isDuplicate = registeredGestures.contains(trimmedInput);
       setState(() {
         _isNameValid = !isDuplicate;
@@ -296,7 +91,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
 
   Future<void> _startCamera() async {
     try {
-      await cameraChannel.invokeMethod('startCamera');
+      await NativeChannelService.cameraChannel.invokeMethod('startCamera');
       print('📷 네이티브 카메라 호출 완료');
     } on PlatformException catch (e) {
       print("❌ 카메라 호출 실패: '${e.message}'.");
@@ -305,16 +100,16 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
 
   Future<void> _resetGesture() async {
     try {
-      await resetChannel.invokeMethod('reset');
+      await NativeChannelService.resetChannel.invokeMethod('reset');
       print('🔄 제스처 초기화 완료');
       // 제스처 목록 새로고침
       await _loadGestureList();
       // 필요 시 사용자에게 알림 표시
-      // if (mounted) {
-      //   ScaffoldMessenger.of(
-      //     context,
-      //   ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
-      // }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      }
     } on PlatformException catch (e) {
       print('❌ 제스처 초기화 실패: ${e.message}');
       if (mounted) {
@@ -451,11 +246,22 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       child: ElevatedButton(
                         onPressed: inputValidAndChecked
                             ? () async {
-                                final shouldStart = await _showCameraDialog(
-                                  context,
-                                );
+                                final shouldStart =
+                                    await CustomDialogs.showCameraDialog(
+                                      context,
+                                      NativeChannelService.cameraChannel,
+                                      _controller,
+                                    );
+
                                 if (shouldStart == true) {
-                                  _startCamera();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => GestureShootingPage(
+                                        gestureName: _controller.text,
+                                      ),
+                                    ),
+                                  );
                                 }
                               }
                             : null,
@@ -518,7 +324,11 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () async {
-                          final shouldReset = await _showResetDialog(context);
+                          final shouldReset =
+                              await CustomDialogs.showResetDialog(
+                                context,
+                                NativeChannelService.resetChannel,
+                              );
                           if (shouldReset == true) {
                             _resetGesture();
                           }
