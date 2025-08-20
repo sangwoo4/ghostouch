@@ -5,8 +5,7 @@ import 'package:clock_loader/clock_loader.dart';
 import 'package:ghostouch/main.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
 import 'package:ghostouch/services/api_service.dart';
-import 'package:lottie/lottie.dart'; 
-
+import 'package:lottie/lottie.dart';
 
 class GestureShootingPage extends StatefulWidget {
   final String gestureName;
@@ -212,7 +211,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
           _isRetaked = false;
           instructionText = '제스처 저장 완료!';
           _isDownloading = false; // 로딩은 끄고
-          _showSuccess = true;    // 성공 오버레이 켜기
+          _showSuccess = true; // 성공 오버레이 켜기
         });
       },
     );
@@ -297,70 +296,104 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
 
             Expanded(
               child: Center(
-  child: Stack(
-    alignment: Alignment.center,
-    children: [
-      // 카메라 영역
-      ClipOval(
-        child: Container(
-          width: 350,
-          height: 350,
-          color: Colors.black12,
-          child: _isCollecting
-              ? (Platform.isAndroid
-                  ? const AndroidView(
-                      viewType: 'hand_detection_view',
-                      layoutDirection: TextDirection.ltr,
-                    )
-                  : const UiKitView(
-                      viewType: 'camera_view',
-                      creationParamsCodec: StandardMessageCodec(),
-                    ))
-              : const SizedBox(),
-        ),
-      ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  // children: [
+                  //   // 카메라 영역
+                  //   ClipOval(
+                  //     child: Container(
+                  //       width: 350,
+                  //       height: 350,
+                  //       color: Colors.black12,
+                  //       child: _isCollecting
+                  //           ? (Platform.isAndroid
+                  //                 ? const AndroidView(
+                  //                     viewType: 'hand_detection_view',
+                  //                     layoutDirection: TextDirection.ltr,
+                  //                   )
+                  //                 : const UiKitView(
+                  //                     viewType: 'camera_view',
+                  //                     creationParamsCodec:
+                  //                         StandardMessageCodec(),
+                  //                   ))
+                  //           : const SizedBox(),
+                  //     ),
+                  //   ),
 
-      // 모델 학습 중일 때 원형 로딩 오버레이
-      // if (_isDownloading && !_isCompleted)
-      //   ClockLoader(
-      //     clockLoaderModel: ClockLoaderModel(
-      //       shapeOfParticles: ShapeOfParticlesEnum.circle,
-      //       mainHandleColor: const Color.fromARGB(255, 55, 62, 137),
-      //       particlesColor: const Color.fromARGB(255, 140, 147, 208),
-      //     ),
-      //   ),
+                  //   // 모델 학습 중일 때 원형 로딩 오버레이
+                  //   if (_isDownloading && !_isCompleted)
+                  //     ClockLoader(
+                  //       clockLoaderModel: ClockLoaderModel(
+                  //         shapeOfParticles: ShapeOfParticlesEnum.circle,
+                  //         mainHandleColor: const Color.fromARGB(
+                  //           255,
+                  //           55,
+                  //           62,
+                  //           137,
+                  //         ),
+                  //         particlesColor: const Color.fromARGB(
+                  //           255,
+                  //           140,
+                  //           147,
+                  //           208,
+                  //         ),
+                  //       ),
+                  //     ),
+                  // ],
+                  children: [
+                    // 카메라 영역 (로딩/성공일 때는 아예 안 보이게)
+                    if (!_isDownloading && !_showSuccess)
+                      ClipOval(
+                        child: Container(
+                          width: 350,
+                          height: 350,
+                          color: Colors.black12,
+                          child: _isCollecting
+                              ? (Platform.isAndroid
+                                    ? const AndroidView(
+                                        viewType: 'hand_detection_view',
+                                        layoutDirection: TextDirection.ltr,
+                                      )
+                                    : const UiKitView(
+                                        viewType: 'camera_view',
+                                        creationParamsCodec:
+                                            StandardMessageCodec(),
+                                      ))
+                              : const SizedBox(),
+                        ),
+                      ),
 
-      // 새로운 Lottie 로딩 애니메이션
-      if (_isDownloading && !_isCompleted)
-        Lottie.asset(
-          'assets/anim/Loading 40 _ Paperplane.json',
-          width: 200,
-          height: 200,
-        ),
+                    // 로딩 애니메이션
+                    if (_isDownloading && !_isCompleted)
+                      Lottie.asset(
+                        'assets/anim/Loading 40 _ Paperplane.json',
+                        width: 400,
+                        height: 400,
+                      ),
 
-      // ✅ 성공 애니메이션 오버레이 추가 위치
-      if (_showSuccess)
-        IgnorePointer(
-          ignoring: true,
-          child: ClipOval(
-            child: SizedBox(
-              width: 250,
-              height: 250,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 220),
-                opacity: _showSuccess ? 1 : 0,
-                child: Lottie.asset(
-                  'assets/anim/Success Send.json',
-                  repeat: false,
-                  fit: BoxFit.cover,
+                    // 성공 애니메이션
+                    if (_showSuccess)
+                      IgnorePointer(
+                        ignoring: true,
+                        child: ClipOval(
+                          child: SizedBox(
+                            width: 250,
+                            height: 250,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 220),
+                              opacity: _showSuccess ? 1 : 0,
+                              child: Lottie.asset(
+                                'assets/anim/Success Send.json',
+                                repeat: false,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
-          ),
-        ),
-    ],
-  ),
-),
             ),
 
             const SizedBox(height: 20),
@@ -377,7 +410,9 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                           _startOrRetakeRecording();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
+                          backgroundColor: _isCompleted
+                            ? const Color.fromARGB(255, 0, 0, 0)
+                            : const Color.fromARGB(255, 156, 168, 240),
                           padding: const EdgeInsets.symmetric(vertical: 18),
                         ),
                         child: const Text(
