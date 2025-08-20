@@ -25,8 +25,48 @@ class DeviceControlService {
         case "action_brightness_down":
             print("액션 실행: 화면 밝기 감소")
             decreaseBrightness()
+        case "action_open_messages":
+            print("액션 실행: 메시지 앱 열기")
+            openURL(urlString: "sms:")
+        case "action_open_calendar":
+            print("액션 실행: 캘린더 앱 열기")
+            openURL(urlString: "calshow://")
+        case "action_open_settings":
+            print("액션 실행: 설정 앱 열기")
+            openURL(urlString: UIApplication.openSettingsURLString)
+        case "action_volume_mute":
+            print("액션 실행: 볼륨 음소거/해제")
+            toggleMute()
         default:
             break
+        }
+    }
+
+    // MARK: - Private App Control
+    private func openURL(urlString: String) {
+        guard let url = URL(string: urlString) else {
+            print("Error: Invalid URL string \(urlString)")
+            return
+        }
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        } else {
+            print("Error: Cannot open URL \(urlString)")
+        }
+    }
+    
+    // MARK: - Private Mute Control
+    private var lastVolume: Float = 0.5 // Store last non-zero volume
+
+    private func toggleMute() {
+        let slider = volumeView?.subviews.first(where: { $0 is UISlider }) as? UISlider
+        guard let currentVolume = slider?.value else { return }
+
+        if currentVolume > 0.0 {
+            lastVolume = currentVolume // Save current volume before muting
+            setVolume(to: 0.0)
+        } else {
+            setVolume(to: lastVolume) // Restore last volume
         }
     }
 
@@ -38,7 +78,7 @@ class DeviceControlService {
     }
     
     private func increaseBrightness() {
-        // << [수정] 순환 로직 추가
+        // 순환 로직
         var newBrightness = UIScreen.main.brightness + 0.1
         // 1.0을 초과하면 0.1로 (10%)
         if newBrightness > 1.0 {

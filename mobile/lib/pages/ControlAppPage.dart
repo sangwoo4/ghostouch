@@ -164,22 +164,17 @@ class _ControlAppPageState extends State<ControlAppPage> {
               ),
             ),
             // iOS 전용 하단 중앙 전면카메라 영역
-            if (Platform.isIOS)
-              Positioned(
-                bottom: 10,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black26),
-                      borderRadius: BorderRadius.circular(10),
-                      color: Colors.black12,
-                    ),
-                    child: const Center(
-                      child: Text('Camera', style: TextStyle(fontSize: 8)),
+            if (Platform.isIOS && widget.isToggleEnabled)
+              Center(
+                child: SizedBox(
+                  width: 90,
+                  height: 120,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: const UiKitView(
+                      viewType: 'com.pentagon.ghostouch/control_camera_view',
+                      layoutDirection: TextDirection.ltr,
+                      creationParamsCodec: StandardMessageCodec(),
                     ),
                   ),
                 ),
@@ -190,3 +185,4 @@ class _ControlAppPageState extends State<ControlAppPage> {
     );
   }
 }
+

@@ -1,6 +1,11 @@
 import Flutter
 import UIKit
 
+// Notification name for toggling the flashlight
+extension Notification.Name {
+    static let toggleFlashlight = Notification.Name("toggleFlashlightNotification")
+}
+
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
 
@@ -24,6 +29,11 @@ import UIKit
       // TestPage Platform 등록
       if let testReg = registrar(forPlugin: "test-page-view-plugin") {
           TestPagePlatformViewFactory.register(with: testReg)
+      }
+
+      // ControlAppPage Camera Platform 등록
+      if let controlCameraReg = registrar(forPlugin: "control-camera-view-plugin") {
+          ControlCameraPlatformViewFactory.register(with: controlCameraReg)
       }
 
       // ProgressBarChannel 등록
