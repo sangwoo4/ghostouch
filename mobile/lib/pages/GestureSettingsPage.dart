@@ -264,36 +264,4 @@ class _GestureActionDropdownState extends State<GestureActionDropdown> {
       ),
     );
   }
-
-  //   @override
-  //   Widget build(BuildContext context) {
-  //     final options = getActionOptions();
-
-  //     return DropdownButton<String>(
-  //       value: selectedAction,
-  //       padding: const EdgeInsets.symmetric(horizontal: 10),
-  //       style: const TextStyle(fontSize: 14, color: Colors.black),
-  //       borderRadius: BorderRadius.circular(12),
-  //       underline: const SizedBox(),
-  //       items: options.entries.map((entry) {
-  //         return DropdownMenuItem<String>(
-  //           value: entry.value, // 화면에 표시될 이름
-  //           child: Text(entry.value),
-  //         );
-  //       }).toList(),
-  //       onChanged: (String? newValue) {
-  //         if (newValue != null) {
-  //           setState(() {
-  //             selectedAction = newValue;
-  //             // 선택된 표시 이름으로 실제 액션 키 찾기
-  //             String actionKey = options.keys.firstWhere(
-  //               (k) => options[k] == newValue,
-  //               orElse: () => 'none',
-  //             );
-  //             _setGestureAction(actionKey);
-  //           });
-  //         }
-  //       },
-  //     );
-  //   }
 }
