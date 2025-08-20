@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.channels
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -17,11 +17,22 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformViewRegistry
 import org.json.JSONObject
 import java.io.File
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
+import com.pentagon.ghostouch.gesture.detection.GestureDetectionService
+import com.pentagon.ghostouch.ui.camera.HandDetectionViewFactory
+import com.pentagon.ghostouch.ui.camera.HandDetectionPlatformView
+import com.pentagon.ghostouch.ui.permissions.PermissionsFragment
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.pentagon.ghostouch/toggle"
     private lateinit var trainingCoordinator: TrainingCoordinator
     private lateinit var toggleChannel: MethodChannel
+    
+    // Channel Handlers
+    private lateinit var gestureChannelHandler: GestureChannelHandler
+    private lateinit var trainingChannelHandler: TrainingChannelHandler
+    private lateinit var handDetectionChannelHandler: HandDetectionChannelHandler
+    private lateinit var utilityChannelHandler: UtilityChannelHandler
     
     // 토글 상태 변경 브로드캐스트 리시버
     private val toggleStateReceiver = object : BroadcastReceiver() {
@@ -50,6 +61,17 @@ class MainActivity: FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
 
         trainingCoordinator = TrainingCoordinator(this)
+        
+        // Initialize channel handlers
+        gestureChannelHandler = GestureChannelHandler(this)
+        trainingChannelHandler = TrainingChannelHandler(trainingCoordinator)
+        handDetectionChannelHandler = HandDetectionChannelHandler(
+            this,
+            { handDetectionPlatformView },
+            { pendingGestureName = it },
+            { pendingGestureName }
+        )
+        utilityChannelHandler = UtilityChannelHandler(this)
 
         // 네이티브 뷰 팩토리 등록
         flutterEngine
@@ -59,146 +81,32 @@ class MainActivity: FlutterActivity() {
 
         // 토글 채널 초기화
         toggleChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-        toggleChannel.setMethodCallHandler {
-            call, result ->
-            when (call.method) {
-                "startGestureService" -> {
-                    val intent = Intent(this, GestureDetectionService::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(intent)
-                    } else {
-                        startService(intent)
-                    }
-                    result.success(null)
-                }
-                "stopGestureService" -> {
-                    val intent = Intent(this, GestureDetectionService::class.java)
-                    stopService(intent)
-                    result.success(null)
-                }
-                "checkCameraPermission" -> {
-                    val hasCameraPermission = ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.CAMERA
-                    ) == PackageManager.PERMISSION_GRANTED
-                    
-                    val hasWriteSettingsPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        Settings.System.canWrite(this)
-                    } else true
-                    
-                    // 두 권한이 모두 있어야 true 반환
-                    result.success(hasCameraPermission && hasWriteSettingsPermission)
-                }
-                "functionToggle" -> {
-                    println("✅ functionToggle 호출됨 (안드로이드)")
-                    result.success(null)
-                }
-                "openSettings" -> {
-                    println("⚙️ openSettings 호출됨")
-                    openAppSettings()
-                    result.success(null)
-                }
-                "setToggleState" -> {
-                    val state = call.argument<Boolean>("state")
-                    if (state != null) {
-                        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-                        prefs.edit().putBoolean("toggle_state", state).apply()
-                        result.success(null)
-                    } else {
-                        result.error("INVALID_ARGUMENTS", "State argument is missing", null)
-                    }
-                }
-                "getToggleState" -> {
-                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-                    val state = prefs.getBoolean("toggle_state", false) // 기본값 false
-                    result.success(state)
-                }
-                "getAvailableGestures" -> {
-                    try {
-                        val gestureMap = getAvailableGestures()
-                        result.success(gestureMap)
-                    } catch (e: Exception) {
-                        result.error("ERROR", "Failed to get available gestures: ${e.message}", null)
-                    }
-                }
-                "getServerUrl" -> {
-                    try {
-                        val serverUrl = TrainingCoordinator.getServerUrl(this)
-                        result.success(serverUrl)
-                    } catch (e: Exception) {
-                        result.error("ERROR", "Failed to get server URL: ${e.message}", null)
-                    }
-                }
-                else -> result.notImplemented()
-            }
+        toggleChannel.setMethodCallHandler { call, result ->
+            utilityChannelHandler.handleToggle(call, result) { getAvailableGestures() }
         }
 
         // 제스처-액션 매핑을 위한 새로운 MethodChannel
         val MAPPING_CHANNEL = "com.pentagon.ghostouch/mapping"
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, MAPPING_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "setGestureAction" -> {
-                    val gesture = call.argument<String>("gesture")
-                    val action = call.argument<String>("action")
-
-                    if (gesture != null && action != null) {
-                        val prefs = getSharedPreferences("gesture_mappings", MODE_PRIVATE)
-                        prefs.edit().putString("gesture_action_$gesture", action).apply()
-                        result.success("매핑 저장 성공: $gesture -> $action")
-                    } else {
-                        result.error("INVALID_ARGUMENTS", "제스처 또는 액션 인수가 없습니다.", null)
-                    }
-                }
-                "getGestureAction" -> {
-                    val gesture = call.argument<String>("gesture")
-                    if (gesture != null) {
-                        val prefs = getSharedPreferences("gesture_mappings", MODE_PRIVATE)
-                        // 저장된 값이 없으면 "none"을 기본값으로 반환
-                        val action = prefs.getString("gesture_action_$gesture", "none")
-                        result.success(action)
-                    } else {
-                        result.error("INVALID_ARGUMENTS", "제스처 인수가 없습니다.", null)
-                    }
-                }
-                else -> result.notImplemented()
-            }
+            gestureChannelHandler.handleMapping(call, result)
         }
 
         // 학습 관련 MethodChannel
         val TRAINING_CHANNEL = "com.pentagon.ghostouch/training"
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TRAINING_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "startTraining" -> {
-                    val gestureName = call.argument<String>("gestureName")
-                    val frames = call.argument<ArrayList<ArrayList<Double>>>("frames")
-
-                    if (gestureName != null && frames != null) {
-                        trainingCoordinator.uploadAndTrain(gestureName, frames.map { it.map { d -> d.toFloat() } })
-                        result.success(null)
-                    } else {
-                        result.error("INVALID_ARGUMENTS", "제스처 이름 또는 프레임이 없습니다.", null)
-                    }
-                }
-                else -> result.notImplemented()
-            }
+            trainingChannelHandler.handleTraining(call, result)
         }
 
         // Task ID 관련 MethodChannel 
         val TASK_ID_CHANNEL = "com.pentagon.gesture/task-id"
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, TASK_ID_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getTaskId" -> {
-                    val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-                    val taskId = prefs.getString("current_task_id", "default_task_id") ?: "default_task_id"
-                    result.success(taskId)
-                }
-                else -> result.notImplemented()
-            }
+            utilityChannelHandler.handleTaskId(call, result)
         }
 
         // Hand Detection 관련 MethodChannel - MainActivity에서 직접 처리
         val HAND_DETECTION_CHANNEL = "com.pentagon.ghostouch/hand_detection"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAND_DETECTION_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HAND_DETECTION_CHANNEL).setMethodCallHandler {
+            call, result ->
             android.util.Log.d("MainActivity", "Hand detection method called: ${call.method}")
             when (call.method) {
                 "startCollecting" -> {
@@ -262,7 +170,8 @@ class MainActivity: FlutterActivity() {
 
         // GestureRegisterPage용 MethodChannel들
         val LIST_GESTURE_CHANNEL = "com.pentagon.ghostouch/list-gesture"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LIST_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, LIST_GESTURE_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "list-gesture" -> {
                     try {
@@ -352,7 +261,8 @@ class MainActivity: FlutterActivity() {
         }
 
         val RESET_GESTURE_CHANNEL = "com.pentagon.ghostouch/reset-gesture"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESET_GESTURE_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESET_GESTURE_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "reset" -> {
                     try {
@@ -368,7 +278,8 @@ class MainActivity: FlutterActivity() {
 
         // ControlAppPage용 MethodChannel
         val CONTROL_APP_CHANNEL = "com.pentagon.ghostouch/control-app"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTROL_APP_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CONTROL_APP_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "openApp" -> {
                     val packageName = call.argument<String>("package")
@@ -389,7 +300,8 @@ class MainActivity: FlutterActivity() {
 
         // 백그라운드 자동 꺼짐 기능용 MethodChannel
         val BACKGROUND_CHANNEL = "com.pentagon.ghostouch/background"
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKGROUND_CHANNEL).setMethodCallHandler { call, result ->
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKGROUND_CHANNEL).setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "setBackgroundTimeout" -> {
                     val minutes = call.argument<Int>("minutes")

@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.gesture.detection
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -22,6 +22,10 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarkerResult
+import com.pentagon.ghostouch.R
+import com.pentagon.ghostouch.actions.ActionExecutor
+import com.pentagon.ghostouch.gesture.management.BackgroundTimeoutManager
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.plugin.common.MethodChannel
@@ -37,12 +41,7 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
     private lateinit var backgroundExecutor: ExecutorService
     private var lastActionTimestamp: Long = 0
     private lateinit var trainingCoordinator: TrainingCoordinator
-    
-    // 백그라운드 자동 꺼짐 관련 변수
-    private var backgroundTimeoutMinutes: Int = 0 // 0이면 자동 꺼짐 없음
-    private var backgroundStartTime: Long = 0
-    private val backgroundTimeoutHandler = Handler(Looper.getMainLooper())
-    private var backgroundTimeoutRunnable: Runnable? = null
+    private lateinit var backgroundTimeoutManager: BackgroundTimeoutManager
 
     companion object {
         private const val TAG = "GestureDetectionService"
@@ -63,9 +62,10 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
         backgroundExecutor = Executors.newSingleThreadExecutor()
         createNotificationChannel()
         trainingCoordinator = TrainingCoordinator(this) // TrainingCoordinator 인스턴스화
+        backgroundTimeoutManager = BackgroundTimeoutManager(this)
         
         // 저장된 백그라운드 타임아웃 설정 로드
-        loadBackgroundTimeoutSetting()
+        backgroundTimeoutManager.loadBackgroundTimeoutSetting()
     }
     
     private fun reloadModel() {
@@ -142,13 +142,13 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
             }
             "ACTION_SET_BACKGROUND_TIMEOUT" -> {
                 val timeoutMinutes = intent.getIntExtra("timeout_minutes", 0)
-                setBackgroundTimeout(timeoutMinutes)
+                backgroundTimeoutManager.setBackgroundTimeout(timeoutMinutes, isAppInForeground) { stopSelfAndNotify() }
             }
             "ACTION_APP_WENT_BACKGROUND" -> {
                 Log.d(TAG, "Received background notification from MainActivity")
-                if (backgroundTimeoutMinutes != 0) {
+                if (backgroundTimeoutManager.getTimeoutMinutes() != 0) {
                     Log.d(TAG, "Starting background timer due to app going background")
-                    startBackgroundTimerIfNeeded()
+                    backgroundTimeoutManager.startBackgroundTimerIfNeeded { stopSelfAndNotify() }
                 }
             }
             else -> {
@@ -209,15 +209,15 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
         // 백그라운드 타이머 관리
         if (isAppInForeground) {
             // 앱이 포그라운드로 돌아왔을 때 백그라운드 타이머 취소
-            if (backgroundTimeoutRunnable != null) {
+            if (backgroundTimeoutManager.hasActiveTimer()) {
                 Log.d(TAG, "App returned to foreground, cancelling background timer")
-                cancelBackgroundTimer()
+                backgroundTimeoutManager.cancelBackgroundTimer()
             }
         } else {
             // 앱이 백그라운드일 때 타이머 시작
-            if (backgroundTimeoutMinutes != 0 && backgroundTimeoutRunnable == null) {
-                Log.d(TAG, "App is in background, starting timer (timeout: $backgroundTimeoutMinutes)")
-                startBackgroundTimerIfNeeded()
+            if (backgroundTimeoutManager.getTimeoutMinutes() != 0 && !backgroundTimeoutManager.hasActiveTimer()) {
+                Log.d(TAG, "App is in background, starting timer (timeout: ${backgroundTimeoutManager.getTimeoutMinutes()})")
+                backgroundTimeoutManager.startBackgroundTimerIfNeeded { stopSelfAndNotify() }
             }
         }
 
@@ -246,82 +246,12 @@ class GestureDetectionService : Service(), HandLandmarkerHelper.LandmarkerListen
     override fun onDestroy() {
         super.onDestroy()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
-        cancelBackgroundTimer() // 타이머 정리
+        backgroundTimeoutManager.cancelBackgroundTimer() // 타이머 정리
         backgroundExecutor.shutdown()
         handLandmarkerHelper?.clearHandLandmarker()
         gestureClassifier?.close()
         cameraProvider?.unbindAll()
         Log.d(TAG, "서비스 종료됨")
-    }
-    
-    // 백그라운드 타임아웃 설정 로드
-    private fun loadBackgroundTimeoutSetting() {
-        val prefs = getSharedPreferences("app_settings", MODE_PRIVATE)
-        backgroundTimeoutMinutes = prefs.getInt("background_timeout_minutes", 0)
-        Log.d(TAG, "Loaded background timeout setting: $backgroundTimeoutMinutes minutes")
-    }
-    
-    // 백그라운드 타임아웃 설정
-    private fun setBackgroundTimeout(minutes: Int) {
-        backgroundTimeoutMinutes = minutes
-        Log.d(TAG, "Background timeout set to $minutes minutes (isAppInForeground: $isAppInForeground)")
-        
-        if (minutes != 0 && !isAppInForeground) {
-            // 이미 백그라운드에 있다면 타이머 재시작 (minutes가 -1이나 양수일 때)
-            Log.d(TAG, "App is in background, starting timer immediately")
-            cancelBackgroundTimer() // 기존 타이머 취소
-            startBackgroundTimerIfNeeded()
-        } else if (minutes == 0) {
-            // 설정이 0이면 타이머 취소
-            Log.d(TAG, "Timeout disabled, cancelling timer")
-            cancelBackgroundTimer()
-        } else {
-            Log.d(TAG, "App is in foreground, timer will start when app goes to background")
-        }
-    }
-    
-    // 백그라운드 타이머 시작 (필요한 경우에만)
-    private fun startBackgroundTimerIfNeeded() {
-        if (backgroundTimeoutMinutes == 0) return // 자동 꺼짐 설정이 없으면 리턴
-        if (backgroundTimeoutRunnable != null) return // 이미 타이머가 실행 중이면 리턴
-        
-        val currentTime = System.currentTimeMillis()
-        if (backgroundStartTime == 0L) {
-            backgroundStartTime = currentTime
-        }
-        
-        // 분을 밀리초로 변환
-        val timeoutMillis = backgroundTimeoutMinutes * 60 * 1000L
-        
-        val elapsedMillis = currentTime - backgroundStartTime
-        val remainingMillis = timeoutMillis - elapsedMillis
-        
-        if (remainingMillis <= 0) {
-            // 이미 시간이 지났으면 바로 서비스 종료
-            stopSelfAndNotify()
-            return
-        }
-        
-        // 남은 시간만큼 타이머 설정
-        backgroundTimeoutRunnable = Runnable {
-            Log.d(TAG, "Background timeout reached after ${backgroundTimeoutMinutes}분. Stopping service.")
-            stopSelfAndNotify()
-        }
-        
-        backgroundTimeoutHandler.postDelayed(backgroundTimeoutRunnable!!, remainingMillis)
-        
-        val remainingMinutes = remainingMillis / (1000 * 60)
-        Log.d(TAG, "Background timer started. Will stop service in ${remainingMinutes}분.")
-    }
-    
-    // 백그라운드 타이머 취소
-    private fun cancelBackgroundTimer() {
-        backgroundTimeoutRunnable?.let {
-            backgroundTimeoutHandler.removeCallbacks(it)
-            backgroundTimeoutRunnable = null
-            backgroundStartTime = 0L
-            Log.d(TAG, "Background timer cancelled.")
-        }
     }
     
     // 서비스 종료 및 알림

@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.ui.permissions
 
 import android.Manifest
 import android.content.Context

@@ -114,7 +114,7 @@ flutter_icons:
 
 flutter_native_splash:
   color: "#FFFFFF" # 배경색 (흰색)
-  image: "assets/icons/app_icon.png" # 스플래시 화면에 표시할 로고
+  image: "assets/icons/app_icon.png"
   android: true
   ios: true
   android_12:

@@ -6,6 +6,7 @@ import 'pages/GestureSettingsPage.dart';
 import 'pages/TestPage.dart'; // 테스트 페이지 import
 import 'package:ghostouch/widgets/dialogs.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
+import 'package:ghostouch/widgets/header.dart'; // 헤더 위젯 import
 
 void main() {
   runApp(const GhostouchApp());
@@ -155,6 +156,12 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
       backgroundColor: Colors.white,
       body: Column(
         children: [
+          // HeaderWidget(
+          //   title: 'Ghostouch',
+          //   description: '고스트 터치를 활용해 핸드폰을 터치 없이 제어할 수 있습니다',
+          //   isMain: true, // 메인 헤더 스타일
+          // ),
+
           // 헤더 부분
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
@@ -202,7 +209,6 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               ],
             ),
           ),
-
           const SizedBox(height: 30),
 
           // Toggle Switch

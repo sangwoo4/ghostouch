@@ -1,8 +1,9 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.gesture.training
 
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.pentagon.ghostouch.channels.MainActivity
 import android.util.Log
 import okhttp3.Call
 import okhttp3.Callback

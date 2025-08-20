@@ -1,4 +1,4 @@
-package com.pentagon.ghostouch
+package com.pentagon.ghostouch.ui.camera
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -30,6 +30,11 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import com.pentagon.ghostouch.gesture.detection.HandLandmarkerHelper
+import com.pentagon.ghostouch.gesture.detection.GestureClassifier
+import com.pentagon.ghostouch.gesture.training.TrainingCoordinator
+import com.pentagon.ghostouch.ui.permissions.PermissionsFragment
+import com.pentagon.ghostouch.channels.MainActivity
 
 class HandDetectionPlatformView(
     private val context: Context,
@@ -103,7 +108,8 @@ class HandDetectionPlatformView(
 
     private fun setupMethodChannel() {
         methodChannel = MethodChannel(binaryMessenger, "com.pentagon.ghostouch/hand_detection")
-        methodChannel.setMethodCallHandler { call, result ->
+        methodChannel.setMethodCallHandler {
+            call, result ->
             when (call.method) {
                 "startCollecting" -> {
                     val gestureName = call.argument<String>("gestureName")
