@@ -8,11 +8,11 @@ import 'package:ghostouch/widgets/dialogs.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
 
 void main() {
-  runApp(const AirCommandApp());
+  runApp(const GhostouchApp());
 }
 
-class AirCommandApp extends StatelessWidget {
-  const AirCommandApp({super.key});
+class GhostouchApp extends StatelessWidget {
+  const GhostouchApp({super.key});
 
   @override
   Widget build(BuildContext context) {
