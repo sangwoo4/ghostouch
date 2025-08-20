@@ -24,8 +24,15 @@
    ```
 
 3. 앱 실행
+
    ```bash
    flutter run
+   ```
+
+4. 앱 로고 아이콘이 보이지 않을 때 별도 설치
+   ```bash
+   flutter pub run flutter_launcher_icons
+   flutter pub run flutter_native_splash:create
    ```
 
 ---

@@ -4,13 +4,16 @@ import 'package:ghostouch/pages/ControlAppPage.dart';
 import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
 import 'pages/TestPage.dart'; // 테스트 페이지 import
+import 'package:ghostouch/widgets/dialogs.dart';
+import 'package:ghostouch/services/native_channel_service.dart';
+import 'package:ghostouch/widgets/header.dart'; // 헤더 위젯 import
 
 void main() {
-  runApp(const AirCommandApp());
+  runApp(const GhostouchApp());
 }
 
-class AirCommandApp extends StatelessWidget {
-  const AirCommandApp({super.key});
+class GhostouchApp extends StatelessWidget {
+  const GhostouchApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +59,10 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
   Future<void> _checkInitialPermission() async {
     bool hasPermission = false;
     try {
-      hasPermission = await toggleChannel.invokeMethod('checkCameraPermission');
+      hasPermission = await NativeChannelService.toggleChannel.invokeMethod(
+        'checkCameraPermission',
+        32,
+      );
       print('카메라 권한 상태: $hasPermission');
     } on PlatformException catch (e) {
       print("카메라 권한 확인 실패: '${e.message}'.");
@@ -82,101 +88,19 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
     '4시간': 240,
   };
 
-  // ✅ MethodChannel 선언
-  static const toggleChannel = MethodChannel('com.pentagon.ghostouch/toggle');
-  static const foregroundChannel = MethodChannel(
-    'com.pentagon.ghostouch/foreground',
-  );
-  static const backgroundChannel = MethodChannel(
-    'com.pentagon.ghostouch/background',
-  );
-
-  // ✅ 추가: 다이얼로그 표시 함수
-  Future<bool?> _showToggleDialog() {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: SizedBox(
-            width: 300,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 16),
-                const Icon(Icons.settings, size: 40, color: Colors.orange),
-                const SizedBox(height: 12),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    '1단계: 🚀 "이동하기" 버튼을 눌러주세요\n'
-                    '2단계: 📋 목록에서 \'Ghostouch\' 선택\n'
-                    '3단계: 🔛 스위치를 \'사용 중\'으로 켜고 확인',
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.5,
-                      color: Color(0xFF333333),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(false);
-                          },
-                          child: const Text(
-                            '취소',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            Navigator.of(context).pop(true);
-                            try {
-                              await toggleChannel.invokeMethod('openSettings');
-                            } on PlatformException catch (e) {
-                              print("❌ openSettings 호출 실패: ${e.message}");
-                            }
-                          },
-                          child: const Text(
-                            '이동하기',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> functionToggle(bool enabled) async {
     print('✅ functionToggle 호출됨. 전달 값: $enabled');
 
     try {
       if (enabled) {
-        await toggleChannel.invokeMethod('startGestureService');
+        await NativeChannelService.toggleChannel.invokeMethod(
+          'startGestureService',
+        );
         print('📡 네이티브에 서비스 시작 명령 전송');
       } else {
-        await toggleChannel.invokeMethod('stopGestureService');
+        await NativeChannelService.toggleChannel.invokeMethod(
+          'stopGestureService',
+        );
         print('📡 네이티브에 서비스 중지 명령 전송');
       }
     } on PlatformException catch (e) {
@@ -208,7 +132,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                 onTap: () async {
                   Navigator.of(context).pop();
                   try {
-                    await backgroundChannel.invokeMethod(
+                    await NativeChannelService.backgroundChannel.invokeMethod(
                       'setBackgroundTimeout',
                       {'minutes': entry.value},
                     );
@@ -232,6 +156,12 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
       backgroundColor: Colors.white,
       body: Column(
         children: [
+          // HeaderWidget(
+          //   title: 'Ghostouch',
+          //   description: '고스트 터치를 활용해 핸드폰을 터치 없이 제어할 수 있습니다',
+          //   isMain: true, // 메인 헤더 스타일
+          // ),
+
           // 헤더 부분
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
@@ -279,7 +209,6 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
               ],
             ),
           ),
-
           const SizedBox(height: 30),
 
           // Toggle Switch
@@ -400,9 +329,9 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                       if (value) {
                         bool hasPermission = false;
                         try {
-                          hasPermission = await toggleChannel.invokeMethod(
-                            'checkCameraPermission',
-                          );
+                          hasPermission = await NativeChannelService
+                              .toggleChannel
+                              .invokeMethod('checkCameraPermission');
                         } on PlatformException catch (e) {
                           print("❌ 권한 확인 실패: ${e.message}");
                         }
@@ -415,7 +344,11 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                           });
                         } else {
                           // 권한이 없으면 설정 안내 다이얼로그 표시
-                          await _showToggleDialog();
+                          // await _showToggleDialog();
+                          await CustomDialogs.showToggleDialog(
+                            context,
+                            NativeChannelService.toggleChannel,
+                          );
                         }
                       } else {
                         // 사용자가 스위치를 끌 때
@@ -483,7 +416,7 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   });
 
                   try {
-                    await backgroundChannel.invokeMethod(
+                    await NativeChannelService.backgroundChannel.invokeMethod(
                       'setBackgroundTimeout',
                       {'minutes': backgroundTimeoutOptions[value]},
                     );
