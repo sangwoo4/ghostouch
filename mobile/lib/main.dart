@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:ghostouch/pages/ControlAppPage.dart';
 import 'package:ghostouch/pages/GestureRegisterPage.dart';
 import 'package:ghostouch/pages/GestureSettingsPage.dart';
-import 'package:ghostouch/pages/TestPage.dart';
 import 'package:ghostouch/widgets/dialogs.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
 import 'package:ghostouch/widgets/header.dart';
@@ -238,19 +237,6 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                   builder: (context) =>
                       ControlAppPage(isToggleEnabled: isGestureEnabled),
                 ),
-              );
-            },
-          ),
-
-          // ✅ 테스트 페이지
-          MenuCard(
-            icon: Icons.bug_report,
-            title: '테스트 페이지',
-            subtitle: '기능을 실험할 수 있는 화면입니다.',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TestPage()),
               );
             },
           ),

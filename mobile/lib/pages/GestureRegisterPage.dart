@@ -105,7 +105,6 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
       print('🔄 제스처 초기화 완료');
       // 제스처 목록 새로고침
       await _loadGestureList();
-      // 초기화 후 사용자에게 알림
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -135,7 +134,7 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
           child: SafeArea(
             child: SingleChildScrollView(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom, // 키보드 높이만큼 여백
+                bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

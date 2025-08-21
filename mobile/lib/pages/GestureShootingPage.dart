@@ -230,7 +230,7 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
               title: '사용자 제스처 등록',
               description:
                   '프레임 안에 제스처를 취한 후, 등록 버튼을 누르세요.\n지시사항에 따라 등록을 완료하세요.',
-              isMain: false, // 메인 헤더 스타일
+              isMain: false,
             ),
 
             const SizedBox(height: 20),
@@ -268,7 +268,6 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // 카메라 영역 (로딩/성공일 때는 아예 안 보이게)
                     if (!_isDownloading && !_showSuccess)
                       ClipOval(
                         child: Container(

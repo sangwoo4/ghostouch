@@ -46,11 +46,9 @@ class UtilityChannelHandler(private val context: Context) {
                 result.success(hasCameraPermission && hasWriteSettingsPermission)
             }
             "functionToggle" -> {
-                println("✅ functionToggle 호출됨 (안드로이드)")
                 result.success(null)
             }
             "openSettings" -> {
-                println("⚙️ openSettings 호출됨")
                 openAppSettings()
                 result.success(null)
             }

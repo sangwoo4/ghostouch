@@ -35,6 +35,5 @@ class ActionExecutor(private val context: Context) {
             "action_brightness_up" -> systemController.adjustBrightness(true)
             "action_brightness_down" -> systemController.adjustBrightness(false)
         }
-        // TODO: 다른 액션들(예: 스크린캡쳐)에 대한 처리 로직 추가
     }
 }

@@ -77,11 +77,9 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
             var yOffset = 0f
 
             if (viewRatio > imageRatio) {
-                // View is wider than image, scale to height
                 actualScaleFactor = height.toFloat() / imageHeight
                 xOffset = (width - imageWidth * actualScaleFactor) / 2f
             } else {
-                // View is taller than image, scale to width
                 actualScaleFactor = width.toFloat() / imageWidth
                 yOffset = (height - imageHeight * actualScaleFactor) / 2f
             }
@@ -112,7 +110,7 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                 // Draw handedness (Left/Right hand)
                 handednesses?.getOrNull(handLandmarkerResult.landmarks().indexOf(landmark))?.let { handednessList ->
                     val handedness = handednessList[0] // Get the first Category object
-                    // 전면 카메라일 경우, 화면에 표시되는 텍스트 레이블을 보정합니다.
+                    // 전면 카메라일 경우, 화면에 표시되는 텍스트 레이블 보정
                     val handLabel = if (isFrontCamera) {
                         if (handedness.categoryName().equals("Left", true)) "Right" else "Left"
                     } else {
@@ -137,7 +135,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                 val centerX = width / 2f - textWidth / 2f
                 val textY = height - 200f
 
-                // 반투명 배경 그리기
                 val backgroundPaint = Paint().apply {
                     color = Color.WHITE
                     alpha = 220
@@ -152,7 +149,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                     backgroundPaint
                 )
 
-                // 검은색 테두리 그리기
                 val borderPaint = Paint().apply {
                     color = Color.BLACK
                     style = Paint.Style.STROKE
@@ -167,7 +163,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
                     borderPaint
                 )
 
-                // 검은색 텍스트 그리기
                 canvas.drawText(
                     displayText,
                     centerX,
@@ -197,7 +192,6 @@ class OverlayView(context: Context?, attrs: AttributeSet?) :
         this.imageHeight = imageHeight
         this.imageWidth = imageWidth
 
-        // The scaleFactor is now calculated within the draw method to handle FILL_CENTER logic
         invalidate()
     }
 
