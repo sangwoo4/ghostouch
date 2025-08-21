@@ -87,7 +87,7 @@
 | 등록된 제스처 목록 보기         | `com.pentagon.ghostouch/list-gesture`    | ✅        | ✅  | ✅      |
 | 제스처 초기화                   | `com.pentagon.ghostouch/reset-gesture`   | ✅        | ✅  | ✅      |
 | 제스처 동작 설정                | `com.pentagon.ghostouch/funtion-gesture` | ✅        | ✅  | ✅      |
-| 안드로이드 백그라운드 시간 설정 | `com.pentagon.ghostouch/background`      | ✅        | ✅  |         |
+| 안드로이드 백그라운드 시간 설정 | `com.pentagon.ghostouch/background`      | ✅        |     | ✅      |
 | 외부 앱 사이트 들어가기         | `com.pentagon.ghostouch/control-app`     | ✅        | ✅  | ✅      |
 | 사용자 제스처 수집 상태바       | `com.pentagon.gesture/task-id`           | ✅        | ✅  | ✅      |
 | 제스처 수집 손 랜드마크 추출    | `com.pentagon.ghostouch/hand_detection`  | ✅        | ✅  | ✅      |
