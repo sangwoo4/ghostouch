@@ -6,7 +6,9 @@ extension Notification.Name {
     static let toggleFlashlight = Notification.Name("toggleFlashlightNotification")
 }
 
+
 @main
+
 @objc class AppDelegate: FlutterAppDelegate {
 
   override func application(

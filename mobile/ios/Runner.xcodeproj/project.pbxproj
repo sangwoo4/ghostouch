@@ -3,12 +3,15 @@
 	archiveVersion = 1;
 	classes = {
 	};
+
 	objectVersion = 54;
+
 	objects = {
 
 /* Begin PBXBuildFile section */
 		0564DA558405590F97CAF052 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 993875D2664CCE51B5B16CF8 /* Pods_RunnerTests.framework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+
 		1B0381942E54356F00270D76 /* DeviceControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0381932E54356F00270D76 /* DeviceControlService.swift */; };
 		1B14AE402E449D07001055A0 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE3F2E449D07001055A0 /* CameraPreviewView.swift */; };
 		1B14AE4B2E44AF74001055A0 /* HandOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE492E44AF74001055A0 /* HandOverlay.swift */; };
@@ -16,7 +19,9 @@
 		1B14AE502E44AF7B001055A0 /* HandLandmarkerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE4D2E44AF7B001055A0 /* HandLandmarkerService.swift */; };
 		1B14AE542E44AF80001055A0 /* InferenceConfigurationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE522E44AF80001055A0 /* InferenceConfigurationManager.swift */; };
 		1B14AE552E44AF80001055A0 /* DefaultConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14AE512E44AF80001055A0 /* DefaultConstants.swift */; };
+
 		1B87B4EA2E56E9C90039E194 /* GestureServiceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B87B4E92E56E9C90039E194 /* GestureServiceState.swift */; };
+
 		1BEDAD3C2E4C8E970096B33F /* TestPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD392E4C8E970096B33F /* TestPage.swift */; };
 		1BEDAD3D2E4C8E970096B33F /* BottomCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD362E4C8E970096B33F /* BottomCamera.swift */; };
 		1BEDAD3E2E4C8E970096B33F /* TestPagePlatformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BEDAD3A2E4C8E970096B33F /* TestPagePlatformView.swift */; };
@@ -58,6 +63,7 @@
 /* Begin PBXFileReference section */
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+
 		1B0381932E54356F00270D76 /* DeviceControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceControlService.swift; sourceTree = "<group>"; };
 		1B14AE3F2E449D07001055A0 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		1B14AE492E44AF74001055A0 /* HandOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandOverlay.swift; sourceTree = "<group>"; };
@@ -65,7 +71,9 @@
 		1B14AE4D2E44AF7B001055A0 /* HandLandmarkerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkerService.swift; sourceTree = "<group>"; };
 		1B14AE512E44AF80001055A0 /* DefaultConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultConstants.swift; sourceTree = "<group>"; };
 		1B14AE522E44AF80001055A0 /* InferenceConfigurationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferenceConfigurationManager.swift; sourceTree = "<group>"; };
+
 		1B87B4E92E56E9C90039E194 /* GestureServiceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureServiceState.swift; sourceTree = "<group>"; };
+
 		1BEDAD362E4C8E970096B33F /* BottomCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomCamera.swift; sourceTree = "<group>"; };
 		1BEDAD372E4C8E970096B33F /* CameraForLandmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraForLandmark.swift; sourceTree = "<group>"; };
 		1BEDAD392E4C8E970096B33F /* TestPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPage.swift; sourceTree = "<group>"; };
@@ -94,6 +102,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+
 		1B87B4E62E56E3070039E194 /* PlatformBridge */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -119,6 +128,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 			);
+
 			path = Server;
 			sourceTree = "<group>";
 		};
@@ -238,9 +248,11 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+
 				1B87B4E82E56E3F30039E194 /* model */,
 				1B87B4E72E56E3230039E194 /* Gesture */,
 				1B87B4E62E56E3070039E194 /* PlatformBridge */,
+
 				1BEDAD492E4DB1340096B33F /* Server */,
 				1BEDAD3B2E4C8E970096B33F /* TestPage */,
 				1B14AE532E44AF80001055A0 /* Configurations */,
@@ -254,6 +266,7 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -329,7 +342,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1510;
+				LastUpgradeCheck = 1640;
 				ORGANIZATIONNAME = "";
 				TargetAttributes = {
 					331C8080294A63A400263BE5 = {
@@ -511,14 +524,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B87B4952E5614B00039E194 /* WebViewPlatformView.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+
 				1B87B4EA2E56E9C90039E194 /* GestureServiceState.swift in Sources */,
+
 				1B0381942E54356F00270D76 /* DeviceControlService.swift in Sources */,
 				1B14AE542E44AF80001055A0 /* InferenceConfigurationManager.swift in Sources */,
 				1BEDAD3C2E4C8E970096B33F /* TestPage.swift in Sources */,
 				1BEDAD3D2E4C8E970096B33F /* BottomCamera.swift in Sources */,
 				1BEDAD3E2E4C8E970096B33F /* TestPagePlatformView.swift in Sources */,
 				1BEDAD3F2E4C8E970096B33F /* CameraForLandmark.swift in Sources */,
+
 				1B14AE552E44AF80001055A0 /* DefaultConstants.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				1B14AE4B2E44AF74001055A0 /* HandOverlay.swift in Sources */,

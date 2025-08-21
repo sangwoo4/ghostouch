@@ -6,7 +6,7 @@ import 'package:ghostouch/data/app_categories.dart';
 import 'package:ghostouch/widgets/header.dart';
 
 class ControlAppPage extends StatefulWidget {
-  final bool isToggleEnabled; // 메인에서 전달해준 토글 상태
+  final bool isToggleEnabled;
 
   const ControlAppPage({super.key, required this.isToggleEnabled});
 
@@ -24,7 +24,6 @@ class _ControlAppPageState extends State<ControlAppPage> {
     "netflix": "https://www.netflix.com/kr/",
     "tving": "https://m.tving.com/",
     "disney": "https://www.disneyplus.com/ko-kr",
-    // "coupang": "https://www.coupangplay.com/", // m.coupangplayㄴㄴ
   };
 
   // iOS 전용: 전면 카메라 실행
@@ -40,14 +39,14 @@ class _ControlAppPageState extends State<ControlAppPage> {
 
   Future<void> _launchApp(String categoryName, String packageName) async {
     if (!widget.isToggleEnabled) {
-      // 🚫 사용 안 함 상태 → 알림창만 띄우고 메소드 채널 호출 안함
+      // 사용 안 함 상태 → 알림창만 띄우고 메소드 채널 호출 안함
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ 사용 안 함 상태에서는 기능을 사용할 수 없습니다.'),
           duration: Duration(seconds: 2),
         ),
       );
-      return; // 메소드 채널 호출 차단
+      return;
     }
 
     if (Platform.isIOS) {
@@ -153,7 +152,6 @@ class _ControlAppPageState extends State<ControlAppPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 수정한 부분 여기부터
             if (Platform.isIOS)
               // iOS 전용 헤더
               Container(
@@ -205,7 +203,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
                 description: '앱을 클릭 후 제스처로 앱을 제어해보세요.',
                 isMain: false,
               ),
-            // 분기 처리 여기까지
+
             const SizedBox(height: 20),
             Expanded(
               child: _showWebView
@@ -213,6 +211,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
                       children: [
                         Expanded(
                           flex: 3, // WebView takes 3/4 of the available space
+
                           child: Platform.isIOS
                               ? UiKitView(
                                   viewType:
@@ -237,6 +236,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
                           Expanded(
                             flex:
                                 1, // Camera view takes 1/4 of the available space
+
                             child: Center(
                               child: SizedBox(
                                 width: 90,

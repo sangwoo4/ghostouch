@@ -87,6 +87,7 @@ class GestureRecognizer {
 
         let isLeft = (handLandmarkerResult.handedness.first?.first?.categoryName?.lowercased() == "left")
         features.append(isLeft ? 0.0 : 1.0)
+
         
         do {
             // 입력 텐서 확인 및 양자화 파라미터 적용

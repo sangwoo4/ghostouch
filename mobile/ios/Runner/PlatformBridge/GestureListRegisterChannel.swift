@@ -17,8 +17,10 @@ class GestureListRegisterChannel: NSObject, FlutterPlugin {
         switch call.method {
         case "list-gesture":
             if let labelMap = LabelMapManager.shared.readLabelMap() {
+
                 // 값 기준 정렬 후 키 배열 반환
                 let gesturesList = labelMap.sorted { $0.value < $1.value }.map { $0.key }
+
                 result(gesturesList)
             } else {
                 result(FlutterError(

@@ -21,6 +21,7 @@ extension OpenSetting: FlutterPlugin {
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "checkCameraPermission":
+
             print("카메라 권한 확인")
             let status = AVCaptureDevice.authorizationStatus(for: .video)
 
@@ -31,6 +32,7 @@ extension OpenSetting: FlutterPlugin {
                 }
             } else {
                 print("권한 상태: \(status == .authorized)")
+
                 result(status == .authorized)
             }
 

@@ -32,6 +32,7 @@ Map<String, String> getActionOptions() {
   } else if (Platform.isIOS) {
     return {
       'none': '동작 없음',
+
       // 'action_open_memo': '메모장 실행',
       // 'action_open_dialer': '전화 실행',
       // 'action_open_camera': '카메라 실행',
@@ -42,6 +43,7 @@ Map<String, String> getActionOptions() {
       'action_open_messages': '메시지 실행',
       'action_open_calendar': '캘린더 실행',
       'action_open_settings': '설정 열기',
+
       'action_brightness_up': '화면 밝기 증가',
       'action_brightness_down': '화면 밝기 감소',
       'action_volume_up': '볼륨 증가',
