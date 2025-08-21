@@ -121,25 +121,71 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : ListView.separated(
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
                       itemCount: gestureNames.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
                       itemBuilder: (context, index) {
-                        // 영어 키와 한글 값 가져오기
                         String gestureKey = gestureNames.keys.elementAt(index);
                         String gestureValue = gestureNames.values.elementAt(
                           index,
                         );
 
-                        return ListTile(
-                          title: Text(gestureValue),
-                          trailing: GestureActionDropdown(
-                            gestureKey: gestureKey,
-                          ), // 영어 키 전달
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 6,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 5,
+                            ),
+                            title: Text(
+                              gestureValue,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            trailing: GestureActionDropdown(
+                              gestureKey: gestureKey,
+                            ),
+                          ),
                         );
                       },
                     ),
             ),
+
+            // Expanded(
+            //   child: isLoading
+            //       ? const Center(child: CircularProgressIndicator())
+            //       : ListView.separated(
+            //           itemCount: gestureNames.length,
+            //           separatorBuilder: (_, __) => const Divider(height: 1),
+            //           itemBuilder: (context, index) {
+            //             // 영어 키와 한글 값 가져오기
+            //             String gestureKey = gestureNames.keys.elementAt(index);
+            //             String gestureValue = gestureNames.values.elementAt(
+            //               index,
+            //             );
+
+            //             return ListTile(
+            //               title: Text(gestureValue),
+            //               trailing: GestureActionDropdown(
+            //                 gestureKey: gestureKey,
+            //               ), // 영어 키 전달
+            //             );
+            //           },
+            //         ),
+            // ),
           ],
         ),
       ),

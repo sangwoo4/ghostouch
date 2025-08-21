@@ -410,7 +410,9 @@ class _GestureShootingPageState extends State<GestureShootingPage> {
                           _startOrRetakeRecording();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
+                          backgroundColor: _isCompleted
+                              ? const Color.fromARGB(255, 0, 0, 0)
+                              : const Color.fromARGB(255, 156, 168, 240),
                           padding: const EdgeInsets.symmetric(vertical: 18),
                         ),
                         child: const Text(

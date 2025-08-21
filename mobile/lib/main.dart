@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:ghostouch/pages/ControlAppPage.dart';
 import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
-import 'pages/TestPage.dart'; // 테스트 페이지 import
+import 'pages/TestPage.dart';
 import 'package:ghostouch/widgets/dialogs.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
-import 'package:ghostouch/widgets/header.dart'; // 헤더 위젯 import
+import 'package:ghostouch/widgets/header.dart';
 
 void main() {
   runApp(const GhostouchApp());
@@ -344,7 +344,6 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
                           });
                         } else {
                           // 권한이 없으면 설정 안내 다이얼로그 표시
-                          // await _showToggleDialog();
                           await CustomDialogs.showToggleDialog(
                             context,
                             NativeChannelService.toggleChannel,
