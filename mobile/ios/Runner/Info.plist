@@ -8,7 +8,7 @@
 		<true/>
 	</dict>
 	<key>ServerIP</key>
-	<string>192.168.25.54</string>
+	<string>192.168.219.84</string>
 	<key>ServerPort</key>
 	<string>8000</string>
 	<key>NSCameraUsageDescription</key>
