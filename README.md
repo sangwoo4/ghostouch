@@ -119,9 +119,9 @@ https://github.com/user-attachments/assets/3ababc90-051f-4354-9be5-df3ad8f15f3f
 
 - 각 모듈(백엔드, 모바일, ML 모델)의 소스를 받아 로컬 환경에서 실행할 수 있습니다
 
-**[서버 환경 설정 및 API 실행](https://github.com/sangwoo4/ghostouch/tree/develop/server)**
+**[서버 환경 설정 및 API 실행](https://github.com/sangwoo4/ghostouch/tree/main/server)**
 
-**[Android/iOS 앱 빌드 및 실행](<!--링크 넣을곳-->)**
+**[Android/iOS 앱 빌드 및 실행](https://github.com/sangwoo4/ghostouch/tree/main/mobile)**
 
 **[제스처 인식 모델 학습 및 평가](https://github.com/sangwoo4/ghostouch/tree/model-setting)**
 
