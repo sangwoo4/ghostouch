@@ -87,7 +87,7 @@ FIREBASE_STORAGE_BUCKET=[firebase key josn 경로] [프로젝트명:tag]
 
 전체 API 명세는 아래 링크에서 확인하실 수 있습니다.
 
--   **[Postman API Documentation](https://documenter.getpostman.com/view/28368657/2sB3BGFUR)**
+-   **[Postman API Documentation](https://documenter.getpostman.com/view/28368657/2sB3BGFURM)**
 
 ## 라이선스
 
