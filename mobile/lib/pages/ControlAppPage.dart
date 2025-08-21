@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
 import 'package:ghostouch/data/app_categories.dart';
+import 'package:ghostouch/widgets/header.dart';
 
 class ControlAppPage extends StatefulWidget {
   final bool isToggleEnabled; // 메인에서 전달해준 토글 상태
@@ -104,7 +105,7 @@ class _ControlAppPageState extends State<ControlAppPage> {
           const SizedBox(height: 15),
           // 앱 리스트
           GridView.count(
-            crossAxisCount: 4, // 한 줄에 4개씩
+            crossAxisCount: 4,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             childAspectRatio: 1.0,
@@ -152,46 +153,59 @@ class _ControlAppPageState extends State<ControlAppPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 상단 헤더
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0E1539),
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(30),
+            // 수정한 부분 여기부터
+            if (Platform.isIOS)
+              // iOS 전용 헤더
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 30,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () {
-                      if (_showWebView) {
-                        _hideWebView();
-                      } else {
-                        Navigator.pop(context);
-                      }
-                    },
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0E1539),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(30),
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    '외부 앱 제어',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        if (_showWebView) {
+                          _hideWebView();
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '앱을 클릭 후 제스처로 앱을 제어해보세요.',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                ],
+                    const SizedBox(height: 10),
+                    const Text(
+                      '외부 앱 제어',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      '앱을 클릭 후 제스처로 앱을 제어해보세요.',
+                      style: TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              )
+            else
+              // Android 전용 헤더
+              const HeaderWidget(
+                title: '외부 앱 제어',
+                description: '앱을 클릭 후 제스처로 앱을 제어해보세요.',
+                isMain: false,
               ),
-            ),
+            // 분기 처리 여기까지
             const SizedBox(height: 20),
             Expanded(
               child: _showWebView

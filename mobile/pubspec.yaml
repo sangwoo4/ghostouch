@@ -39,6 +39,8 @@ dependencies:
   path_provider: ^2.1.5
   http: ^1.5.0
 
+  lottie: 3.3.1 # 로딩 완료 관련
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -72,6 +74,8 @@ flutter:
     - assets/tmap.png
     - assets/kakaomap.png
     - assets/icons/
+    - assets/anim/Loading 40 _ Paperplane.json # 로딩
+    - assets/anim/Success Send.json # 로딩 완료
 
   # To add assets to your application, add an assets section, like this:
   # assets:

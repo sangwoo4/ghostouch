@@ -79,7 +79,7 @@ class DeviceControlService {
     
     private func increaseBrightness() {
         // 순환 로직
-        var newBrightness = UIScreen.main.brightness + 0.1
+        var newBrightness = UIScreen.main.brightness + 0.5
         // 1.0을 초과하면 0.1로 (10%)
         if newBrightness > 1.0 {
             newBrightness = 0.1

@@ -11,7 +11,7 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
     <application
-        android:label="Ghostouch"
+        android:label="ghostouch"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -59,7 +59,7 @@
         <!-- 서버 설정 -->
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_IP"
-            android:value="172.30.1.93" />
+            android:value="10.58.89.84" />
         <meta-data
             android:name="com.pentagon.ghostouch.SERVER_PORT"
             android:value="8000" />
