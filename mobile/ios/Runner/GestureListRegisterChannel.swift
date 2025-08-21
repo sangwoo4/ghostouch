@@ -22,7 +22,7 @@ class GestureListRegisterChannel: NSObject, FlutterPlugin {
             if let labelMap = LabelMapManager.shared.readLabelMap() {
                 // Convert [String: Int] to [String: Any] for Flutter
                 // Dart expects a List<dynamic> for gestures, so we return the keys as an array.
-                let gesturesList = Array(labelMap.keys)
+                let gesturesList = labelMap.sorted(by: { $0.value < $1.value }).map({ $0.key })
                 result(gesturesList)
             } else {
                 result(FlutterError(code: "UNAVAILABLE", message: "Failed to get available gestures.", details: nil))

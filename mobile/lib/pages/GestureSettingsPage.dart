@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
 import 'package:ghostouch/data/gesture_data.dart';
+import 'package:ghostouch/widgets/header.dart';
 
 class GestureSettingsPage extends StatefulWidget {
   const GestureSettingsPage({super.key});
@@ -72,54 +73,18 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (bool didPop) {
-        if (!didPop) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: MediaQuery.removePadding(
-          context: context,
-          removeTop: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            // 상단 헤더
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0E1539),
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(30),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    '제스처 기능 설정',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '오프라인 상태에서 사용할 제스처를 골라주세요.',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                ],
-              ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HeaderWidget(
+              title: '제스처 기능 설정',
+              description: '오프라인 상태에서 사용할 제스처를 골라주세요.',
+              isMain: false,
             ),
 
             const SizedBox(height: 20),
@@ -171,7 +136,6 @@ class _GestureSettingsPageState extends State<GestureSettingsPage> {
                     ),
             ),
           ],
-        ),
         ),
       ),
     );

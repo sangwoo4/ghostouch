@@ -1,6 +1,12 @@
 import Foundation
 import MediaPipeTasksVision
 
+// MARK: - Notification Names
+extension Notification.Name {
+    static let didRecognizeGesture = Notification.Name("didRecognizeGesture")
+}
+
+
 // 제스처 인식 관련 서비스를 앱 전체에서 공유하는 싱글톤 클래스
 @MainActor
 class GestureRecognitionService {
@@ -146,6 +152,7 @@ class GestureRecognitionService {
             ProgressBarChannel.channel?.invokeMethod("updateProgress", arguments: landmarkBuffer.items.count)
             
             if landmarkBuffer.items.count >= landmarkBuffer.capacity {
+                ProgressBarChannel.channel?.invokeMethod("collectionComplete", arguments: nil)
                 let batch = landmarkBuffer.items
                 landmarkBuffer.reset()
 
@@ -173,13 +180,14 @@ extension GestureRecognitionService: TrainingManagerDelegate {
     
     func trainingDidStart(taskId: String) {
         print("👍 [서버 응답] 학습 시작됨. Task ID: \(taskId)")
+        ProgressBarChannel.channel?.invokeMethod("taskIdReady", arguments: ["taskId": taskId])
     }
 
     func trainingDidProgress(taskId: String, progress: StatusResponse.ProgressPayload?) {
         print("⏳ [서버 응답] 학습 진행 중... 상태: \(progress?.current_step ?? "")")
-        let step = progress?.current_step ?? "모델 학습 중..."
-        let payload: [String: Any] = ["progress": ["current_step": step]]
-        ProgressBarChannel.channel?.invokeMethod("modelDownloading", arguments: payload)
+         let step = progress?.current_step ?? "모델 학습 중..."
+         let payload: [String: Any] = ["progress": ["current_step": step]]
+         ProgressBarChannel.channel?.invokeMethod("modelDownloading", arguments: payload)
     }
 
     func trainingDidSucceed(taskId: String, tfliteURL: String?, modelCode: String?) {
