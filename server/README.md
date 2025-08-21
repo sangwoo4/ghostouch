@@ -3,7 +3,7 @@
 
 이 리포지토리는 Ghostouch 프로젝트의 백엔드 서버 파트입니다. FastAPI를 기반으로 구축되었으며, 클라이언트로부터 수신한 손 랜드마크(hand landmark) 데이터를 전처리하고 증분 학습(incremental learning)을 수행하여 클라이언트에 맞춤형 모델을 배포하는 역할을 합니다.
 
-## 🏛️ 아키텍처
+## 아키텍처
 
 -   **Web Framework:** `FastAPI`를 사용하여 비동기 API 서버를 구축했습니다.
 -   **Asynchronous Tasks:** `Celery`와 `Redis`를 사용하여 모델 학습과 같은 시간이 많이 소요되는 작업을 백그라운드에서 비동기적으로 처리합니다.
@@ -11,7 +11,7 @@
 -   **Model Deployment:** 학습된 모델은 `Firebase Storage`를 통해 클라이언트에 안전하게 배포됩니다.
 -   **Web Server:** `Uvicorn`을 ASGI 서버로 사용합니다.
 
-## 🛠️ 기술 스택
+## 기술 스택
 
 -   **Language:** Python 3.10
 -   **Framework:** FastAPI, Celery
@@ -20,7 +20,7 @@
 -   **Deployment:** Docker, Firebase (Storage, Admin SDK)
 -   **Web Server:** Uvicorn
 
-## 📁 프로젝트 구조
+## 프로젝트 구조
 
 ```
 server/
@@ -35,7 +35,7 @@ server/
 └── README.md
 ```
 
-## 🚀 시작하기
+## 시작하기
 
 ### 사전 준비
 
@@ -83,12 +83,12 @@ FIREBASE_STORAGE_BUCKET=[firebase key josn 경로] [프로젝트명:tag]
     celery -A app.core.celery_app.celery_app worker -l info
     ```
 
-## 📖 API Endpoints
+## API Endpoints
 
 전체 API 명세는 아래 링크에서 확인하실 수 있습니다.
 
 -   **[Postman API Documentation](https://documenter.getpostman.com/view/28368657/2sB3BGFUR)**
 
-## 📄 라이선스
+## 라이선스
 
 이 프로젝트는 MIT 라이선스를 따릅니다.
