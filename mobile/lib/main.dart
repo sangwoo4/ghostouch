@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ghostouch/pages/ControlAppPage.dart';
 import 'pages/GestureRegisterPage.dart';
 import 'pages/GestureSettingsPage.dart';
-import 'pages/TestPage.dart'; // 테스트 페이지 import
+// import 'pages/TestPage.dart'; // 테스트 페이지 import
 import 'package:ghostouch/widgets/dialogs.dart';
 import 'package:ghostouch/services/native_channel_service.dart';
 import 'package:ghostouch/widgets/header.dart'; // 헤더 위젯 import
@@ -289,18 +289,18 @@ class _MainPageState extends State<MainPage> with WidgetsBindingObserver {
             },
           ),
 
-          // ✅ 테스트 페이지 카드 (맨 아래)
-          _buildMenuCard(
-            icon: Icons.bug_report,
-            title: '테스트 페이지',
-            subtitle: '기능을 실험할 수 있는 화면입니다.',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TestPage()),
-              );
-            },
-          ),
+          // // ✅ 테스트 페이지 카드 (맨 아래)
+          // _buildMenuCard(
+          //   icon: Icons.bug_report,
+          //   title: '테스트 페이지',
+          //   subtitle: '기능을 실험할 수 있는 화면입니다.',
+          //   onTap: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(builder: (context) => const TestPage()),
+          //     );
+          //   },
+          // ),
         ],
       ),
     );

@@ -21,25 +21,19 @@ class BackgroundTimeoutManager(private val context: Context) {
     fun loadBackgroundTimeoutSetting() {
         val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
         backgroundTimeoutMinutes = prefs.getInt("background_timeout_minutes", 0)
-        Log.d(TAG, "Loaded background timeout setting: $backgroundTimeoutMinutes minutes")
     }
     
     // 백그라운드 타임아웃 설정
     fun setBackgroundTimeout(minutes: Int, isAppInForeground: Boolean, stopSelfAndNotify: () -> Unit) {
         backgroundTimeoutMinutes = minutes
-        Log.d(TAG, "Background timeout set to $minutes minutes (isAppInForeground: $isAppInForeground)")
         
         if (minutes != 0 && !isAppInForeground) {
             // 이미 백그라운드에 있다면 타이머 재시작 (minutes가 -1이나 양수일 때)
-            Log.d(TAG, "App is in background, starting timer immediately")
             cancelBackgroundTimer() // 기존 타이머 취소
             startBackgroundTimerIfNeeded(stopSelfAndNotify)
         } else if (minutes == 0) {
             // 설정이 0이면 타이머 취소
-            Log.d(TAG, "Timeout disabled, cancelling timer")
             cancelBackgroundTimer()
-        } else {
-            Log.d(TAG, "App is in foreground, timer will start when app goes to background")
         }
     }
     
@@ -67,7 +61,6 @@ class BackgroundTimeoutManager(private val context: Context) {
         
         // 남은 시간만큼 타이머 설정
         backgroundTimeoutRunnable = Runnable {
-            Log.d(TAG, "Background timeout reached after ${backgroundTimeoutMinutes}분. Stopping service.")
             stopSelfAndNotify()
         }
         
