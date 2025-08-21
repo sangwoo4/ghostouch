@@ -1,17 +1,14 @@
-//
-//  TaskIdChannel.swift
-//  Runner
-//
-//  Created by 이상원 on 8/17/25.
-//
-
 import Foundation
 import Flutter
 import UIKit
 
+// Task ID 채널
 class TaskIdChannel: NSObject, FlutterPlugin {
     static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "com.pentagon.gesture/task-id", binaryMessenger: registrar.messenger())
+        let channel = FlutterMethodChannel(
+            name: "com.pentagon.gesture/task-id",
+            binaryMessenger: registrar.messenger()
+        )
         let instance = TaskIdChannel()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }

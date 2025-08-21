@@ -106,11 +106,11 @@ class _GestureRegisterPageState extends State<GestureRegisterPage> {
       // 제스처 목록 새로고침
       await _loadGestureList();
       // 초기화 후 사용자에게 알림
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
-      }
+      // if (mounted) {
+      //   ScaffoldMessenger.of(
+      //     context,
+      //   ).showSnackBar(const SnackBar(content: Text('제스처가 초기화되었습니다.')));
+      // }
     } on PlatformException catch (e) {
       print('❌ 제스처 초기화 실패: ${e.message}');
       if (mounted) {

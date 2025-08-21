@@ -1,24 +1,24 @@
 import Foundation
 import MediaPipeTasksVision
 
-// MARK: - Notification Names
+// MARK: - 알림 이름
 extension Notification.Name {
     static let didRecognizeGesture = Notification.Name("didRecognizeGesture")
+    static let didResetAllGestures = Notification.Name("didResetAllGestures")
 }
 
-
-// 제스처 인식 관련 서비스를 앱 전체에서 공유하는 싱글톤 클래스
+// 제스처 인식 서비스를 앱 전체에서 공유하는 싱글톤
 @MainActor
 class GestureRecognitionService {
 
-    // MARK: - Singleton Instance
+    // MARK: - 싱글톤 인스턴스
     static let shared = GestureRecognitionService()
 
-    // MARK: - Public Properties
+    // MARK: - 공개 프로퍼티
     let handLandmarkerService: HandLandmarkerService?
-    var gestureRecognizer: GestureRecognizer? // 재초기화를 허용하기 위해 var로 변경
+    var gestureRecognizer: GestureRecognizer? // 재초기화 허용하려고 var 사용
     
-    // MARK: - Training Properties
+    // MARK: - 학습 관련 프로퍼티
     let landmarkBuffer = LandmarkBuffer(capacity: 100)
     let trainingManager = TrainingManager()
     private(set) var isRecording = false
@@ -28,9 +28,9 @@ class GestureRecognitionService {
     
     private let customModelNameKey = "CustomModelName"
 
-    // MARK: - Initializer
+    // MARK: - 초기화
     private init() {
-        // HandLandmarkerService 초기화
+        // 손 랜드마커 서비스 준비
         let landmarker = HandLandmarkerService.liveStreamHandLandmarkerService(
             modelPath: DefaultConstants.modelPath,
             numHands: DefaultConstants.numHands,
@@ -42,7 +42,7 @@ class GestureRecognitionService {
         )
         
         guard let landmarker = landmarker else {
-            print("ERROR: Failed to initialize HandLandmarkerService")
+            print("오류: HandLandmarkerService 초기화 실패")
             self.handLandmarkerService = nil
             self.gestureRecognizer = nil
             return
@@ -50,64 +50,104 @@ class GestureRecognitionService {
         
         self.handLandmarkerService = landmarker
         
-        // Initialize GestureRecognizer with persisted model or basic model
+        // 저장된 모델이 있으면 그걸로, 없으면 기본 모델로 초기화
         self.initializeGestureRecognizer()
         
-        // TrainingManager의 delegate를 self로 설정
+        // 학습 매니저 델리게이트 설정
         self.trainingManager.delegate = self
+        
+        // 모든 제스처 초기화 알림 받으면 리셋 처리
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleGestureReset),
+            name: .didResetAllGestures,
+            object: nil
+        )
     }
     
-    //  영구 저장 로직 함수
+    // 알림 수신 시 제스처 인식 상태 초기화
+    @objc private func handleGestureReset() {
+        print("'didResetAllGestures' 알림 받음. 제스처 인식기 상태 초기화")
+        
+        TrainingStore.shared.lastModelCode = "base_v1"
+
+        guard let gestureRecognizer = self.gestureRecognizer else {
+            print("경고: GestureRecognizer 인스턴스를 못 찾아서 초기화 못 함")
+            return
+        }
+
+        if let labelURL = LabelMapManager.shared.documentsFileURL {
+            if gestureRecognizer.updateLabelMap(labelURL: labelURL) {
+                print("레이블 맵 업데이트 성공")
+            } else {
+                print("레이블 맵 업데이트 실패")
+            }
+        } else {
+            print("오류: Documents 디렉터리에서 레이블 맵 URL을 못 가져와서 업데이트 못 함")
+        }
+
+        if let basicModelURL = Bundle.main.url(forResource: "basic_gesture_model", withExtension: "tflite") {
+            if gestureRecognizer.updateModel(modelURL: basicModelURL) {
+                print("기본 모델로 업데이트 성공")
+            } else {
+                print("기본 모델로 업데이트 실패")
+            }
+        } else {
+            print("오류: 번들에서 basic_gesture_model.tflite를 못 찾아서 모델 초기화 못 함")
+        }
+    }
+    
+    // 제스처 인식기 초기화 (영구 저장된 모델 우선)
     private func initializeGestureRecognizer() {
         var finalModelURL: URL?
         
-        // Documents 디렉토리의 레이블 맵이 항상 최신 버전임
+        // Documents에 있는 레이블 맵이 최신이라 이걸로 고정
         guard let finalLabelURL = LabelMapManager.shared.documentsFileURL else {
-            print("🚨 [초기화 실패] Documents 디렉토리의 레이블 맵 URL을 가져올 수 없음.")
+            print("오류: 레이블 맵 URL을 못 가져와서 초기화 실패")
             self.gestureRecognizer = nil
             return
         }
 
-        // TrainingStore에 저장된 커스텀 모델이 있는지 확인
+        // 저장된 커스텀 모델이 있는지 확인
         if let lastModelCode = TrainingStore.shared.lastModelCode,
            let lastModelURLString = TrainingStore.shared.lastModelURLString,
-           let storedModelURL = URL(string: lastModelURLString) {
+           let _ = URL(string: lastModelURLString) {
             
             let localModelURL = TrainingStore.shared.modelFileURL(modelCode: lastModelCode)
 
             if FileManager.default.fileExists(atPath: localModelURL.path) {
-                print("✅ 저장된 커스텀 모델 찾음: \(lastModelCode)")
+                print("저장된 커스텀 모델 찾음: \(lastModelCode)")
                 finalModelURL = localModelURL
             } else {
-                print("⚠️ TrainingStore에 모델 정보(\(lastModelCode))가 있지만 파일 없음. 기본 모델 사용.")
+                print("경고: 모델 정보(\(lastModelCode))는 있는데 파일이 없음. 기본 모델 사용")
                 TrainingStore.shared.lastModelCode = nil
                 TrainingStore.shared.lastModelURLString = nil
             }
         }
 
-        // 커스텀 모델 또는 기본 모델로 GestureRecognizer 초기화
+        // 커스텀 모델 우선, 없으면 기본 모델 사용
         if let modelURL = finalModelURL {
-            print("커스텀 모델과 레이블로 초기화 시도.")
+            print("커스텀 모델과 레이블로 초기화 시도")
             self.gestureRecognizer = GestureRecognizer(modelURL: modelURL, labelURL: finalLabelURL)
         } else {
-            print("기본 번들 모델과 Documents 레이블로 초기화 시도.")
+            print("기본 모델과 Documents 레이블로 초기화 시도")
             if let bundleModelURL = Bundle.main.url(forResource: "basic_gesture_model", withExtension: "tflite") {
-                 self.gestureRecognizer = GestureRecognizer(modelURL: bundleModelURL, labelURL: finalLabelURL)
+                self.gestureRecognizer = GestureRecognizer(modelURL: bundleModelURL, labelURL: finalLabelURL)
             } else {
-                print("🚨 [초기화 실패] 기본 번들 모델을 찾을 수 없음.")
+                print("오류: 기본 번들 모델을 못 찾아서 초기화 실패")
                 self.gestureRecognizer = nil
             }
         }
         
         if self.gestureRecognizer == nil {
-            print("🚨 [초기화 실패] GestureRecognizer를 초기화할 수 없었음.")
+            print("오류: GestureRecognizer 초기화에 실패했음")
         }
     }
     
-    // MARK: - Public Methods for Training Control
+    // MARK: - 학습 제어 메서드
 
     func stopRecording() {
-        print("⏹️ 데이터 수집 중지 및 버퍼/UI 초기화.")
+        print("데이터 수집 중지하고 버퍼랑 UI 초기화")
         self.isRecording = false
         self.currentGesture = nil
         self.landmarkBuffer.reset()
@@ -116,13 +156,13 @@ class GestureRecognitionService {
     }
     
     func startCollecting(gestureName: String) {
-        // 학습이 이미 진행 중일 때는 다시촬영 요청을 무시
+        // 학습 진행 중이면 새 요청 무시
         guard self.gestureBeingTrained == nil else {
-            print("⚠️ 학습이 이미 진행 중입니다. 새로운 데이터 수집 요청을 무시합니다.")
+            print("학습이 이미 진행 중이어서 새 데이터 수집 요청은 무시")
             return
         }
         
-        print("▶️ \"\(gestureName)\" 제스처 데이터 수집 시작 (요청 받음).")
+        print("\"\(gestureName)\" 제스처 데이터 수집 시작 (요청 받음)")
         self.currentGesture = gestureName
         self.isRecording = true
         self.hasCollectedSuccessfully = false
@@ -133,22 +173,24 @@ class GestureRecognitionService {
     
     func resetCollectionStateIfNeeded() {
         if self.hasCollectedSuccessfully {
-            print("⚪️ 손이 화면에서 사라짐. 다시 수집 가능.")
+            print("손이 화면에서 사라짐. 다시 수집 가능")
             self.hasCollectedSuccessfully = false
         }
     }
 
-    // MARK: - Public Method for Processing
+    // MARK: - 처리 메서드
     
     func recognizeAndCollect(result: HandLandmarkerResult?) -> String? {
-        guard let result = result, let (recognizedGesture, features) = gestureRecognizer?.classifyGesture(handLandmarkerResult: result), let featureVector = features else {
+        guard let result = result,
+              let (recognizedGesture, features) = gestureRecognizer?.classifyGesture(handLandmarkerResult: result),
+              let featureVector = features else {
             resetCollectionStateIfNeeded()
             return nil
         }
         
         if isRecording {
             landmarkBuffer.append(featureVector)
-            print("...[\(landmarkBuffer.items.count)/100] 데이터 추가 중...")
+            print("[\(landmarkBuffer.items.count)/100] 데이터 추가 중")
             ProgressBarChannel.channel?.invokeMethod("updateProgress", arguments: landmarkBuffer.items.count)
             
             if landmarkBuffer.items.count >= landmarkBuffer.capacity {
@@ -156,7 +198,7 @@ class GestureRecognitionService {
                 let batch = landmarkBuffer.items
                 landmarkBuffer.reset()
 
-                print("✅ 100개 데이터 수집 완료. 서버 학습 시작.")
+                print("100개 데이터 수집 완료. 서버 학습 시작")
                 isRecording = false
                 hasCollectedSuccessfully = true
                 
@@ -164,7 +206,7 @@ class GestureRecognitionService {
                     gestureBeingTrained = gesture
                     trainingManager.uploadAndTrain(gesture: gesture, frames: batch)
                 } else {
-                    print("🚨 [오류] 제스처 이름이 없어 학습을 시작할 수 없음.")
+                    print("오류: 제스처 이름이 없어서 학습을 시작 못 함")
                 }
                 currentGesture = nil
             }
@@ -174,27 +216,27 @@ class GestureRecognitionService {
     }
 }
 
-// MARK: - TrainingManagerDelegate Conformance
+// MARK: - TrainingManagerDelegate 구현
 
 extension GestureRecognitionService: TrainingManagerDelegate {
     
     func trainingDidStart(taskId: String) {
-        print("👍 [서버 응답] 학습 시작됨. Task ID: \(taskId)")
+        print("서버 응답: 학습 시작. Task ID: \(taskId)")
         ProgressBarChannel.channel?.invokeMethod("taskIdReady", arguments: ["taskId": taskId])
     }
 
     func trainingDidProgress(taskId: String, progress: StatusResponse.ProgressPayload?) {
-        print("⏳ [서버 응답] 학습 진행 중... 상태: \(progress?.current_step ?? "")")
-         let step = progress?.current_step ?? "모델 학습 중..."
-         let payload: [String: Any] = ["progress": ["current_step": step]]
-         ProgressBarChannel.channel?.invokeMethod("modelDownloading", arguments: payload)
+        print("서버 응답: 학습 진행 중.. 상태: \(progress?.current_step ?? "")")
+        let step = progress?.current_step ?? "모델 학습 중..."
+        let payload: [String: Any] = ["progress": ["current_step": step]]
+        ProgressBarChannel.channel?.invokeMethod("modelDownloading", arguments: payload)
     }
 
     func trainingDidSucceed(taskId: String, tfliteURL: String?, modelCode: String?) {
-        print("🎉 [서버 응답] 학습 성공! 모델 코드: \(modelCode ?? "N/A")")
+        print("서버 응답: 학습 성공. 모델 코드: \(modelCode ?? "N/A")")
         
         guard let gestureName = self.gestureBeingTrained else {
-            print("🚨 [오류] 학습 성공했으나 어떤 제스처인지 알 수 없음.")
+            print("오류: 학습은 성공 but 어떤 제스처인지 알 수 없음")
             return
         }
 
@@ -206,7 +248,7 @@ extension GestureRecognitionService: TrainingManagerDelegate {
     }
 
     func trainingDidFail(taskId: String, errorInfo: String?) {
-        print("🚨 [서버 응답] 학습 실패. 원인: \(errorInfo ?? "알 수 없는 오류")")
+        print("서버 응답: 학습 실패. 원인: \(errorInfo ?? "알 수 없는 오류")")
         
         self.gestureBeingTrained = nil
         self.hasCollectedSuccessfully = false
@@ -216,26 +258,26 @@ extension GestureRecognitionService: TrainingManagerDelegate {
     }
 
     func modelReady(savedURL: URL) {
-        print("💾 [모델 저장] 새 모델이 기기에 저장됨: \(savedURL.path)")
+        print("모델 저장: 새 모델을 기기에 저장. 경로: \(savedURL.path)")
         
         let modelName = savedURL.lastPathComponent
         UserDefaults.standard.set(modelName, forKey: customModelNameKey)
-        print("✅ 새 모델 이름 '\(modelName)'을 UserDefaults에 저장함.")
+        print("새 모델 이름 '\(modelName)' 저장했어 (UserDefaults)")
         
         let modelUpdateSuccess = gestureRecognizer?.updateModel(modelURL: savedURL)
         if modelUpdateSuccess != true {
-            print("🚨 제스처 인식기 모델 업데이트 실패.")
+            print("오류: 제스처 인식기 모델 업데이트 실패")
             return
         }
 
         if let labelURL = LabelMapManager.shared.documentsFileURL {
             let labelUpdateSuccess = gestureRecognizer?.updateLabelMap(labelURL: labelURL)
             if labelUpdateSuccess != true {
-                print("🚨 제스처 인식기 레이블 맵 업데이트 실패.")
+                print("오류: 레이블 맵 업데이트 실패")
                 return
             }
         } else {
-            print("🚨 업데이트할 레이블 맵 파일의 URL을 가져오지 못함.")
+            print("오류: 업데이트할 레이블 맵 파일 URL을 못 가져옴")
             return
         }
     }

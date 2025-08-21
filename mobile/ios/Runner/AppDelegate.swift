@@ -6,7 +6,7 @@ extension Notification.Name {
     static let toggleFlashlight = Notification.Name("toggleFlashlightNotification")
 }
 
-@UIApplicationMain
+@main
 @objc class AppDelegate: FlutterAppDelegate {
 
   override func application(
@@ -27,9 +27,9 @@ extension Notification.Name {
       }
       
       // TestPage Platform 등록
-      if let testReg = registrar(forPlugin: "test-page-view-plugin") {
-          TestPagePlatformViewFactory.register(with: testReg)
-      }
+//      if let testReg = registrar(forPlugin: "test-page-view-plugin") {
+//          TestPagePlatformViewFactory.register(with: testReg)
+//      }
 
       // WebView Platform 등록
       if let webviewReg = registrar(forPlugin: "webview-view-plugin") {

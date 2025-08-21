@@ -4,11 +4,11 @@ import UIKit
 import AVFoundation
 import MediaPipeTasksVision
 
-// 1. The View that contains the camera preview
+// 카메라 프리뷰를 담는 뷰
 @MainActor
 class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServiceLiveStreamDelegate {
 
-    // MARK: - Services and Properties
+    // MARK: - 서비스와 프로퍼티
     private var cameraFeedService: CameraFeedService?
     private var handLandmarkerService: HandLandmarkerService?
     private let gestureRecognitionService = GestureRecognitionService.shared
@@ -18,14 +18,14 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
     private var previewView: UIView!
     private var overlayView: OverlayView!
 
-    // MARK: - Gesture Action Properties
+    // MARK: - 제스처 동작 관련
     private var gestureHoldTimer: Timer?
     private var currentHeldGesture: String?
     private var gestureStartTime: Date?
     private let requiredHoldDuration: TimeInterval = 1.0
     private var actionableGestures: [String] = []
 
-    // MARK: - Initializers
+    // MARK: - 초기화
     init(frame: CGRect, isCameraEnabled: Bool) {
         super.init(frame: frame)
         if isCameraEnabled {
@@ -36,10 +36,10 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
     }
 
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        fatalError("init(coder:)가 구현되지 않았음")
     }
     
-    // MARK: - View Lifecycle
+    // MARK: - 뷰 생명주기
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if self.window != nil {
@@ -57,7 +57,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
         cameraFeedService?.updateVideoPreviewLayer(toFrame: self.bounds)
     }
 
-    // MARK: - Setup
+    // MARK: - 설정
     private func setupUI() {
         previewView = UIView(frame: self.bounds)
         previewView.backgroundColor = .clear
@@ -77,7 +77,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
         handLandmarkerService?.liveStreamDelegate = self
     }
 
-    // MARK: - Gesture Logic (from TestPage.swift)
+    // MARK: - 제스처 로직
     private func updateActionableGestures() {
         guard let allGestures = LabelMapManager.shared.readLabelMap()?.keys else {
             self.actionableGestures = []
@@ -89,7 +89,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
             }
             return action != "none"
         }
-        print("ControlApp actionable gestures: \(self.actionableGestures)")
+        print("실행 가능한 제스처: \(self.actionableGestures)")
     }
 
     private func handleGestureChange(to newGesture: String) {
@@ -121,7 +121,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
     }
 
     private func performGestureAction(for gesture: String) {
-        print("Action triggered for gesture: \(gesture)")
+        print("제스처 동작 실행: \(gesture)")
         if let actionName = GestureActionPersistence.shared.getAction(forGesture: gesture), actionName != "none" {
             deviceControlService.handleAction(actionName)
         }
@@ -151,9 +151,9 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
         }
     }
     
-    func didEncounterSessionRuntimeError() { print("ControlCameraView: Session runtime error.") }
-    func sessionWasInterrupted(canResumeManually resumeManually: Bool) { print("ControlCameraView: Session interrupted.") }
-    func sessionInterruptionEnded() { print("ControlCameraView: Session interruption ended.") }
+    func didEncounterSessionRuntimeError() { print("세션 실행 중 오류 발생") }
+    func sessionWasInterrupted(canResumeManually resumeManually: Bool) { print("세션이 일시 중단됨") }
+    func sessionInterruptionEnded() { print("세션 일시 중단이 끝남") }
 
     // MARK: - HandLandmarkerServiceLiveStreamDelegate
     func handLandmarkerService(
@@ -163,7 +163,7 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
     ) {
         DispatchQueue.main.async {
             if let error = error {
-                print("Landmark detection error: \(error.localizedDescription)")
+                print("랜드마크 감지 오류: \(error.localizedDescription)")
                 self.handleGestureChange(to: "none")
                 return
             }
@@ -197,13 +197,13 @@ class ControlCameraView: UIView, CameraFeedServiceDelegate, HandLandmarkerServic
 }
 
 
-// 2. The PlatformView that wraps the ControlCameraView
+// FlutterPlatformView로 감싼 컨트롤 카메라 뷰
 @MainActor
 class ControlCameraPlatformView: NSObject, @preconcurrency FlutterPlatformView {
     private let nativeView: ControlCameraView
 
     init(frame: CGRect, viewIdentifier: Int64, arguments: Any?, messenger: FlutterBinaryMessenger) {
-        let isCameraEnabled = OpenSetting.isGestureServiceEnabled
+        let isCameraEnabled = GestureServiceState.shared.isGestureServiceEnabled
         self.nativeView = ControlCameraView(frame: frame, isCameraEnabled: isCameraEnabled)
         super.init()
     }
@@ -213,7 +213,7 @@ class ControlCameraPlatformView: NSObject, @preconcurrency FlutterPlatformView {
     }
 }
 
-// 3. The Factory that creates the PlatformView
+// PlatformView를 생성하는 팩토리
 @MainActor
 class ControlCameraPlatformViewFactory: NSObject, @preconcurrency FlutterPlatformViewFactory {
     private let messenger: FlutterBinaryMessenger

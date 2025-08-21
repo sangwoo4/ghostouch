@@ -1,17 +1,14 @@
-//
-//  GestureListRegisterChannel.swift
-//  Runner
-//
-//  Created by 이상원 on 8/17/25.
-//
-
 import Foundation
 import Flutter
 import UIKit
 
+// 제스처 목록 채널
 class GestureListRegisterChannel: NSObject, FlutterPlugin {
     static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "com.pentagon.ghostouch/list-gesture", binaryMessenger: registrar.messenger())
+        let channel = FlutterMethodChannel(
+            name: "com.pentagon.ghostouch/list-gesture",
+            binaryMessenger: registrar.messenger()
+        )
         let instance = GestureListRegisterChannel()
         registrar.addMethodCallDelegate(instance, channel: channel)
     }
@@ -20,12 +17,15 @@ class GestureListRegisterChannel: NSObject, FlutterPlugin {
         switch call.method {
         case "list-gesture":
             if let labelMap = LabelMapManager.shared.readLabelMap() {
-                // Convert [String: Int] to [String: Any] for Flutter
-                // Dart expects a List<dynamic> for gestures, so we return the keys as an array.
-                let gesturesList = labelMap.sorted(by: { $0.value < $1.value }).map({ $0.key })
+                // 값 기준 정렬 후 키 배열 반환
+                let gesturesList = labelMap.sorted { $0.value < $1.value }.map { $0.key }
                 result(gesturesList)
             } else {
-                result(FlutterError(code: "UNAVAILABLE", message: "Failed to get available gestures.", details: nil))
+                result(FlutterError(
+                    code: "UNAVAILABLE",
+                    message: "제스처 목록 조회 실패",
+                    details: nil
+                ))
             }
         default:
             result(FlutterMethodNotImplemented)

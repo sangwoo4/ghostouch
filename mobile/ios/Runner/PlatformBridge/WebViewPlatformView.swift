@@ -1,4 +1,3 @@
-
 import Foundation
 import Flutter
 import UIKit
@@ -62,8 +61,6 @@ class WebView: UIView, WKNavigationDelegate {
     deinit {
         webView.navigationDelegate = nil
         webView.stopLoading()
-        // If you have a UI delegate, set it to nil as well:
-        // webView.uiDelegate = nil
     }
 }
 
@@ -79,7 +76,10 @@ final class WebViewPlatformView: NSObject, FlutterPlatformView {
     ) {
         let initialUrl = (args as? [String: Any])?["url"] as? String
         self.webView = WebView(frame: frame, initialUrl: initialUrl)
-        self.channel = FlutterMethodChannel(name: "com.ghostouch.webview/webview_view_\(viewId)", binaryMessenger: messenger)
+        self.channel = FlutterMethodChannel(
+            name: "com.ghostouch.webview/webview_view_\(viewId)",
+            binaryMessenger: messenger
+        )
         super.init()
         
         self.channel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
@@ -90,7 +90,7 @@ final class WebViewPlatformView: NSObject, FlutterPlatformView {
                     self.webView.loadUrl(url)
                     result(nil)
                 } else {
-                    result(FlutterError(code: "INVALID_ARGUMENT", message: "URL argument is missing or invalid", details: nil))
+                    result(FlutterError(code: "INVALID_ARGUMENT", message: "URL 인자가 없음", details: nil))
                 }
             case "goBack":
                 self.webView.goBack()
@@ -140,6 +140,7 @@ final class WebViewPlatformViewFactory: NSObject, FlutterPlatformViewFactory {
     static func register(with registrar: FlutterPluginRegistrar) {
         registrar.register(
             WebViewPlatformViewFactory(messenger: registrar.messenger()),
-            withId: "com.ghostouch.webview/webview_view")
+            withId: "com.ghostouch.webview/webview_view"
+        )
     }
 }
