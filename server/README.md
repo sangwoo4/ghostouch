@@ -1,7 +1,7 @@
 # Ghostouch - Backend Server 👻
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-이 리포지토리는 Ghostouch 프로젝트의 백엔드 서버 파트입니다. FastAPI를 기반으로 구축되었으며, 클라이언트로부터 수신한 손 랜드마크(hand landmark) 데이터를 전처리하고 증분 학습(incremental learning)을 수행하여 클라이언트에 맞춤형 모델을 배포하는 역할을 합니다.
+Ghostouch 프로젝트의 백엔드 서버 파트입니다. FastAPI를 기반으로 구축되었으며, 클라이언트로부터 수신한 손 랜드마크(hand landmark) 데이터를 전처리하고 증분 학습(incremental learning)을 수행하여 클라이언트에 맞춤형 모델을 배포하는 역할을 합니다.
 
 ## 아키텍처
 
