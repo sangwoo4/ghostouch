@@ -2,7 +2,7 @@
 
 <div align="center">
 
-### ✨ 2025 오픈소스 개발자 대회  
+### 2025 오픈소스 개발자 대회  
 **TEAM Pentagon**
 
 </div>
@@ -20,9 +20,9 @@
 ## 👥 팀원 정보
 <div align="center">
 
-| <img src="https://img.shields.io/badge/Project_Leader-FF5733" /> | <img src="https://img.shields.io/badge/Backend-%2300264B" /> | <img src="https://img.shields.io/badge/Mobile-%2310069F" /> | <img src="https://img.shields.io/badge/Mobile-%2310069F" /> | <img src="https://img.shields.io/badge/ML-blue" /> |
+| <img src="https://img.shields.io/badge/Project_Leader-FF5733" /> | <img src="https://img.shields.io/badge/Backend-%2300264B" /> | <img src="https://img.shields.io/badge/Mobile-%2310069F" /> |<img src="https://img.shields.io/badge/Mobile-%2310069F" /> | <img src="https://img.shields.io/badge/ML-blue" /> |
 | :-------------------------------------------------------------: | :----------------------------------------------------------: | :---------------------------------------------------------: | :---------------------------------------------------------: | :------------------------------------------------: |
-| [팀장]() | [팀원2](https://github.com/sangwoo4) | [팀원3](https://github.com/HeungJunBag) | [팀원4](https://github.com/HeungJunBag) | [팀원5](https://github.com/doyun034) |
+| 팀장 | 팀원2 | 팀원3 | 팀원4 | 팀원5 |
 | UI·UX 설계 및 사용자 테스트 | 서버 개발 | Android 앱 개발 | iOS 앱 개발 | ML 모델 학습 및 최적화 |
 
 </div>
@@ -70,11 +70,13 @@
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-000000?style=for-the-badge&logo=apple&logoColor=white)
+
 </details>
 
 ## 📌 프로젝트 개요
 - Ghostouch는 스마트폰에서 손 제스처만으로 기기 제어 및 앱 기능을 간편하게 제어할 수 있는 모바일 어플리케이션입니다. 스마트폰 전면 카메라와 Mediapipe Hand Detection 모델을 이용해 손 모양을 빠르고 정확하게 인식하고 네트워크 없이 실행이 가능하며 사용자가 원하는 제스처를 제어 기능에 연결할 수 있어 누구나 쉽게 사용할 수 있습니다.
 <details>
+  <summary><b>더보기</b></summary>
   
   <a id="핵심-기능"></a>
   ### ⚡ 핵심 기능
@@ -106,12 +108,10 @@
   
   <a id="시연-영상"></a>
   ### 🎥 시연 영상
-  
-  <p align="center">
-    <a href="https://github.com/user-attachments/assets/84133da0-bcf1-4eb2-a670-f93d6c5dfbd4">
-      ▶️ 시연 영상 보기
-    </a>
-  </p>
+
+https://github.com/user-attachments/assets/3ababc90-051f-4354-9be5-df3ad8f15f3f
+
+[유튜브로 보기](https://youtu.be/gx8s9TinyVQ?si=LhrMnQXhdomIoyjq)
 
 </details>
 
@@ -119,10 +119,20 @@
 
 - 각 모듈(백엔드, 모바일, ML 모델)의 소스를 받아 로컬 환경에서 실행할 수 있습니다
 
-[서버 환경 설정 및 API 실행](https://github.com/sangwoo4/ghostouch/tree/develop/server)
+**[서버 환경 설정 및 API 실행](https://github.com/sangwoo4/ghostouch/tree/develop/server)**
 
-[Android/iOS 앱 빌드 및 실행]()
+**[Android/iOS 앱 빌드 및 실행](<!--링크 넣을곳-->)**
 
-[제스처 인식 모델 학습 및 평가](https://github.com/sangwoo4/ghostouch/tree/model-setting)  
+**[제스처 인식 모델 학습 및 평가](https://github.com/sangwoo4/ghostouch/tree/model-setting)**
 
-## 📎 참고 문헌
+## 📎 참고 자료
+- [Mediapipe World Landmark](https://mediapipe.readthedocs.io/en/latest/solutions/hands.html)
+- [Mediapipe Hand .Task](https://github.com/google-ai-edge/mediapipe-samples/blob/main/examples/hand_landmarker/python/hand_landmarker.ipynb)
+- [LiteRT (TFLite)](https://ai.google.dev/edge/litert?hl=ko)
+- [MediaPipe Github](https://github.com/google/mediapipe)
+- [Flutter platform channels](https://docs.flutter.dev/platform-integration/platform-channels)
+- [Lottiefiiles](https://lottiefiles.com/free-animations)
+- [Android Example (CameraX + TFLite)](https://developers.google.com/mediapipe/solutions/vision/hand_landmarker/android)
+- [CameraX 공식 문서](https://developer.android.com/training/camerax)
+- [iOS Example (Swift + MediaPipe)](https://developers.google.com/mediapipe/solutions/vision/hand_landmarker/ios)
+- [AVFoundation 공식 문서](https://developer.apple.com/documentation/avfoundation/)
