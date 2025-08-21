@@ -104,7 +104,7 @@ class GestureRecognizer {
 
             
         //print(features)
-        let formatted = features.map { String(format: "%.15f", Double($0)) }
+        //let formatted = features.map { String(format: "%.15f", Double($0)) }
         //print("[\(formatted.joined(separator: ", "))]")
         
         
