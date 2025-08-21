@@ -1,0 +1,24 @@
+# FastAPI & Uvicorn
+fastapi
+uvicorn
+
+# Celery & Redis
+celery
+redis
+
+# ML & Data
+tensorflow==2.19.0
+
+pandas==2.2.2
+scikit-learn==1.7.1
+
+# Firebase
+firebase-admin
+
+# Utilities
+python-dotenv
+numpy==2.0.2
+requests
+httpx
+click
+typing-extensions
